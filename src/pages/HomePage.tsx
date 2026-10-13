@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, BookOpen, ArrowRight } from 'lucide-react';
 import { Carousel } from '@/components/content/Carousel';
@@ -14,12 +14,8 @@ export function HomePage() {
   const [sections, setSections] = useState<Record<string, ContentTitle[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const loadedRef = useRef(false);
 
   useEffect(() => {
-    if (loadedRef.current) return;
-    loadedRef.current = true;
-
     let cancelled = false;
     async function load() {
       setLoading(true);
