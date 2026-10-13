@@ -107,7 +107,7 @@ interface MediaFilterVars {
   sort?: string;
 }
 
-const PAGE_QUERY = `query ($page: Int, $perPage: Int, $genre_in: [String], $genre: String, $format_in: [MediaFormat], $status_in: [MediaStatus], $seasonYear: Int, $search: String, $sort: [MediaSort]) {
+const PAGE_QUERY = `query ($page: Int, $perPage: Int, $genre_in: [String], $genre: String, $format_in: [MediaFormat], $status_in: [MediaStatus], $seasonYear: Int, $search: String, $sort: MediaSort) {
   Page(page: $page, perPage: $perPage) {
     pageInfo { currentPage hasNextPage total perPage lastPage }
     media(type: MANGA, genre_in: $genre_in, genre: $genre, format_in: $format_in, status_in: $status_in, seasonYear: $seasonYear, search: $search, sort: [$sort], isAdult: false) {
@@ -139,20 +139,6 @@ async function fetchGLBase(extra: Partial<MediaFilterVars> = {}, perPage = 20): 
     ...extra,
   });
   return result.items;
-}
-
-function dedupe(titles: ContentTitle[][]): ContentTitle[] {
-  const seen = new Set<string>();
-  const all: ContentTitle[] = [];
-  for (const batch of titles) {
-    for (const t of batch) {
-      if (!seen.has(t.id)) {
-        seen.add(t.id);
-        all.push(t);
-      }
-    }
-  }
-  return all;
 }
 
 export async function searchGLTitles(filter: ContentFilter, page = 1, perPage = 20): Promise<PaginatedResult> {
