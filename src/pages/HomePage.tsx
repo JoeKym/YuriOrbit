@@ -4,7 +4,7 @@ import { Heart, BookOpen, ArrowRight } from 'lucide-react';
 import { Carousel } from '@/components/content/Carousel';
 import type { ContentTitle } from '@/types/content';
 import { GL_ALLOWED_CLASSIFICATIONS } from '@/lib/providers/classify';
-import { getTrendingGL, getPopularGL, getRecentGL, getCompletedGL } from '@/lib/providers';
+import { getTrendingGL, getPopularGL, getRecentGL, getCompletedGL, matchesGenre } from '@/lib/providers';
 
 function filterGLTitles(titles: ContentTitle[]): ContentTitle[] {
   return titles.filter((t) => GL_ALLOWED_CLASSIFICATIONS.includes(t.glClassification));
@@ -42,10 +42,9 @@ export function HomePage() {
 
         data['romance'] = filtered.filter((t) => t.genres.includes('Romance')).slice(0, 20);
         data['fantasy'] = filtered.filter((t) => t.genres.some((g) => g === 'Fantasy' || g === 'Supernatural')).slice(0, 20);
-        data['schoolLife'] = filtered.filter((t) => t.genres.includes('School Life') || t.tags.some((tag) => tag.name === 'School')).slice(0, 20);
+        data['schoolLife'] = filtered.filter((t) => matchesGenre(t, 'School Life')).slice(0, 20);
         data['drama'] = filtered.filter((t) => t.genres.includes('Drama')).slice(0, 20);
-        data['historical'] = filtered.filter((t) => t.genres.includes('Historical')).slice(0, 20);
-        data['slowBurn'] = filtered.filter((t) => t.tags.some((tag) => tag.name.toLowerCase().includes('slow burn'))).slice(0, 20);
+        data['historical'] = filtered.filter((t) => matchesGenre(t, 'Historical')).slice(0, 20);
 
         const recent = await getRecentGL(20);
         if (cancelled) return;
@@ -115,7 +114,6 @@ export function HomePage() {
         <Carousel title="GL Novels" titles={get('novels')} loading={loading} viewAllLink="/novels" />
         <Carousel title="Recently Released" titles={get('recent')} loading={loading} />
         <Carousel title="Completed Stories" titles={get('completed')} loading={loading} />
-        <Carousel title="Slow-Burn Romance" titles={get('slowBurn')} loading={loading} />
         <Carousel title="Romance" titles={get('romance')} loading={loading} />
         <Carousel title="Fantasy & Supernatural" titles={get('fantasy')} loading={loading} />
         <Carousel title="School Life" titles={get('schoolLife')} loading={loading} />

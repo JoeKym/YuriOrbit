@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SlidersHorizontal, Search, X, Grid3x3, List } from 'lucide-react';
-import { ContentCard, ContentCardGrid } from '@/components/content/ContentCard';
+import { ContentCardGrid } from '@/components/content/ContentCard';
 import { ContentCardSkeleton } from '@/components/content/ContentCard';
-import type { ContentTitle, ContentFilter, ContentType, ReleaseStatus, SourceProvider, GLClassification } from '@/types/content';
+import type { ContentTitle, ContentFilter, ContentType, ReleaseStatus, SourceProvider } from '@/types/content';
 import { GENRE_LIST, SORT_OPTIONS, CONTENT_TYPE_LABELS } from '@/types/content';
 import { searchGLTitles } from '@/lib/providers';
 import { GL_ALLOWED_CLASSIFICATIONS } from '@/lib/providers/classify';

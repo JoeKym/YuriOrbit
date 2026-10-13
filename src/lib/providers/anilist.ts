@@ -3,29 +3,46 @@ import { normalizeAniList } from './normalize';
 
 const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
 const REQUEST_TIMEOUT = 15000;
-const REQUEST_DELAY = 350;
+const REQUEST_DELAY = 700;
+const MAX_RETRIES = 3;
 
-const GL_GENRES = ["Yuri", "Girls' Love", "Shoujo Ai"];
+// AniList has no "Yuri" genre; GL content is identified by the "Yuri" tag.
+// tag_in requires ALL listed tags, so extra tag filters are appended to this.
+const GL_TAGS = ['Yuri'];
+const MIN_TAG_RANK = 40;
 
-const GENRE_MAP: Record<string, string> = {
-  'Romance': 'Romance', 'Drama': 'Drama', 'Comedy': 'Comedy', 'Fantasy': 'Fantasy',
-  'Historical': 'Historical', 'Mystery': 'Mystery', 'Psychological': 'Psychological',
-  'Supernatural': 'Supernatural', 'Science Fiction': 'Sci-Fi', 'Tragedy': 'Tragedy',
-  'Action': 'Action', 'Adventure': 'Adventure', 'Thriller': 'Thriller', 'Horror': 'Horror',
-  'Music': 'Music', 'Slice of Life': 'Slice of Life', 'School Life': 'School Life',
-  'Slow Burn': 'Slow Burn',
+// UI genre -> AniList filter. Only AniList's fixed GenreCollection works as `genre`;
+// everything else must be filtered as a tag.
+const GENRE_MAP: Record<string, { genre?: string; tag?: string }> = {
+  'Romance': { genre: 'Romance' }, 'Drama': { genre: 'Drama' }, 'Comedy': { genre: 'Comedy' },
+  'Fantasy': { genre: 'Fantasy' }, 'Mystery': { genre: 'Mystery' }, 'Psychological': { genre: 'Psychological' },
+  'Supernatural': { genre: 'Supernatural' }, 'Science Fiction': { genre: 'Sci-Fi' },
+  'Action': { genre: 'Action' }, 'Adventure': { genre: 'Adventure' }, 'Thriller': { genre: 'Thriller' },
+  'Horror': { genre: 'Horror' }, 'Music': { genre: 'Music' }, 'Slice of Life': { genre: 'Slice of Life' },
+  'Historical': { tag: 'Historical' }, 'Tragedy': { tag: 'Tragedy' }, 'School Life': { tag: 'School' },
 };
+
+function resolveGenre(genre: string): { genre?: string; tag?: string } {
+  return GENRE_MAP[genre] || { genre };
+}
+
+export function matchesGenre(title: ContentTitle, genre: string): boolean {
+  const { genre: g, tag } = resolveGenre(genre);
+  if (g) return title.genres.includes(g);
+  return title.tags.some((t) => t.name === tag);
+}
 
 const SORT_MAP: Record<string, string> = {
   POPULARITY: 'POPULARITY_DESC', SCORE: 'SCORE_DESC', NEWEST: 'START_DATE_DESC',
   YEAR: 'START_DATE_DESC', TITLE: 'TITLE_ROMAJI',
 };
 
-const FORMAT_MAP: Partial<Record<ContentType, string[]>> = {
-  MANGA: ['MANGA', 'ONE_SHOT'],
-  MANHWA: ['MANHWA'],
-  MANHUA: ['MANHUA'],
-  LIGHT_NOVEL: ['NOVEL'],
+// AniList has no MANHWA/MANHUA formats; they are MANGA filtered by country of origin.
+const FORMAT_MAP: Partial<Record<ContentType, { format_in: string[]; countryOfOrigin?: string }>> = {
+  MANGA: { format_in: ['MANGA', 'ONE_SHOT'], countryOfOrigin: 'JP' },
+  MANHWA: { format_in: ['MANGA', 'ONE_SHOT'], countryOfOrigin: 'KR' },
+  MANHUA: { format_in: ['MANGA', 'ONE_SHOT'], countryOfOrigin: 'CN' },
+  LIGHT_NOVEL: { format_in: ['NOVEL'] },
 };
 
 const MEDIA_FIELDS = `
@@ -65,52 +82,74 @@ function timeoutFetch(url: string, options: RequestInit, ms: number): Promise<Re
   return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
 }
 
+let queue: Promise<unknown> = Promise.resolve();
 let lastRequestTime = 0;
 
-async function anilistQuery(query: string, variables: Record<string, unknown>): Promise<unknown> {
-  const now = Date.now();
-  const elapsed = now - lastRequestTime;
-  if (elapsed < REQUEST_DELAY) {
-    await new Promise((r) => setTimeout(r, REQUEST_DELAY - elapsed));
-  }
-  lastRequestTime = Date.now();
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-  const resp = await timeoutFetch(
-    ANILIST_ENDPOINT,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ query, variables }),
-    },
-    REQUEST_TIMEOUT
-  );
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => '');
-    throw new Error(`AniList ${resp.status}: ${text.slice(0, 200)}`);
+// Serialize requests so concurrent callers don't burst past AniList's rate limit.
+function enqueue<T>(task: () => Promise<T>): Promise<T> {
+  const run = queue.then(async () => {
+    const wait = REQUEST_DELAY - (Date.now() - lastRequestTime);
+    if (wait > 0) await sleep(wait);
+    try {
+      return await task();
+    } finally {
+      lastRequestTime = Date.now();
+    }
+  });
+  queue = run.catch(() => undefined);
+  return run;
+}
+
+async function anilistQuery(query: string, variables: Record<string, unknown>): Promise<unknown> {
+  for (let attempt = 0; ; attempt++) {
+    const resp = await enqueue(() =>
+      timeoutFetch(
+        ANILIST_ENDPOINT,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ query, variables }),
+        },
+        REQUEST_TIMEOUT
+      )
+    );
+    if (resp.status === 429 && attempt < MAX_RETRIES) {
+      const retryAfter = Number(resp.headers.get('Retry-After'));
+      await sleep((Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 2 ** attempt * 2) * 1000);
+      continue;
+    }
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => '');
+      throw new Error(`AniList ${resp.status}: ${text.slice(0, 200)}`);
+    }
+    const json = await resp.json();
+    if (json.errors) {
+      throw new Error(json.errors[0]?.message || 'AniList GraphQL error');
+    }
+    return json.data;
   }
-  const json = await resp.json();
-  if (json.errors) {
-    throw new Error(json.errors[0]?.message || 'AniList GraphQL error');
-  }
-  return json.data;
 }
 
 interface MediaFilterVars {
   page: number;
   perPage: number;
-  genre_in?: string[];
+  tag_in?: string[];
   genre?: string;
   format_in?: string[];
+  countryOfOrigin?: string;
   status_in?: string[];
-  seasonYear?: number;
+  startDate_greater?: number;
+  startDate_lesser?: number;
   search?: string;
   sort?: string;
 }
 
-const PAGE_QUERY = `query ($page: Int, $perPage: Int, $genre_in: [String], $genre: String, $format_in: [MediaFormat], $status_in: [MediaStatus], $seasonYear: Int, $search: String, $sort: MediaSort) {
+const PAGE_QUERY = `query ($page: Int, $perPage: Int, $tag_in: [String], $genre: String, $format_in: [MediaFormat], $countryOfOrigin: CountryCode, $status_in: [MediaStatus], $startDate_greater: FuzzyDateInt, $startDate_lesser: FuzzyDateInt, $search: String, $sort: MediaSort) {
   Page(page: $page, perPage: $perPage) {
     pageInfo { currentPage hasNextPage total perPage lastPage }
-    media(type: MANGA, genre_in: $genre_in, genre: $genre, format_in: $format_in, status_in: $status_in, seasonYear: $seasonYear, search: $search, sort: [$sort], isAdult: false) {
+    media(type: MANGA, tag_in: $tag_in, minimumTagRank: ${MIN_TAG_RANK}, genre: $genre, format_in: $format_in, countryOfOrigin: $countryOfOrigin, status_in: $status_in, startDate_greater: $startDate_greater, startDate_lesser: $startDate_lesser, search: $search, sort: [$sort], isAdult: false) {
       ${MEDIA_FIELDS}
     }
   }
@@ -134,45 +173,43 @@ async function fetchGLBase(extra: Partial<MediaFilterVars> = {}, perPage = 20): 
   const result = await fetchFiltered({
     page: 1,
     perPage,
-    genre_in: GL_GENRES,
+    tag_in: GL_TAGS,
     sort: 'POPULARITY_DESC',
     ...extra,
   });
   return result.items;
 }
 
-export async function searchGLTitles(filter: ContentFilter, page = 1, perPage = 20): Promise<PaginatedResult> {
-  if (filter.query) {
-    const result = await fetchFiltered({
-      page,
-      perPage,
-      search: filter.query,
-      genre_in: GL_GENRES,
-      sort: SORT_MAP[filter.sort || 'POPULARITY'] || 'POPULARITY_DESC',
-    });
-    return result;
-  }
+function applyGenre(extra: Partial<MediaFilterVars>, genre: string) {
+  const { genre: g, tag } = resolveGenre(genre);
+  if (g) extra.genre = g;
+  if (tag) extra.tag_in = [...GL_TAGS, tag];
+}
 
+function applyContentType(extra: Partial<MediaFilterVars>, contentType: ContentType) {
+  const fmt = FORMAT_MAP[contentType];
+  if (!fmt) return;
+  extra.format_in = fmt.format_in;
+  if (fmt.countryOfOrigin) extra.countryOfOrigin = fmt.countryOfOrigin;
+}
+
+export async function searchGLTitles(filter: ContentFilter, page = 1, perPage = 20): Promise<PaginatedResult> {
   const extra: Partial<MediaFilterVars> = {
-    sort: SORT_MAP[filter.sort || 'POPULARITY'] || 'POPULARITY_DESC',
+    tag_in: GL_TAGS,
+    sort: filter.query && !filter.sort ? 'SEARCH_MATCH' : SORT_MAP[filter.sort || 'POPULARITY'] || 'POPULARITY_DESC',
   };
 
-  if (filter.genre) {
-    extra.genre = GENRE_MAP[filter.genre] || filter.genre;
+  if (filter.query) extra.search = filter.query;
+  if (filter.genre) applyGenre(extra, filter.genre);
+  if (filter.year) {
+    // seasonYear only applies to anime; manga/novels are filtered by start date (YYYYMMDD).
+    extra.startDate_greater = (filter.year - 1) * 10000 + 1231;
+    extra.startDate_lesser = (filter.year + 1) * 10000;
   }
-  if (filter.year) extra.seasonYear = filter.year;
   if (filter.status && filter.status !== 'ALL') extra.status_in = [filter.status];
-  if (filter.contentType && filter.contentType !== 'ALL') {
-    const fmts = FORMAT_MAP[filter.contentType as ContentType];
-    if (fmts) extra.format_in = fmts;
-  }
+  if (filter.contentType && filter.contentType !== 'ALL') applyContentType(extra, filter.contentType);
 
-  return fetchFiltered({
-    page,
-    perPage,
-    genre_in: GL_GENRES,
-    ...extra,
-  });
+  return fetchFiltered({ page, perPage, ...extra });
 }
 
 export async function getTrendingGL(perPage = 20): Promise<ContentTitle[]> {
@@ -183,8 +220,14 @@ export async function getPopularGL(perPage = 20): Promise<ContentTitle[]> {
   return fetchGLBase({ sort: 'POPULARITY_DESC' }, perPage);
 }
 
+function todayFuzzyDate(): number {
+  const d = new Date();
+  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+}
+
 export async function getRecentGL(perPage = 20): Promise<ContentTitle[]> {
-  return fetchGLBase({ sort: 'START_DATE_DESC' }, perPage);
+  // Without an upper bound, unreleased titles with unknown start dates sort first.
+  return fetchGLBase({ sort: 'START_DATE_DESC', startDate_lesser: todayFuzzyDate() }, perPage);
 }
 
 export async function getCompletedGL(perPage = 20): Promise<ContentTitle[]> {
@@ -192,14 +235,16 @@ export async function getCompletedGL(perPage = 20): Promise<ContentTitle[]> {
 }
 
 export async function getGLByGenre(genre: string, perPage = 20): Promise<ContentTitle[]> {
-  const g = GENRE_MAP[genre] || genre;
-  return fetchGLBase({ genre: g, sort: 'POPULARITY_DESC' }, perPage);
+  const extra: Partial<MediaFilterVars> = { sort: 'POPULARITY_DESC' };
+  applyGenre(extra, genre);
+  return fetchGLBase(extra, perPage);
 }
 
 export async function getGLByContentType(contentType: ContentType, perPage = 30): Promise<ContentTitle[]> {
-  const formats = FORMAT_MAP[contentType];
-  if (!formats) return [];
-  return fetchGLBase({ format_in: formats, sort: 'POPULARITY_DESC' }, perPage);
+  if (!FORMAT_MAP[contentType]) return [];
+  const extra: Partial<MediaFilterVars> = { sort: 'POPULARITY_DESC' };
+  applyContentType(extra, contentType);
+  return fetchGLBase(extra, perPage);
 }
 
 export async function getTitleById(id: string): Promise<ContentTitle | null> {

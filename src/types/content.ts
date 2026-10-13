@@ -180,7 +180,7 @@ export const CONTENT_TYPE_ROUTES: Record<ContentType, string> = {
 export const GENRE_LIST = [
   'Romance', 'Drama', 'Comedy', 'Fantasy', 'Historical',
   'School Life', 'Slice of Life', 'Mystery', 'Psychological',
-  'Supernatural', 'Science Fiction', 'Tragedy', 'Slow Burn',
+  'Supernatural', 'Science Fiction', 'Tragedy',
   'Action', 'Adventure', 'Thriller', 'Horror', 'Music',
 ];
 

@@ -3,11 +3,11 @@ import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import type { ContentTitle } from '@/types/content';
 import { GENRE_LIST } from '@/types/content';
-import { getPopularGL } from '@/lib/providers';
+import { getPopularGL, matchesGenre } from '@/lib/providers';
 import { GL_ALLOWED_CLASSIFICATIONS } from '@/lib/providers/classify';
 import { ContentCardSkeleton } from '@/components/content/ContentCard';
 
-const FEATURED_GENRES = ['Romance', 'Drama', 'Comedy', 'Fantasy', 'Historical', 'School Life', 'Slice of Life', 'Mystery', 'Supernatural', 'Science Fiction', 'Tragedy', 'Slow Burn', 'Action'];
+const FEATURED_GENRES = ['Romance', 'Drama', 'Comedy', 'Fantasy', 'Historical', 'School Life', 'Slice of Life', 'Mystery', 'Supernatural', 'Science Fiction', 'Tragedy', 'Action'];
 
 export function GenresPage() {
   const [genreData, setGenreData] = useState<Record<string, ContentTitle[]>>({});
@@ -24,11 +24,7 @@ export function GenresPage() {
 
         const data: Record<string, ContentTitle[]> = {};
         for (const g of FEATURED_GENRES) {
-          const genreKey = g === 'Science Fiction' ? 'Sci-Fi' : g;
-          data[g] = filtered.filter((t) =>
-            t.genres.includes(genreKey) ||
-            (g === 'Slow Burn' && t.tags.some((tag) => tag.name.toLowerCase().includes('slow burn')))
-          ).slice(0, 6);
+          data[g] = filtered.filter((t) => matchesGenre(t, g)).slice(0, 6);
         }
         if (!cancelled) setGenreData(data);
       } catch {

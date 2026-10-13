@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { LibraryEntry, LibraryStatus, ContentTitle, ContentType } from '@/types/content';
+import type { LibraryEntry, LibraryStatus, ContentTitle } from '@/types/content';
 
 const STORAGE_KEY = 'yuriverse:library';
 

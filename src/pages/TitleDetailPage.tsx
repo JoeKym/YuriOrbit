@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   Heart, BookOpen, Play, Share2, Flag, ExternalLink, Star,
-  ChevronLeft, Calendar, Globe, Layers, Hash, TrendingUp, Users
+  ChevronLeft, Calendar, Globe, Layers, Hash, TrendingUp
 } from 'lucide-react';
 import type { ContentTitle, LibraryStatus } from '@/types/content';
 import { CONTENT_TYPE_LABELS, LIBRARY_STATUS_LABELS } from '@/types/content';
 import { getTitleById } from '@/lib/providers';
 import { useLibrary } from '@/hooks/useLibrary';
-import { cn, formatScore, getFallbackCover, getFallbackBanner, getStatusLabel, getStatusColor } from '@/lib/utils/format';
+import { cn, formatScore, getFallbackCover, getStatusLabel, getStatusColor } from '@/lib/utils/format';
 
 const STATUSES: LibraryStatus[] = ['CURRENT', 'PLANNED', 'COMPLETED', 'ON_HOLD', 'DROPPED', 'FAVOURITE'];
 
