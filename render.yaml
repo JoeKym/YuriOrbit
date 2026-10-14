@@ -13,6 +13,10 @@ services:
         value: 20
       - key: VITE_APP_NAME
         value: YuriVerse
+      - key: VITE_KINDE_CLIENT_ID
+        value: 488dc9038b0d4282977f5e6e7b3b3d0b
+      - key: VITE_KINDE_DOMAIN
+        value: https://yuriverse.kinde.com
       - key: VITE_TMDB_API_KEY
         sync: false
       - key: VITE_FIRECRAWL_API_KEY

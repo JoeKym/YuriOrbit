@@ -1,7 +1,8 @@
-import { Search, Heart, Menu, X, BookOpen } from 'lucide-react';
+import { Search, Heart, Menu, X, BookOpen, LogOut, Shield } from 'lucide-react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { cn } from '@/lib/utils/format';
+import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 
 const NAV_LINKS = [
   { to: '/', label: 'Home', exact: true },
@@ -18,6 +19,7 @@ const NAV_LINKS = [
 ];
 
 export function Navbar() {
+  const { login, register, logout, user, isAuthenticated, isLoading } = useKindeAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
@@ -80,9 +82,64 @@ export function Navbar() {
             to="/library"
             className="rounded-lg p-2 text-ink-200 transition-colors hover:bg-ink-800 hover:text-ink-50"
             aria-label="Library"
+            title="Library"
           >
             <BookOpen className="h-5 w-5" />
           </Link>
+
+          {!isLoading && (
+            isAuthenticated ? (
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/admin"
+                  className="hidden sm:flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-ink-300 hover:bg-ink-800 hover:text-ink-100 transition-colors"
+                  title="Admin Dashboard"
+                >
+                  <Shield className="h-3.5 w-3.5 text-rose-400" />
+                  <span>Admin</span>
+                </Link>
+                <div className="flex items-center gap-2 rounded-full border border-ink-700 bg-ink-850 py-1 pl-1 pr-2.5">
+                  {user?.picture ? (
+                    <img
+                      src={user.picture}
+                      alt={user.givenName || 'User'}
+                      className="h-6 w-6 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-rose-500 to-lavender-500 text-[11px] font-bold text-white">
+                      {(user?.givenName?.[0] || user?.email?.[0] || 'U').toUpperCase()}
+                    </div>
+                  )}
+                  <span className="hidden xl:inline text-xs font-medium text-ink-200 max-w-[100px] truncate">
+                    {user?.givenName || user?.email?.split('@')[0]}
+                  </span>
+                  <button
+                    onClick={() => logout()}
+                    className="ml-1 text-ink-400 hover:text-rose-400 transition-colors"
+                    title="Sign out"
+                    aria-label="Sign out"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="hidden sm:flex items-center gap-2">
+                <button
+                  onClick={() => login()}
+                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-ink-200 hover:bg-ink-800 hover:text-ink-50 transition-colors"
+                >
+                  Sign in
+                </button>
+                <button
+                  onClick={() => register()}
+                  className="rounded-lg bg-gradient-to-r from-rose-500 to-lavender-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:from-rose-600 hover:to-lavender-700 transition-all"
+                >
+                  Sign up
+                </button>
+              </div>
+            )
+          )}
 
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -139,6 +196,72 @@ export function Navbar() {
                 Library
               </NavLink>
             </nav>
+
+            {!isLoading && (
+              <div className="mt-4 pt-3 border-t border-ink-800">
+                {isAuthenticated ? (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      {user?.picture ? (
+                        <img
+                          src={user.picture}
+                          alt={user.givenName || 'User'}
+                          className="h-8 w-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-rose-500 to-lavender-500 text-xs font-bold text-white">
+                          {(user?.givenName?.[0] || user?.email?.[0] || 'U').toUpperCase()}
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-xs font-semibold text-ink-100">
+                          {user?.givenName || user?.email?.split('@')[0]}
+                        </p>
+                        <p className="text-[11px] text-ink-400">{user?.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        to="/admin"
+                        onClick={() => setMobileOpen(false)}
+                        className="rounded-lg p-2 text-ink-300 hover:bg-ink-800 hover:text-ink-100 transition-colors"
+                        title="Admin Dashboard"
+                      >
+                        <Shield className="h-4 w-4 text-rose-400" />
+                      </Link>
+                      <button
+                        onClick={() => logout()}
+                        className="rounded-lg p-2 text-ink-400 hover:bg-ink-800 hover:text-rose-400 transition-colors"
+                        title="Sign out"
+                      >
+                        <LogOut className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        login();
+                        setMobileOpen(false);
+                      }}
+                      className="flex-1 rounded-lg border border-ink-700 bg-ink-850 py-2 text-center text-xs font-semibold text-ink-100 hover:bg-ink-800 transition-colors"
+                    >
+                      Sign in
+                    </button>
+                    <button
+                      onClick={() => {
+                        register();
+                        setMobileOpen(false);
+                      }}
+                      className="flex-1 rounded-lg bg-gradient-to-r from-rose-500 to-lavender-600 py-2 text-center text-xs font-semibold text-white shadow-sm hover:from-rose-600 hover:to-lavender-700 transition-all"
+                    >
+                      Sign up
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

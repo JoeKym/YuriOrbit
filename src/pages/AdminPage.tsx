@@ -1,52 +1,143 @@
 import { Link } from 'react-router-dom';
-import { Shield, Lock, AlertCircle } from 'lucide-react';
+import { Shield, Lock, ExternalLink, UserCheck, KeyRound, CheckCircle2 } from 'lucide-react';
+import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 
 export function AdminPage() {
+  const { user, isAuthenticated, isLoading, login, logout } = useKindeAuth();
+
   return (
-    <div className="mx-auto max-w-2xl px-4 py-12 md:px-6">
+    <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
       <div className="flex items-center gap-3 mb-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-ink-800">
-          <Shield className="h-5 w-5 text-rose-400" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500 to-lavender-600">
+          <Shield className="h-5 w-5 text-white" />
         </div>
-        <h1 className="font-display text-3xl font-semibold text-ink-50">Administration</h1>
+        <div>
+          <h1 className="font-display text-3xl font-semibold text-ink-50">Administration & Management</h1>
+          <p className="text-sm text-ink-400">Powered by Kinde Auth & Access Control</p>
+        </div>
       </div>
 
-      <div className="card-surface p-6">
-        <div className="flex gap-3 mb-4">
-          <Lock className="h-5 w-5 flex-shrink-0 text-warning-400" />
-          <div>
-            <h2 className="text-lg font-semibold text-ink-50">Admin Access Unavailable</h2>
-            <p className="mt-1 text-sm text-ink-400 leading-relaxed">
-              The administration dashboard requires a configured backend with server-verified admin privileges. No backend server is currently configured for this deployment.
-            </p>
+      {isLoading ? (
+        <div className="card-surface p-8 text-center text-ink-300">
+          Loading authentication status...
+        </div>
+      ) : !isAuthenticated ? (
+        <div className="card-surface p-8">
+          <div className="flex gap-4 mb-6">
+            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-ink-800 text-warning-400">
+              <Lock className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-ink-50">Authentication Required</h2>
+              <p className="mt-1 text-sm text-ink-400 leading-relaxed">
+                Sign in with your Kinde account to access administration, role-based controls, and user management for YuriVerse.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => login()}
+              className="btn-primary flex items-center gap-2"
+            >
+              <KeyRound className="h-4 w-4" />
+              <span>Sign in with Kinde</span>
+            </button>
+            <Link to="/" className="btn-secondary">
+              Back to Home
+            </Link>
           </div>
         </div>
+      ) : (
+        <div className="space-y-6">
+          {/* User Profile Card */}
+          <div className="card-surface p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                {user?.picture ? (
+                  <img
+                    src={user.picture}
+                    alt={user.givenName || 'Admin'}
+                    className="h-12 w-12 rounded-full object-cover border border-rose-500/30"
+                  />
+                ) : (
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-tr from-rose-500 to-lavender-500 text-lg font-bold text-white">
+                    {(user?.givenName?.[0] || user?.email?.[0] || 'A').toUpperCase()}
+                  </div>
+                )}
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-semibold text-ink-50">
+                      {user?.givenName ? `${user.givenName} ${user?.familyName || ''}`.trim() : user?.email}
+                    </h2>
+                    <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-400 border border-emerald-500/20">
+                      <UserCheck className="h-3 w-3" />
+                      Active
+                    </span>
+                  </div>
+                  <p className="text-xs text-ink-400">{user?.email}</p>
+                </div>
+              </div>
 
-        <div className="mt-4 rounded-lg border border-ink-800 bg-ink-850 p-4">
-          <div className="flex gap-2 mb-2">
-            <AlertCircle className="h-4 w-4 flex-shrink-0 text-ink-400 mt-0.5" />
-            <p className="text-xs text-ink-400">
-              For security reasons, YuriVerse does not create a simulated or client-side admin system. Admin features — including classification review, metadata overrides, curated collections, and broken-link reports — require a real server with role-based access control.
+              <button
+                onClick={() => logout()}
+                className="btn-secondary text-xs"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+
+          {/* Management Console Link */}
+          <div className="card-surface p-6">
+            <h3 className="text-base font-semibold text-ink-50 mb-2">Website Management Console</h3>
+            <p className="text-sm text-ink-400 mb-4 leading-relaxed">
+              You can manage all registered users, define roles (Admin, Moderator, Curators), inspect login activity, and manage SSO settings directly in your Kinde organization dashboard:
             </p>
+
+            <a
+              href="https://yuriverse.kinde.com/admin"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg bg-ink-800 px-4 py-2.5 text-sm font-semibold text-ink-50 hover:bg-ink-750 border border-ink-700 transition-colors"
+            >
+              <span>Open Kinde Admin Dashboard</span>
+              <ExternalLink className="h-4 w-4 text-ink-400" />
+            </a>
+
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-ink-300">
+              <div className="rounded-lg border border-ink-800 bg-ink-850 p-3.5 flex items-start gap-2.5">
+                <CheckCircle2 className="h-4 w-4 text-rose-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold text-ink-100 block mb-0.5">User Directory</span>
+                  Search, ban, or invite team members and readers.
+                </div>
+              </div>
+              <div className="rounded-lg border border-ink-800 bg-ink-850 p-3.5 flex items-start gap-2.5">
+                <CheckCircle2 className="h-4 w-4 text-rose-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold text-ink-100 block mb-0.5">Roles & Permissions</span>
+                  Assign 'admin' or custom roles to grant exclusive features.
+                </div>
+              </div>
+              <div className="rounded-lg border border-ink-800 bg-ink-850 p-3.5 flex items-start gap-2.5">
+                <CheckCircle2 className="h-4 w-4 text-rose-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold text-ink-100 block mb-0.5">Social Connections</span>
+                  Enable Google, Discord, Apple, or GitHub login with 1 click.
+                </div>
+              </div>
+              <div className="rounded-lg border border-ink-800 bg-ink-850 p-3.5 flex items-start gap-2.5">
+                <CheckCircle2 className="h-4 w-4 text-rose-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold text-ink-100 block mb-0.5">Free 7,500 MAU</span>
+                  Generous free tier with no unexpected paywalls.
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
-        <div className="mt-4 text-sm text-ink-400">
-          <p className="mb-2">When a backend is configured, admin features will include:</p>
-          <ul className="space-y-1 ml-4 list-disc">
-            <li>Classification review queue</li>
-            <li>Metadata overrides and corrections</li>
-            <li>Curated collections and featured titles</li>
-            <li>Official source-link management</li>
-            <li>Broken-link report review</li>
-            <li>Provider status and synchronization logs</li>
-          </ul>
-        </div>
-      </div>
-
-      <div className="mt-6 text-center">
-        <Link to="/" className="btn-ghost">Back to home</Link>
-      </div>
+      )}
     </div>
   );
 }
