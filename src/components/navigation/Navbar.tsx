@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   Search,
-  Heart,
   Menu,
   X,
   BookOpen,
@@ -84,9 +83,11 @@ export function Navbar() {
       <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between gap-4 px-4 md:px-6">
         {/* Brand Logo */}
         <Link to="/" className="flex items-center gap-2.5 flex-shrink-0 group">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-rose-500 via-rose-600 to-lavender-600 shadow-md shadow-rose-500/20 transition-transform duration-200 group-hover:scale-105">
-            <Heart className="h-4.5 w-4.5 text-white" fill="white" />
-          </div>
+          <img
+            src="/apple-touch-icon.png"
+            alt="YuriVerse"
+            className="h-9 w-9 rounded-xl shadow-md shadow-rose-500/20 transition-transform duration-200 group-hover:scale-105"
+          />
           <div className="flex flex-col">
             <span className="font-display text-xl font-bold tracking-tight text-ink-50 transition-colors group-hover:text-rose-200">
               YuriVerse
