@@ -15,7 +15,10 @@ const REQUEST_DELAY = 250;
 // Free public read-only token (limited rate limits, use VITE_TMDB_KEY for production)
 // Users can get a free key at https://www.themoviedb.org/settings/api
 const env = (import.meta as { env?: Record<string, string> }).env || {};
-const TMDB_API_KEY = env.VITE_TMDB_API_KEY || env.VITE_TMDB_KEY || '1b6a1d5c7d35d07b8b50f2f7a00c0a37';
+const clean = (val?: string) => (!val || val.trim() === '' || val.trim().toLowerCase() === 'value' ? undefined : val.trim());
+
+const TMDB_RAW_KEY = clean(env.VITE_TMDB_API_KEY) || clean(env.VITE_TMDB_KEY) || clean(env.VITE_TMDB_READ_ACCESS_TOKEN) || '1b6a1d5c7d35d07b8b50f2f7a00c0a37';
+const isBearerToken = TMDB_RAW_KEY.startsWith('ey') || TMDB_RAW_KEY.length > 50;
 
 let lastTMDBRequest = 0;
 
@@ -27,14 +30,23 @@ async function tmdbFetch<T>(path: string, params?: Record<string, string>): Prom
   }
   lastTMDBRequest = Date.now();
 
-  const urlParams = new URLSearchParams({ api_key: TMDB_API_KEY, ...params });
-  const url = `${TMDB_BASE}${path}?${urlParams}`;
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  let queryParams = { ...params };
+
+  if (isBearerToken) {
+    headers['Authorization'] = `Bearer ${TMDB_RAW_KEY}`;
+  } else {
+    queryParams = { api_key: TMDB_RAW_KEY, ...queryParams };
+  }
+
+  const urlParams = new URLSearchParams(queryParams);
+  const url = `${TMDB_BASE}${path}${urlParams.toString() ? `?${urlParams}` : ''}`;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT);
   try {
     const resp = await fetch(url, {
-      headers: { Accept: 'application/json' },
+      headers,
       signal: controller.signal,
     });
     if (!resp.ok) throw new Error(`TMDB ${resp.status}: ${path}`);
