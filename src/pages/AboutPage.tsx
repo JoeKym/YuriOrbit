@@ -56,6 +56,22 @@ export function AboutPage() {
         </ul>
       </div>
 
+      <div className="mt-10 card-surface p-6 border border-ink-800 bg-gradient-to-br from-ink-900 to-ink-950">
+        <h2 className="text-base font-semibold text-ink-50 mb-1">Crafted & Engineered by JoeKym Labs</h2>
+        <p className="text-sm text-ink-400 leading-relaxed mb-4">
+          YuriVerse is built and maintained by <strong className="text-ink-100">JoeKym Labs</strong>, a digital product studio dedicated to creating high-performance web products, sleek user experiences, and modern custom software.
+        </p>
+        <a
+          href="https://joekymlabs.onrender.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-lg bg-ink-800 px-4 py-2 text-xs font-semibold text-rose-300 hover:bg-ink-750 border border-ink-700 transition-colors"
+        >
+          <span>Visit JoeKym Labs</span>
+          <span className="text-ink-400">&rarr;</span>
+        </a>
+      </div>
+
       <div className="mt-10 text-center">
         <Link to="/discover" className="btn-primary">Start Exploring</Link>
       </div>

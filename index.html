@@ -2,22 +2,60 @@
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="YuriVerse — Your world of Girls' Love. Discover yuri manga, manhwa, webtoons, novels, movies, and dramas from across the world." />
-    <meta property="og:title" content="YuriVerse — Your world of Girls' Love" />
-    <meta property="og:description" content="Discover yuri manga, manhwa, webtoons, novels, movies, and dramas from across the world in one curated place." />
+
+    <!-- Favicons & App Icons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#0d0a14" />
+    <meta name="msapplication-TileColor" content="#0d0a14" />
+
+    <!-- Primary Meta Tags -->
+    <title>YuriVerse — Your World of Girls' Love</title>
+    <meta name="title" content="YuriVerse — Your World of Girls' Love" />
+    <meta name="description" content="Discover, track, and enjoy curated Yuri and Girls' Love anime, manga, manhwa, webtoons, light novels, and live-action dramas from around the globe." />
+    <meta name="keywords" content="yuri, girls love, GL, yuri manga, yuri manhwa, yuri anime, GL webtoons, shoujo ai, GL dramas, GL novels, YuriVerse, JoeKym Labs" />
+    <meta name="author" content="JoeKym Labs" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="YuriVerse" />
+    <meta property="og:title" content="YuriVerse — Your World of Girls' Love" />
+    <meta property="og:description" content="Discover, track, and enjoy curated Yuri and Girls' Love anime, manga, manhwa, webtoons, light novels, and live-action dramas from around the globe." />
+    <meta property="og:image" content="/android-chrome-512x512.png" />
+
+    <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="YuriVerse — Your World of Girls' Love" />
+    <meta name="twitter:description" content="Discover, track, and enjoy curated Yuri and Girls' Love anime, manga, manhwa, webtoons, light novels, and live-action dramas from around the globe." />
+    <meta name="twitter:image" content="/android-chrome-512x512.png" />
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-    <title>YuriVerse — Your world of Girls' Love</title>
-    <meta property="og:image" content="https://bolt.new/static/og_default.png">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:image" content="https://bolt.new/static/og_default.png">
-</head>
-  <body>
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "YuriVerse",
+      "description": "Your world of Girls' Love — anime, manga, manhwa, webtoons, novels, and dramas.",
+      "url": "https://yuriverse.onrender.com",
+      "creator": {
+        "@type": "Organization",
+        "name": "JoeKym Labs",
+        "url": "https://joekymlabs.onrender.com"
+      }
+    }
+    </script>
+  </head>
+  <body class="bg-ink-950 text-ink-50 selection:bg-rose-500/30 selection:text-rose-200">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

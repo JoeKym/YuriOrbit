@@ -3,6 +3,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { cn } from '@/lib/utils/format';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
+import { useIsAdmin } from '@/lib/auth/admin';
 
 const NAV_LINKS = [
   { to: '/', label: 'Home', exact: true },
@@ -20,6 +21,7 @@ const NAV_LINKS = [
 
 export function Navbar() {
   const { login, register, logout, user, isAuthenticated, isLoading } = useKindeAuth();
+  const { isAdmin } = useIsAdmin();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
@@ -90,14 +92,16 @@ export function Navbar() {
           {!isLoading && (
             isAuthenticated ? (
               <div className="flex items-center gap-2">
-                <Link
-                  to="/admin"
-                  className="hidden sm:flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-ink-300 hover:bg-ink-800 hover:text-ink-100 transition-colors"
-                  title="Admin Dashboard"
-                >
-                  <Shield className="h-3.5 w-3.5 text-rose-400" />
-                  <span>Admin</span>
-                </Link>
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className="hidden sm:flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-ink-300 hover:bg-ink-800 hover:text-ink-100 transition-colors"
+                    title="Admin Dashboard"
+                  >
+                    <Shield className="h-3.5 w-3.5 text-rose-400" />
+                    <span>Admin</span>
+                  </Link>
+                )}
                 <div className="flex items-center gap-2 rounded-full border border-ink-700 bg-ink-850 py-1 pl-1 pr-2.5">
                   {user?.picture ? (
                     <img
@@ -221,14 +225,16 @@ export function Navbar() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Link
-                        to="/admin"
-                        onClick={() => setMobileOpen(false)}
-                        className="rounded-lg p-2 text-ink-300 hover:bg-ink-800 hover:text-ink-100 transition-colors"
-                        title="Admin Dashboard"
-                      >
-                        <Shield className="h-4 w-4 text-rose-400" />
-                      </Link>
+                      {isAdmin && (
+                        <Link
+                          to="/admin"
+                          onClick={() => setMobileOpen(false)}
+                          className="rounded-lg p-2 text-ink-300 hover:bg-ink-800 hover:text-ink-100 transition-colors"
+                          title="Admin Dashboard"
+                        >
+                          <Shield className="h-4 w-4 text-rose-400" />
+                        </Link>
+                      )}
                       <button
                         onClick={() => logout()}
                         className="rounded-lg p-2 text-ink-400 hover:bg-ink-800 hover:text-rose-400 transition-colors"
