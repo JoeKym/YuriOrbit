@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: yuriverse
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: VITE_APP_NAME
+        value: YuriVerse
+      - key: VITE_TMDB_API_KEY
+        sync: false
+      - key: VITE_FIRECRAWL_API_KEY
+        sync: false

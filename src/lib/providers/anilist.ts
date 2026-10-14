@@ -5,7 +5,8 @@ const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
 const REQUEST_TIMEOUT = 15000;
 const REQUEST_DELAY = 350;
 
-const GL_GENRES = ["Yuri", "Girls' Love", "Shoujo Ai"];
+// AniList uses "Girls Love" (with space) as the official genre tag
+const GL_GENRES = ['Yuri', "Girls Love", 'Shoujo Ai'];
 
 const GENRE_MAP: Record<string, string> = {
   'Romance': 'Romance', 'Drama': 'Drama', 'Comedy': 'Comedy', 'Fantasy': 'Fantasy',
@@ -16,9 +17,14 @@ const GENRE_MAP: Record<string, string> = {
   'Slow Burn': 'Slow Burn',
 };
 
+// Maps our sort keys to AniList MediaSort enum values
 const SORT_MAP: Record<string, string> = {
-  POPULARITY: 'POPULARITY_DESC', SCORE: 'SCORE_DESC', NEWEST: 'START_DATE_DESC',
-  YEAR: 'START_DATE_DESC', TITLE: 'TITLE_ROMAJI',
+  POPULARITY: 'POPULARITY_DESC',
+  SCORE: 'SCORE_DESC',
+  NEWEST: 'START_DATE_DESC',
+  YEAR: 'START_DATE_DESC',
+  TITLE: 'TITLE_ROMAJI',
+  TRENDING: 'TRENDING_DESC',
 };
 
 const FORMAT_MAP: Partial<Record<ContentType, string[]>> = {
@@ -104,20 +110,24 @@ interface MediaFilterVars {
   status_in?: string[];
   seasonYear?: number;
   search?: string;
-  sort?: string;
 }
 
-const PAGE_QUERY = `query ($page: Int, $perPage: Int, $genre_in: [String], $genre: String, $format_in: [MediaFormat], $status_in: [MediaStatus], $seasonYear: Int, $search: String, $sort: MediaSort) {
+// FIX: sort is now inlined as a literal enum in each query rather than a variable
+// because AniList requires MediaSort enum type, not String — this fixes the 400 errors.
+function buildPageQuery(sortEnum: string): string {
+  return `query ($page: Int, $perPage: Int, $genre_in: [String], $genre: String, $format_in: [MediaFormat], $status_in: [MediaStatus], $seasonYear: Int, $search: String) {
   Page(page: $page, perPage: $perPage) {
     pageInfo { currentPage hasNextPage total perPage lastPage }
-    media(type: MANGA, genre_in: $genre_in, genre: $genre, format_in: $format_in, status_in: $status_in, seasonYear: $seasonYear, search: $search, sort: [$sort], isAdult: false) {
+    media(type: MANGA, genre_in: $genre_in, genre: $genre, format_in: $format_in, status_in: $status_in, seasonYear: $seasonYear, search: $search, sort: [${sortEnum}], isAdult: false) {
       ${MEDIA_FIELDS}
     }
   }
 }`;
+}
 
-async function fetchFiltered(vars: MediaFilterVars): Promise<PaginatedResult> {
-  const data = await anilistQuery(PAGE_QUERY, vars as unknown as Record<string, unknown>) as {
+async function fetchFiltered(vars: MediaFilterVars, sortEnum: string): Promise<PaginatedResult> {
+  const query = buildPageQuery(sortEnum);
+  const data = await anilistQuery(query, vars as unknown as Record<string, unknown>) as {
     Page: { pageInfo: { hasNextPage: boolean; total: number; currentPage: number; perPage: number }, media: unknown[] }
   };
   const items = (data.Page.media || []).map((m) => normalizeAniList(m as Parameters<typeof normalizeAniList>[0]));
@@ -130,36 +140,19 @@ async function fetchFiltered(vars: MediaFilterVars): Promise<PaginatedResult> {
   };
 }
 
-async function fetchGLBase(extra: Partial<MediaFilterVars> = {}, perPage = 20): Promise<ContentTitle[]> {
-  const result = await fetchFiltered({
-    page: 1,
-    perPage,
-    genre_in: GL_GENRES,
-    sort: 'POPULARITY_DESC',
-    ...extra,
-  });
+async function fetchGLBase(extra: Partial<MediaFilterVars> = {}, sortEnum: string, perPage = 20): Promise<ContentTitle[]> {
+  const result = await fetchFiltered(
+    { page: 1, perPage, genre_in: GL_GENRES, ...extra },
+    sortEnum
+  );
   return result.items;
 }
 
 export async function searchGLTitles(filter: ContentFilter, page = 1, perPage = 20): Promise<PaginatedResult> {
-  if (filter.query) {
-    const result = await fetchFiltered({
-      page,
-      perPage,
-      search: filter.query,
-      genre_in: GL_GENRES,
-      sort: SORT_MAP[filter.sort || 'POPULARITY'] || 'POPULARITY_DESC',
-    });
-    return result;
-  }
+  const sortEnum = SORT_MAP[filter.sort || 'POPULARITY'] || 'POPULARITY_DESC';
+  const extra: Partial<MediaFilterVars> = {};
 
-  const extra: Partial<MediaFilterVars> = {
-    sort: SORT_MAP[filter.sort || 'POPULARITY'] || 'POPULARITY_DESC',
-  };
-
-  if (filter.genre) {
-    extra.genre = GENRE_MAP[filter.genre] || filter.genre;
-  }
+  if (filter.genre) extra.genre = GENRE_MAP[filter.genre] || filter.genre;
   if (filter.year) extra.seasonYear = filter.year;
   if (filter.status && filter.status !== 'ALL') extra.status_in = [filter.status];
   if (filter.contentType && filter.contentType !== 'ALL') {
@@ -167,39 +160,38 @@ export async function searchGLTitles(filter: ContentFilter, page = 1, perPage = 
     if (fmts) extra.format_in = fmts;
   }
 
-  return fetchFiltered({
-    page,
-    perPage,
-    genre_in: GL_GENRES,
-    ...extra,
-  });
+  if (filter.query) {
+    return fetchFiltered({ page, perPage, search: filter.query, genre_in: GL_GENRES, ...extra }, sortEnum);
+  }
+
+  return fetchFiltered({ page, perPage, genre_in: GL_GENRES, ...extra }, sortEnum);
 }
 
 export async function getTrendingGL(perPage = 20): Promise<ContentTitle[]> {
-  return fetchGLBase({ sort: 'TRENDING_DESC' }, perPage);
+  return fetchGLBase({}, 'TRENDING_DESC', perPage);
 }
 
 export async function getPopularGL(perPage = 20): Promise<ContentTitle[]> {
-  return fetchGLBase({ sort: 'POPULARITY_DESC' }, perPage);
+  return fetchGLBase({}, 'POPULARITY_DESC', perPage);
 }
 
 export async function getRecentGL(perPage = 20): Promise<ContentTitle[]> {
-  return fetchGLBase({ sort: 'START_DATE_DESC' }, perPage);
+  return fetchGLBase({}, 'START_DATE_DESC', perPage);
 }
 
 export async function getCompletedGL(perPage = 20): Promise<ContentTitle[]> {
-  return fetchGLBase({ status_in: ['FINISHED'], sort: 'POPULARITY_DESC' }, perPage);
+  return fetchGLBase({ status_in: ['FINISHED'] }, 'POPULARITY_DESC', perPage);
 }
 
 export async function getGLByGenre(genre: string, perPage = 20): Promise<ContentTitle[]> {
   const g = GENRE_MAP[genre] || genre;
-  return fetchGLBase({ genre: g, sort: 'POPULARITY_DESC' }, perPage);
+  return fetchGLBase({ genre: g }, 'POPULARITY_DESC', perPage);
 }
 
 export async function getGLByContentType(contentType: ContentType, perPage = 30): Promise<ContentTitle[]> {
   const formats = FORMAT_MAP[contentType];
   if (!formats) return [];
-  return fetchGLBase({ format_in: formats, sort: 'POPULARITY_DESC' }, perPage);
+  return fetchGLBase({ format_in: formats }, 'POPULARITY_DESC', perPage);
 }
 
 export async function getTitleById(id: string): Promise<ContentTitle | null> {

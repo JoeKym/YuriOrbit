@@ -16,7 +16,7 @@ export type GLClassification = 'CONFIRMED_GL' | 'GL_RELATED' | 'NEEDS_REVIEW' | 
 
 export type ReleaseStatus = 'RELEASING' | 'FINISHED' | 'NOT_YET_RELEASED' | 'CANCELLED' | 'HIATUS' | 'UNKNOWN';
 
-export type SourceProvider = 'ANILIST' | 'MANGADEX' | 'TMDB' | 'CURATED';
+export type SourceProvider = 'ANILIST' | 'JIKAN' | 'MANGADEX' | 'TMDB' | 'CURATED';
 
 export interface Genre {
   id: number;

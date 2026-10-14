@@ -17,7 +17,7 @@ export function AdminPage() {
           <div>
             <h2 className="text-lg font-semibold text-ink-50">Admin Access Unavailable</h2>
             <p className="mt-1 text-sm text-ink-400 leading-relaxed">
-              The administration dashboard requires a configured backend with server-verified admin privileges. No Supabase backend is currently configured for this deployment.
+              The administration dashboard requires a configured backend with server-verified admin privileges. No backend server is currently configured for this deployment.
             </p>
           </div>
         </div>

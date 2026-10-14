@@ -89,9 +89,9 @@ export function SettingsPage() {
           <div className="flex gap-3">
             <Info className="h-5 w-5 flex-shrink-0 text-lavender-400" />
             <div>
-              <h2 className="mb-1 text-sm font-semibold text-ink-50">About Guest Mode</h2>
+              <h2 className="mb-1 text-sm font-semibold text-ink-50">Local Storage Mode</h2>
               <p className="text-sm text-ink-400">
-                You're using YuriVerse in guest mode. Your library, favourites, and preferences are saved in this browser only. Sign in with a Supabase account (when available) to sync across devices.
+                YuriVerse stores your library, favourites, and preferences locally in your browser using IndexedDB (with localStorage as a backup). No account or sign-in is needed. Export your data regularly to avoid losing it if you clear browser storage.
               </p>
             </div>
           </div>
