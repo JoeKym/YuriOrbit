@@ -6,10 +6,10 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import type { LibraryEntry, LibraryStatus, ContentTitle } from '@/types/content';
 
-const DB_NAME = 'yuriverse';
+const DB_NAME = 'yuriorbit';
 const DB_VERSION = 1;
 const STORE_NAME = 'library';
-const LS_KEY = 'yuriverse:library';
+const LS_KEY = 'yuriorbit:library';
 
 // ─── IndexedDB helpers ────────────────────────────────────────────────────────
 

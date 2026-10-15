@@ -32,7 +32,7 @@ export function AdminPage() {
             <div>
               <h2 className="text-xl font-semibold text-ink-50">Authentication Required</h2>
               <p className="mt-1 text-sm text-ink-400 leading-relaxed">
-                Sign in with your Kinde account to access administration, role-based controls, and user management for YuriVerse.
+                Sign in with your Kinde account to access administration, role-based controls, and user management for YuriOrbit.
               </p>
             </div>
           </div>
@@ -68,7 +68,7 @@ export function AdminPage() {
           <div className="rounded-lg border border-ink-800 bg-ink-850 p-4 mb-6 text-xs text-ink-400 space-y-2">
             <p className="font-medium text-ink-200">How to authorize an Administrator:</p>
             <ol className="list-decimal ml-4 space-y-1">
-              <li>Open your Kinde Admin Console at <a href="https://yuriverse.kinde.com/admin" target="_blank" rel="noopener noreferrer" className="text-rose-400 underline">yuriverse.kinde.com/admin</a>.</li>
+              <li>Open your Kinde Admin Console at <a href="https://yuriorbit.kinde.com/admin" target="_blank" rel="noopener noreferrer" className="text-rose-400 underline">yuriorbit.kinde.com/admin</a>.</li>
               <li>Go to <strong>Users</strong> &rarr; find your user account &rarr; assign the <strong>admin</strong> role or permission.</li>
               <li>Alternatively, set <code className="bg-ink-900 px-1.5 py-0.5 rounded text-ink-200">VITE_ADMIN_EMAILS={user?.email}</code> in your environment variables.</li>
             </ol>
@@ -135,7 +135,7 @@ export function AdminPage() {
             </p>
 
             <a
-              href="https://yuriverse.kinde.com/admin"
+              href="https://yuriorbit.kinde.com/admin"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-lg bg-ink-800 px-4 py-2.5 text-sm font-semibold text-ink-50 hover:bg-ink-750 border border-ink-700 transition-colors"

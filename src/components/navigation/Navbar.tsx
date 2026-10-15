@@ -85,12 +85,12 @@ export function Navbar() {
         <Link to="/" className="flex items-center gap-2.5 flex-shrink-0 group">
           <img
             src="/apple-touch-icon.png"
-            alt="YuriVerse"
+            alt="YuriOrbit"
             className="h-9 w-9 rounded-xl shadow-md shadow-rose-500/20 transition-transform duration-200 group-hover:scale-105"
           />
           <div className="flex flex-col">
             <span className="font-display text-xl font-bold tracking-tight text-ink-50 transition-colors group-hover:text-rose-200">
-              YuriVerse
+              YuriOrbit
             </span>
           </div>
         </Link>

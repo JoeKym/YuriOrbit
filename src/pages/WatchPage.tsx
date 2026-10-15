@@ -105,7 +105,7 @@ export function WatchPage() {
         <div className="mt-8 rounded-xl border border-ink-800 bg-ink-900 p-6">
           <h2 className="mb-3 text-lg font-semibold text-ink-50">Watch Options</h2>
           <p className="mb-4 text-sm text-ink-400">
-            YuriVerse provides metadata and discovery for GL films and series. Direct playback requires visiting an authorized streaming platform. We do not host or redistribute copyrighted video.
+            YuriOrbit provides metadata and discovery for GL films and series. Direct playback requires visiting an authorized streaming platform. We do not host or redistribute copyrighted video.
           </p>
 
           {title.externalLinks.length > 0 ? (
@@ -136,7 +136,7 @@ export function WatchPage() {
 
         <div className="mt-6 text-center">
           <p className="text-xs text-ink-400">
-            Source: {title.provider} · YuriVerse does not host copyrighted content.
+            Source: {title.provider} · YuriOrbit does not host copyrighted content.
           </p>
         </div>
       </div>

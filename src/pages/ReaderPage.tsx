@@ -162,7 +162,7 @@ export function ReaderPage() {
           </div>
           <h3 className="mb-2 text-lg font-medium">Read on the official source</h3>
           <p className="mb-4 text-sm opacity-70 max-w-md mx-auto">
-            YuriVerse provides metadata and discovery. Reading this title's full chapters requires visiting an authorized source. We do not host or proxy copyrighted pages.
+            YuriOrbit provides metadata and discovery. Reading this title's full chapters requires visiting an authorized source. We do not host or proxy copyrighted pages.
           </p>
 
           {title.externalLinks.length > 0 && (
@@ -210,7 +210,7 @@ export function ReaderPage() {
 
         <div className="mt-6 text-center">
           <p className="text-xs opacity-50">
-            Source: {title.provider} · YuriVerse does not host copyrighted content.
+            Source: {title.provider} · YuriOrbit does not host copyrighted content.
           </p>
         </div>
       </div>

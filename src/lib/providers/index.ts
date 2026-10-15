@@ -1,5 +1,5 @@
 /**
- * Unified provider index for YuriVerse.
+ * Unified provider index for YuriOrbit.
  * Aggregates content from AniList, Jikan (MAL), MangaDex, and TMDB.
  * All providers are free and require no authentication.
  */

@@ -33,7 +33,7 @@ const FOOTER_SECTIONS = [
     links: [
       { to: '/library', label: 'My Library' },
       { to: '/settings', label: 'Settings' },
-      { to: '/about', label: 'About YuriVerse' },
+      { to: '/about', label: 'About YuriOrbit' },
     ],
   },
   {
@@ -55,7 +55,7 @@ export function Footer() {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500 to-lavender-600">
                 <Heart className="h-4 w-4 text-white" fill="white" />
               </div>
-              <span className="font-display text-xl font-semibold text-ink-50">YuriVerse</span>
+              <span className="font-display text-xl font-semibold text-ink-50">YuriOrbit</span>
             </Link>
             <p className="text-sm text-ink-400 max-w-xs leading-relaxed mb-4">
               Your world of Girls' Love. Discover yuri manga, manhwa, webtoons, novels, movies, and dramas from across the world.
@@ -95,10 +95,10 @@ export function Footer() {
 
         <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-ink-800 pt-6 sm:flex-row">
           <p className="text-xs text-ink-400">
-            Powered by AniList, Jikan, MangaDex & TMDB. YuriVerse is a discovery platform and does not host copyrighted media.
+            Powered by AniList, Jikan, MangaDex & TMDB. YuriOrbit is a discovery platform and does not host copyrighted media.
           </p>
           <p className="text-xs text-ink-400">
-            © {new Date().getFullYear()} YuriVerse. Built with care by{' '}
+            © {new Date().getFullYear()} YuriOrbit. Built with care by{' '}
             <a
               href="https://joekymlabs.onrender.com"
               target="_blank"

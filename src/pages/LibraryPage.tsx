@@ -35,7 +35,7 @@ export function LibraryPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'yuriverse-library.json';
+    a.download = 'yuriorbit-library.json';
     a.click();
     URL.revokeObjectURL(url);
   };

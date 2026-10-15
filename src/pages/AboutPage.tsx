@@ -8,13 +8,13 @@ export function AboutPage() {
         <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 to-lavender-600 mb-4">
           <Heart className="h-7 w-7 text-white" fill="white" />
         </div>
-        <h1 className="font-display text-4xl font-semibold text-ink-50">YuriVerse</h1>
+        <h1 className="font-display text-4xl font-semibold text-ink-50">YuriOrbit</h1>
         <p className="mt-2 text-lg text-ink-300">Your world of Girls' Love.</p>
       </div>
 
       <div className="prose prose-invert max-w-none">
         <p className="text-ink-300 leading-relaxed">
-          YuriVerse is a dedicated discovery platform for Girls' Love (GL), yuri, and female-female romance content across manga, manhwa, manhua, webtoons, light novels, web novels, movies, dramas, and television series.
+          YuriOrbit is a dedicated discovery platform for Girls' Love (GL), yuri, and female-female romance content across manga, manhwa, manhua, webtoons, light novels, web novels, movies, dramas, and television series.
         </p>
         <p className="mt-4 text-ink-300 leading-relaxed">
           Our mission is to make it easy to discover, organize, and access GL entertainment from different countries, formats, and legitimate publishing or viewing sources through one coherent platform — without depending on manual content uploads.
@@ -59,7 +59,7 @@ export function AboutPage() {
       <div className="mt-10 card-surface p-6 border border-ink-800 bg-gradient-to-br from-ink-900 to-ink-950">
         <h2 className="text-base font-semibold text-ink-50 mb-1">Crafted & Engineered by JoeKym Labs</h2>
         <p className="text-sm text-ink-400 leading-relaxed mb-4">
-          YuriVerse is built and maintained by <strong className="text-ink-100">JoeKym Labs</strong>, a digital product studio dedicated to creating high-performance web products, sleek user experiences, and modern custom software.
+          YuriOrbit is built and maintained by <strong className="text-ink-100">JoeKym Labs</strong>, a digital product studio dedicated to creating high-performance web products, sleek user experiences, and modern custom software.
         </p>
         <a
           href="https://joekymlabs.onrender.com"

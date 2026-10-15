@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: yuriverse
+    name: yuriorbit
     runtime: static
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
@@ -12,11 +12,11 @@ services:
       - key: NODE_VERSION
         value: 20
       - key: VITE_APP_NAME
-        value: YuriVerse
+        value: YuriOrbit
       - key: VITE_KINDE_CLIENT_ID
         value: 488dc9038b0d4282977f5e6e7b3b3d0b
       - key: VITE_KINDE_DOMAIN
-        value: https://yuriverse.kinde.com
+        value: https://yuriorbit.kinde.com
       - key: VITE_TMDB_API_KEY
         sync: false
       - key: VITE_FIRECRAWL_API_KEY

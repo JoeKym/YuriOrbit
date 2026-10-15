@@ -299,7 +299,7 @@ export function TitleDetailPage() {
               ))}
             </div>
             <p className="mt-2 text-xs text-ink-400">
-              Metadata sourced from {title.provider}. YuriVerse does not host copyrighted content.
+              Metadata sourced from {title.provider}. YuriOrbit does not host copyrighted content.
             </p>
           </div>
         )}

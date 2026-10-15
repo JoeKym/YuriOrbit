@@ -14,7 +14,7 @@ export function SettingsPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'yuriverse-settings.json';
+    a.download = 'yuriorbit-settings.json';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -29,7 +29,7 @@ export function SettingsPage() {
       <div className="space-y-6">
         <section className="card-surface p-5">
           <h2 className="mb-1 text-lg font-semibold text-ink-50">Appearance</h2>
-          <p className="mb-4 text-sm text-ink-400">Customize how YuriVerse looks.</p>
+          <p className="mb-4 text-sm text-ink-400">Customize how YuriOrbit looks.</p>
           <div className="space-y-3">
             <div>
               <label className="mb-1.5 block text-xs font-medium text-ink-300">Theme</label>
@@ -91,7 +91,7 @@ export function SettingsPage() {
             <div>
               <h2 className="mb-1 text-sm font-semibold text-ink-50">Local Storage Mode</h2>
               <p className="text-sm text-ink-400">
-                YuriVerse stores your library, favourites, and preferences locally in your browser using IndexedDB (with localStorage as a backup). No account or sign-in is needed. Export your data regularly to avoid losing it if you clear browser storage.
+                YuriOrbit stores your library, favourites, and preferences locally in your browser using IndexedDB (with localStorage as a backup). No account or sign-in is needed. Export your data regularly to avoid losing it if you clear browser storage.
               </p>
             </div>
           </div>
