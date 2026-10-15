@@ -1,7 +1,7 @@
 import type { ContentTitle, ContentFilter, PaginatedResult, ContentType } from '@/types/content';
 import { normalizeAniList } from './normalize';
 
-const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
+const ANILIST_ENDPOINT = '/api/anilist';
 const REQUEST_TIMEOUT = 15000;
 const REQUEST_DELAY = 350;
 

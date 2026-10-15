@@ -135,14 +135,14 @@ export function AdminPage() {
             </p>
 
             <a
-              href="https://yuriorbit.kinde.com/admin"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-lg bg-ink-800 px-4 py-2.5 text-sm font-semibold text-ink-50 hover:bg-ink-750 border border-ink-700 transition-colors"
-            >
-              <span>Open Kinde Admin Dashboard</span>
-              <ExternalLink className="h-4 w-4 text-ink-400" />
-            </a>
+                          href="https://yuriverse.kinde.com/admin"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 rounded-lg bg-ink-800 px-4 py-2.5 text-sm font-semibold text-ink-50 hover:bg-ink-750 border border-ink-700 transition-colors"
+                        >
+                          <span>Open Kinde Admin Dashboard</span>
+                          <ExternalLink className="h-4 w-4 text-ink-400" />
+                        </a>
 
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-ink-300">
               <div className="rounded-lg border border-ink-800 bg-ink-850 p-3.5 flex items-start gap-2.5">

@@ -7,7 +7,7 @@
 import type { ContentTitle, PaginatedResult, ContentFilter } from '@/types/content';
 import { classifyGL, GL_ALLOWED_CLASSIFICATIONS } from './classify';
 
-const TMDB_BASE = 'https://api.themoviedb.org/3';
+const TMDB_BASE = '/api/tmdb';
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
 const TIMEOUT = 15000;
 const REQUEST_DELAY = 250;

@@ -3,9 +3,11 @@ import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
 import dyadComponentTagger from '@dyad-sh/react-vite-component-tagger';
 
+import { nitro } from "nitro/vite";
+
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [dyadComponentTagger(), react()],
+  plugins: [dyadComponentTagger(), react(), nitro()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
