@@ -24,7 +24,7 @@ import { KindeProvider } from '@kinde-oss/kinde-auth-react';
 const clean = (val?: string) => (!val || val.trim() === '' || val.trim().toLowerCase() === 'value' ? undefined : val.trim());
 
 const KINDE_CLIENT_ID = clean(import.meta.env.VITE_KINDE_CLIENT_ID) || '488dc9038b0d4282977f5e6e7b3b3d0b';
-const KINDE_DOMAIN = clean(import.meta.env.VITE_KINDE_DOMAIN) || 'https://yuriorbit.kinde.com';
+const KINDE_DOMAIN = clean(import.meta.env.VITE_KINDE_DOMAIN) || 'https://yuriverse.kinde.com';
 const REDIRECT_URI = clean(import.meta.env.VITE_KINDE_REDIRECT_URI) || (typeof window !== 'undefined' ? window.location.origin : '');
 const LOGOUT_URI = clean(import.meta.env.VITE_KINDE_LOGOUT_URI) || (typeof window !== 'undefined' ? window.location.origin : '');
 

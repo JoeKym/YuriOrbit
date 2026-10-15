@@ -68,7 +68,7 @@ export function AdminPage() {
           <div className="rounded-lg border border-ink-800 bg-ink-850 p-4 mb-6 text-xs text-ink-400 space-y-2">
             <p className="font-medium text-ink-200">How to authorize an Administrator:</p>
             <ol className="list-decimal ml-4 space-y-1">
-              <li>Open your Kinde Admin Console at <a href="https://yuriorbit.kinde.com/admin" target="_blank" rel="noopener noreferrer" className="text-rose-400 underline">yuriorbit.kinde.com/admin</a>.</li>
+              <li>Open your Kinde Admin Console at <a href="https://yuriverse.kinde.com/admin" target="_blank" rel="noopener noreferrer" className="text-rose-400 underline">yuriverse.kinde.com/admin</a>.</li>
               <li>Go to <strong>Users</strong> &rarr; find your user account &rarr; assign the <strong>admin</strong> role or permission.</li>
               <li>Alternatively, set <code className="bg-ink-900 px-1.5 py-0.5 rounded text-ink-200">VITE_ADMIN_EMAILS={user?.email}</code> in your environment variables.</li>
             </ol>
