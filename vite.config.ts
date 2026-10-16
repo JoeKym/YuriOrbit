@@ -7,7 +7,7 @@ import { nitro } from "nitro/vite";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [dyadComponentTagger(), react(), nitro()],
+  plugins: [dyadComponentTagger(), react()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
