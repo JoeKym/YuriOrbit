@@ -6,7 +6,7 @@ import type { ContentTitle, PaginatedResult, ContentFilter } from '@/types/conte
 import { classifyGL, GL_ALLOWED_CLASSIFICATIONS } from './classify';
 import { normalizeAniList } from './normalize';
 
-const JIKAN_BASE = '/api/jikan';
+const JIKAN_BASE = 'https://api.jikan.moe/v4';
 const REQUEST_DELAY = 500; // Jikan rate limit: 3 req/s burst, 60/min
 const TIMEOUT = 15000;
 
