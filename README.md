@@ -1,4 +1,4 @@
-# YuriOrbit 🪐
+# YuriOrbit [https://yuriverse.onrender.com/apple-touch-icon.png]
 
 > Discover, track, and curate Yuri and Girls' Love anime, manga, manhwa, webtoons, light novels, and live-action dramas worldwide.
 
