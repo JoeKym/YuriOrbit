@@ -6,7 +6,7 @@
 import type { ContentTitle, PaginatedResult, ContentFilter, ChapterInfo } from '@/types/content';
 import { classifyGL, GL_ALLOWED_CLASSIFICATIONS } from './classify';
 
-const MANGADEX_BASE = '/api/mangadex';
+const MANGADEX_BASE = 'https://api.mangadex.org';
 const TIMEOUT = 15000;
 const REQUEST_DELAY = 300; // Be polite to MangaDex
 
