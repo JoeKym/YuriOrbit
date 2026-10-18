@@ -9,7 +9,7 @@ import type {
 } from '@/types/content';
 import { classifyGL } from './classify';
 
-interface AniListMedia {
+export interface AniListMedia {
   id: number;
   idMal?: number;
   title?: {
@@ -96,6 +96,7 @@ function stripHtml(html?: string): string | undefined {
 }
 
 export function normalizeAniList(media: AniListMedia): ContentTitle {
+
   const title = media.title?.english || media.title?.romaji || media.title?.native || 'Unknown Title';
   const altTitles = media.synonyms || [
     media.title?.romaji,
@@ -172,3 +173,5 @@ export function normalizeAniList(media: AniListMedia): ContentTitle {
     updatedAt: new Date().toISOString(),
   };
 }
+
+export const normalizeAniListMedia = normalizeAniList;
