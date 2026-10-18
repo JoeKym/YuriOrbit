@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { AlertCircle, RotateCcw, Search } from 'lucide-react';
 import { ContentCardGrid, ContentCardSkeleton } from '@/components/content/ContentCard';
 import type { ContentTitle } from '@/types/content';
 import { getTrendingGL } from '@/lib/providers';
@@ -8,11 +10,13 @@ export function TrendingPage() {
   const [titles, setTitles] = useState<ContentTitle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       setLoading(true);
+      setError(false);
       try {
         const result = await getTrendingGL(40);
         if (cancelled) return;
@@ -25,7 +29,7 @@ export function TrendingPage() {
     }
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [reloadKey]);
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
@@ -37,9 +41,28 @@ export function TrendingPage() {
           {Array.from({ length: 14 }).map((_, i) => <ContentCardSkeleton key={i} />)}
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-ink-400 mb-4">Failed to load trending titles.</p>
-          <button onClick={() => window.location.reload()} className="btn-primary">Retry</button>
+        <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl border border-ink-800 bg-ink-900/40 p-8">
+          <AlertCircle className="h-10 w-10 text-rose-400 mb-3" />
+          <h3 className="text-base font-semibold text-ink-100">Unable to load trending titles</h3>
+          <p className="mt-1 text-xs text-ink-400 max-w-sm">
+            We encountered a network or rate limit issue fetching trending content.
+          </p>
+          <div className="mt-4 flex gap-3">
+            <button onClick={() => setReloadKey((k) => k + 1)} className="btn-primary text-xs flex items-center gap-1.5">
+              <RotateCcw className="h-3.5 w-3.5" />
+              Try Again
+            </button>
+            <Link to="/discover" className="btn-secondary text-xs">Browse Discovery</Link>
+          </div>
+        </div>
+      ) : titles.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl border border-dashed border-ink-800 p-8">
+          <Search className="h-10 w-10 text-ink-600 mb-3" />
+          <h3 className="text-base font-medium text-ink-200">No trending titles available</h3>
+          <p className="mt-1 text-xs text-ink-400 max-w-sm">
+            Check back soon or explore titles on the discovery page.
+          </p>
+          <Link to="/discover" className="btn-secondary mt-4 text-xs">Browse all GL</Link>
         </div>
       ) : (
         <ContentCardGrid titles={titles} />

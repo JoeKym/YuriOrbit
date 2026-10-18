@@ -1,34 +1,49 @@
 import type { ContentTitle, GLClassification } from '@/types/content';
 
+const normalizeStr = (s: string) => s.toLowerCase().replace(/['’]/g, '').trim();
+
 const GL_GENRES = new Set([
   'yuri',
   'girls love',
+  "girls' love",
   'gl',
   'shoujo ai',
+  'shoujo-ai',
+  'lesbian',
+  'sapphic',
+  'wlw',
 ]);
 
 const GL_TAGS = new Set([
   'yuri',
   'girls love',
+  "girls' love",
   'shoujo ai',
+  'shoujo-ai',
   'female protagonist',
   'female-female romance',
   'lesbian',
+  'sapphic',
+  'wlw',
   'ff romance',
 ]);
 
 const BL_GENRES = new Set([
   'boys love',
+  "boys' love",
   'bl',
   'yaoi',
   'shounen ai',
+  'shounen-ai',
 ]);
 
 const BL_TAGS = new Set([
   'yaoi',
   'boys love',
+  "boys' love",
   'bl',
   'shounen ai',
+  'shounen-ai',
   'male-male romance',
   'mm romance',
 ]);
@@ -36,6 +51,7 @@ const BL_TAGS = new Set([
 const GL_KEYWORDS = [
   'yuri',
   'girls love',
+  "girls' love",
   'shoujo ai',
   'female-female romance',
   'two girls',
@@ -49,6 +65,7 @@ const GL_KEYWORDS = [
 const BL_KEYWORDS = [
   'yaoi',
   'boys love',
+  "boys' love",
   'shounen ai',
   'male-male romance',
   'two boys',
@@ -67,17 +84,19 @@ export function classifyGL(title: {
   const tagNames = (title.tags || []).map((t) => t.name.toLowerCase().trim());
   const descText = `${title.title || ''} ${(title.altTitles || []).join(' ')} ${title.description || ''}`.toLowerCase();
 
-  if (genres.some((g) => BL_GENRES.has(g)) || tagNames.some((t) => BL_TAGS.has(t))) {
-    if (!genres.some((g) => GL_GENRES.has(g)) && !tagNames.some((t) => GL_TAGS.has(t))) {
+  const isGLGenre = genres.some((g) => GL_GENRES.has(g) || normalizeStr(g) === 'girls love' || normalizeStr(g) === 'shoujo ai');
+  const isGLTag = tagNames.some((t) => GL_TAGS.has(t) || normalizeStr(t) === 'girls love' || normalizeStr(t) === 'shoujo ai');
+
+  const isBLGenre = genres.some((g) => BL_GENRES.has(g) || normalizeStr(g) === 'boys love');
+  const isBLTag = tagNames.some((t) => BL_TAGS.has(t) || normalizeStr(t) === 'boys love');
+
+  if (isBLGenre || isBLTag) {
+    if (!isGLGenre && !isGLTag) {
       return 'EXCLUDED';
     }
   }
 
-  if (genres.some((g) => GL_GENRES.has(g))) {
-    return 'CONFIRMED_GL';
-  }
-
-  if (tagNames.some((t) => GL_TAGS.has(t))) {
+  if (isGLGenre || isGLTag) {
     return 'CONFIRMED_GL';
   }
 
@@ -94,10 +113,12 @@ export function classifyGL(title: {
     return 'GL_RELATED';
   }
 
-  const glTags = tagNames.filter((t) =>
-    t.includes('yuri') || t.includes('girls love') || t.includes('shoujo ai') || t.includes('lesbian') || t.includes('sapphic')
-  );
-  if (glTags.length > 0) {
+  const glTagsOrGenres = [...tagNames, ...genres].filter((t) => {
+    const clean = normalizeStr(t);
+    return clean.includes('yuri') || clean.includes('girls love') || clean.includes('shoujo ai') || clean.includes('lesbian') || clean.includes('sapphic');
+  });
+
+  if (glTagsOrGenres.length > 0) {
     return 'CONFIRMED_GL';
   }
 

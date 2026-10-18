@@ -3,7 +3,7 @@
  * Used for manga/manhwa/manhua chapter lists and GL content discovery.
  * Docs: https://api.mangadex.org/docs/
  */
-import type { ContentTitle, PaginatedResult, ContentFilter, ChapterInfo } from '@/types/content';
+import type { ContentTitle, PaginatedResult, ContentFilter, ChapterInfo, Tag } from '@/types/content';
 import { classifyGL, GL_ALLOWED_CLASSIFICATIONS } from './classify';
 
 const MANGADEX_BASE = 'https://api.mangadex.org';
@@ -24,7 +24,8 @@ async function mdFetch<T>(path: string, params?: Record<string, string | string[
   if (params) {
     for (const [k, v] of Object.entries(params)) {
       if (Array.isArray(v)) {
-        v.forEach((item) => urlParams.append(k + '[]', item));
+        const key = k.endsWith('[]') ? k : `${k}[]`;
+        v.forEach((item) => urlParams.append(key, item));
       } else {
         urlParams.set(k, v);
       }
@@ -181,7 +182,12 @@ function normalizeMangaDex(m: MDManga): ContentTitle {
   const contentType = mapMDContentType(attrs.originalLanguage);
   const coverImage = getCoverUrl(m.relationships, m.id);
 
-  const glClassification = classifyGL({ genres, description, title, altTitles });
+  const tags: Tag[] = attrs.tags.map((t, idx) => ({
+    id: idx + 1,
+    name: getBestText(t.attributes.name),
+  }));
+
+  const glClassification = classifyGL({ genres, tags, description, title, altTitles });
 
   return {
     id: `MANGADEX-${m.id}`,
@@ -193,7 +199,7 @@ function normalizeMangaDex(m: MDManga): ContentTitle {
     contentType,
     coverImage,
     genres,
-    tags: [],
+    tags,
     status: mapMDStatusInternal(attrs.status),
     releaseYear: attrs.year,
     externalLinks: [
@@ -216,8 +222,8 @@ export async function mangadexSearchGL(filter: ContentFilter, page = 1, perPage 
   const [orderField, orderDir] = mapMDSort(filter.sort).split(':');
 
   const params: Record<string, string | string[]> = {
-    'includedTags[]': GL_TAG_IDS,
-    'excludedTags[]': EXCLUDE_TAG_IDS,
+    includedTags: GL_TAG_IDS,
+    excludedTags: EXCLUDE_TAG_IDS,
     includes: ['cover_art'],
     limit: String(Math.min(perPage, 100)),
     offset: String(offset),

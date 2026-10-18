@@ -16,7 +16,7 @@ import {
 } from './anilist';
 import { jikanSearchGL, jikanGetPopular, jikanGetById } from './jikan';
 import { mangadexSearchGL, mangadexGetPopular, mangadexGetById, mangadexGetChapters, mangadexGetChapterPages } from './mangadex';
-import { tmdbGetGLMovies, tmdbGetGLDramas, tmdbGetById } from './tmdb';
+import { tmdbGetGLMovies, tmdbGetGLDramas, tmdbGetById, tmdbSearchGL } from './tmdb';
 import { GL_ALLOWED_CLASSIFICATIONS } from './classify';
 
 export { classifyGL, filterGL, GL_ALLOWED_CLASSIFICATIONS } from './classify';
@@ -82,12 +82,16 @@ export async function getGLByGenre(genre: string, perPage = 20): Promise<Content
 }
 
 export async function getGLByContentType(contentType: ContentTitle['contentType'], perPage = 30): Promise<ContentTitle[]> {
-  // For movies/dramas pull from TMDB; for manga/manhwa/manhua use AniList + MangaDex
+  // For movies/dramas pull from TMDB with AniList fallback; for manga/manhwa/manhua use AniList
   if (contentType === 'MOVIE') {
-    return tmdbGetGLMovies();
+    const tmdbResults = await tmdbGetGLMovies().catch(() => []);
+    if (tmdbResults.length > 0) return tmdbResults;
+    return anilistByType('MOVIE', perPage);
   }
-  if (contentType === 'TV') {
-    return tmdbGetGLDramas();
+  if (contentType === 'TV' || contentType === 'DRAMA') {
+    const tmdbResults = await tmdbGetGLDramas().catch(() => []);
+    if (tmdbResults.length > 0) return tmdbResults;
+    return anilistByType('TV', perPage);
   }
   return anilistByType(contentType, perPage);
 }
@@ -97,36 +101,28 @@ export async function getGLByContentType(contentType: ContentTitle['contentType'
 export async function searchGLTitles(filter: ContentFilter, page = 1, perPage = 20): Promise<PaginatedResult> {
   const contentType = filter.contentType;
 
-  // Route movies/dramas to TMDB
-  if (contentType === 'MOVIE' || contentType === 'TV' || contentType === 'DRAMA') {
-    // TMDB doesn't export searchGL currently; fall through to AniList + MangaDex
-  }
-
-  // For manga/manhwa/manhua or general search, aggregate AniList + MangaDex + Jikan
-  const [anilistResult, mangadexResult, jikanResult] = await Promise.allSettled([
+  const promises: Promise<PaginatedResult>[] = [
     anilistSearch(filter, page, perPage),
     mangadexSearchGL(filter, page, perPage),
     jikanSearchGL(filter, page, perPage),
-  ]);
+  ];
+
+  if (contentType === 'MOVIE' || contentType === 'TV' || contentType === 'DRAMA' || !contentType || contentType === 'ALL') {
+    promises.push(tmdbSearchGL(filter, page));
+  }
+
+  const results = await Promise.allSettled(promises);
 
   const items: ContentTitle[] = [];
   let total = 0;
   let hasNextPage = false;
 
-  if (anilistResult.status === 'fulfilled') {
-    items.push(...anilistResult.value.items);
-    total = Math.max(total, anilistResult.value.total || 0);
-    hasNextPage = hasNextPage || anilistResult.value.hasNextPage;
-  }
-  if (mangadexResult.status === 'fulfilled') {
-    items.push(...mangadexResult.value.items);
-    total = Math.max(total, mangadexResult.value.total || 0);
-    hasNextPage = hasNextPage || mangadexResult.value.hasNextPage;
-  }
-  if (jikanResult.status === 'fulfilled') {
-    items.push(...jikanResult.value.items);
-    total = Math.max(total, jikanResult.value.total || 0);
-    hasNextPage = hasNextPage || jikanResult.value.hasNextPage;
+  for (const r of results) {
+    if (r.status === 'fulfilled') {
+      items.push(...r.value.items);
+      total = Math.max(total, r.value.total || 0);
+      hasNextPage = hasNextPage || r.value.hasNextPage;
+    }
   }
 
   const deduped = dedupe(items).filter((t) => GL_ALLOWED_CLASSIFICATIONS.includes(t.glClassification));

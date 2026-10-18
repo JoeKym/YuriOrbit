@@ -9,7 +9,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
-    "start": "node .output/server/index.mjs"
+    "start": "node .output/server/index.mjs",
+    "test:smoke": "node scripts/smoke-test.mjs",
+    "test": "npm run typecheck && npm run test:smoke"
   },
   "dependencies": {
     "@kinde-oss/kinde-auth-react": "^5.13.1",

@@ -14,48 +14,55 @@ export function HomePage() {
   const [sections, setSections] = useState<Record<string, ContentTitle[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const loadedRef = useRef(false);
+  const [loadKey, setLoadKey] = useState(0);
 
   useEffect(() => {
-    if (loadedRef.current) return;
-    loadedRef.current = true;
-
     let cancelled = false;
     async function load() {
       setLoading(true);
       setError(false);
       try {
+        const [trendingRes, popularRes, recentRes, completedRes] = await Promise.allSettled([
+          getTrendingGL(20),
+          getPopularGL(50),
+          getRecentGL(20),
+          getCompletedGL(20),
+        ]);
+
+        if (cancelled) return;
+
         const data: Record<string, ContentTitle[]> = {};
 
-        const trending = await getTrendingGL(20);
-        if (cancelled) return;
-        data['trending'] = filterGLTitles(trending);
+        const trending = trendingRes.status === 'fulfilled' ? filterGLTitles(trendingRes.value) : [];
+        const popular = popularRes.status === 'fulfilled' ? filterGLTitles(popularRes.value) : [];
+        const recent = recentRes.status === 'fulfilled' ? filterGLTitles(recentRes.value) : [];
+        const completed = completedRes.status === 'fulfilled' ? filterGLTitles(completedRes.value) : [];
 
-        const popular = await getPopularGL(50);
-        if (cancelled) return;
-        const filtered = filterGLTitles(popular);
+        data['trending'] = trending.length > 0 ? trending : popular.slice(0, 20);
 
-        data['popularManga'] = filtered.filter((t) => t.contentType === 'MANGA').slice(0, 20);
-        data['manhwa'] = filtered.filter((t) => t.contentType === 'MANHWA').slice(0, 20);
-        data['manhua'] = filtered.filter((t) => t.contentType === 'MANHUA').slice(0, 20);
-        data['novels'] = filtered.filter((t) => t.contentType === 'LIGHT_NOVEL').slice(0, 20);
+        const pool = popular.length > 0 ? popular : trending;
 
-        data['romance'] = filtered.filter((t) => t.genres.includes('Romance')).slice(0, 20);
-        data['fantasy'] = filtered.filter((t) => t.genres.some((g) => g === 'Fantasy' || g === 'Supernatural')).slice(0, 20);
-        data['schoolLife'] = filtered.filter((t) => t.genres.includes('School Life') || t.tags.some((tag) => tag.name === 'School')).slice(0, 20);
-        data['drama'] = filtered.filter((t) => t.genres.includes('Drama')).slice(0, 20);
-        data['historical'] = filtered.filter((t) => t.genres.includes('Historical')).slice(0, 20);
-        data['slowBurn'] = filtered.filter((t) => t.tags.some((tag) => tag.name.toLowerCase().includes('slow burn'))).slice(0, 20);
+        data['popularManga'] = pool.filter((t) => t.contentType === 'MANGA').slice(0, 20);
+        data['manhwa'] = pool.filter((t) => t.contentType === 'MANHWA').slice(0, 20);
+        data['manhua'] = pool.filter((t) => t.contentType === 'MANHUA').slice(0, 20);
+        data['novels'] = pool.filter((t) => t.contentType === 'LIGHT_NOVEL').slice(0, 20);
 
-        const recent = await getRecentGL(20);
-        if (cancelled) return;
-        data['recent'] = filterGLTitles(recent);
+        data['romance'] = pool.filter((t) => t.genres.includes('Romance')).slice(0, 20);
+        data['fantasy'] = pool.filter((t) => t.genres.some((g) => g === 'Fantasy' || g === 'Supernatural')).slice(0, 20);
+        data['schoolLife'] = pool.filter((t) => t.genres.includes('School Life') || t.tags.some((tag) => tag.name === 'School')).slice(0, 20);
+        data['drama'] = pool.filter((t) => t.genres.includes('Drama')).slice(0, 20);
+        data['historical'] = pool.filter((t) => t.genres.includes('Historical')).slice(0, 20);
+        data['slowBurn'] = pool.filter((t) => t.tags.some((tag) => tag.name.toLowerCase().includes('slow burn'))).slice(0, 20);
 
-        const completed = await getCompletedGL(20);
-        if (cancelled) return;
-        data['completed'] = filterGLTitles(completed);
+        data['recent'] = recent.length > 0 ? recent : pool.slice(0, 20);
+        data['completed'] = completed.length > 0 ? completed : pool.filter((t) => t.status === 'FINISHED').slice(0, 20);
 
-        if (!cancelled) setSections(data);
+        const hasAny = Object.values(data).some((arr) => arr.length > 0);
+        if (!hasAny) {
+          setError(true);
+        }
+
+        setSections(data);
       } catch {
         if (!cancelled) setError(true);
       } finally {
@@ -64,7 +71,7 @@ export function HomePage() {
     }
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [loadKey]);
 
   const get = (key: string) => sections[key] || [];
 
@@ -103,8 +110,16 @@ export function HomePage() {
 
       <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
         {error && (
-          <div className="mb-6 rounded-xl border border-error-500/30 bg-error-500/5 px-4 py-3 text-sm text-error-400">
-            Some content sections could not be loaded. This may be due to rate limits or connectivity issues. Please try again later.
+          <div className="mb-6 flex flex-col items-start justify-between gap-3 rounded-xl border border-error-500/30 bg-error-500/5 p-4 sm:flex-row sm:items-center">
+            <span className="text-sm text-error-400">
+              Some content sections could not be loaded due to temporary upstream connectivity.
+            </span>
+            <button
+              onClick={() => setLoadKey((k) => k + 1)}
+              className="rounded-lg bg-error-500/20 px-3 py-1.5 text-xs font-medium text-error-300 hover:bg-error-500/30 transition-colors"
+            >
+              Retry
+            </button>
           </div>
         )}
 

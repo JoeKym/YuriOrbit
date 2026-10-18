@@ -110,6 +110,8 @@ export function DiscoverPage() {
     setSearchInput(searchParams.get('q') || '');
   }, [searchParams]);
 
+  const [reloadKey, setReloadKey] = useState(0);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -139,7 +141,7 @@ export function DiscoverPage() {
     return () => {
       cancelled = true;
     };
-  }, [filter]);
+  }, [filter, reloadKey]);
 
   const loadMore = async () => {
     if (loadingMore || !hasNextPage) return;
@@ -495,7 +497,7 @@ export function DiscoverPage() {
             <button
               onClick={() => {
                 setError(false);
-                setSearchParams(new URLSearchParams(searchParams));
+                setReloadKey((k) => k + 1);
               }}
               className="btn-primary mt-4 text-xs"
             >

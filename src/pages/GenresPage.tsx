@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, AlertCircle, RotateCcw } from 'lucide-react';
 import type { ContentTitle } from '@/types/content';
 import { GENRE_LIST } from '@/types/content';
 import { getPopularGL } from '@/lib/providers';
@@ -12,11 +12,14 @@ const FEATURED_GENRES = ['Romance', 'Drama', 'Comedy', 'Fantasy', 'Historical', 
 export function GenresPage() {
   const [genreData, setGenreData] = useState<Record<string, ContentTitle[]>>({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       setLoading(true);
+      setError(false);
       try {
         const popular = await getPopularGL(50);
         if (cancelled) return;
@@ -30,16 +33,22 @@ export function GenresPage() {
             (g === 'Slow Burn' && t.tags.some((tag) => tag.name.toLowerCase().includes('slow burn')))
           ).slice(0, 6);
         }
+
+        const hasAnyContent = Object.values(data).some((arr) => arr.length > 0);
+        if (!hasAnyContent) {
+          setError(true);
+        }
+
         if (!cancelled) setGenreData(data);
       } catch {
-        // leave empty
+        if (!cancelled) setError(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [reloadKey]);
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
@@ -68,6 +77,21 @@ export function GenresPage() {
               </div>
             </section>
           ))}
+        </div>
+      ) : error || Object.values(genreData).every((titles) => !titles || titles.length === 0) ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl border border-ink-800 bg-ink-900/40 p-8">
+          <AlertCircle className="h-10 w-10 text-rose-400 mb-3" />
+          <h3 className="text-base font-semibold text-ink-100">Unable to load genre titles</h3>
+          <p className="mt-1 text-xs text-ink-400 max-w-sm">
+            We encountered an issue fetching popular titles. You can try again or explore titles directly.
+          </p>
+          <div className="mt-4 flex gap-3">
+            <button onClick={() => setReloadKey((k) => k + 1)} className="btn-primary text-xs flex items-center gap-1.5">
+              <RotateCcw className="h-3.5 w-3.5" />
+              Try Again
+            </button>
+            <Link to="/discover" className="btn-secondary text-xs">Browse Discovery</Link>
+          </div>
         </div>
       ) : (
         <div className="space-y-8">

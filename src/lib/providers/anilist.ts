@@ -104,19 +104,21 @@ async function anilistQuery(query: string, variables: Record<string, unknown>): 
 interface MediaFilterVars {
   page: number;
   perPage: number;
+  type?: 'MANGA' | 'ANIME';
   tag_in?: string[];
   genre?: string;
   format_in?: string[];
   status_in?: string[];
   seasonYear?: number;
   search?: string;
+  countryOfOrigin?: string;
 }
 
 function buildPageQuery(sortEnum: string): string {
-  return `query ($page: Int, $perPage: Int, $tag_in: [String], $genre: String, $format_in: [MediaFormat], $status_in: [MediaStatus], $seasonYear: Int, $search: String) {
+  return `query ($page: Int, $perPage: Int, $type: MediaType, $tag_in: [String], $genre: String, $format_in: [MediaFormat], $status_in: [MediaStatus], $seasonYear: Int, $search: String, $countryOfOrigin: CountryCode) {
   Page(page: $page, perPage: $perPage) {
     pageInfo { currentPage hasNextPage total perPage lastPage }
-    media(type: MANGA, tag_in: $tag_in, genre: $genre, format_in: $format_in, status_in: $status_in, seasonYear: $seasonYear, search: $search, sort: [${sortEnum}], isAdult: false) {
+    media(type: $type, tag_in: $tag_in, genre: $genre, format_in: $format_in, status_in: $status_in, seasonYear: $seasonYear, search: $search, countryOfOrigin: $countryOfOrigin, sort: [${sortEnum}], isAdult: false) {
       ${MEDIA_FIELDS}
     }
   }
@@ -154,8 +156,27 @@ export async function searchGLTitles(filter: ContentFilter, page = 1, perPage = 
   if (filter.year) extra.seasonYear = filter.year;
   if (filter.status && filter.status !== 'ALL') extra.status_in = [filter.status];
   if (filter.contentType && filter.contentType !== 'ALL') {
-    const fmts = FORMAT_MAP[filter.contentType as ContentType];
-    if (fmts) extra.format_in = fmts;
+    if (filter.contentType === 'MANHWA') {
+      extra.type = 'MANGA';
+      extra.countryOfOrigin = 'KR';
+      extra.format_in = ['MANGA', 'ONE_SHOT'];
+    } else if (filter.contentType === 'MANHUA') {
+      extra.type = 'MANGA';
+      extra.countryOfOrigin = 'CN';
+      extra.format_in = ['MANGA', 'ONE_SHOT'];
+    } else if (filter.contentType === 'MOVIE') {
+      extra.type = 'ANIME';
+      extra.format_in = ['MOVIE'];
+    } else if (filter.contentType === 'TV') {
+      extra.type = 'ANIME';
+      extra.format_in = ['TV', 'TV_SHORT', 'OVA', 'ONA'];
+    } else if (filter.contentType === 'LIGHT_NOVEL') {
+      extra.type = 'MANGA';
+      extra.format_in = ['NOVEL'];
+    } else if (filter.contentType === 'MANGA') {
+      extra.type = 'MANGA';
+      extra.format_in = ['MANGA', 'ONE_SHOT'];
+    }
   }
 
   if (filter.query) {
@@ -187,15 +208,35 @@ export async function getGLByGenre(genre: string, perPage = 20): Promise<Content
 }
 
 export async function getGLByContentType(contentType: ContentType, perPage = 30): Promise<ContentTitle[]> {
-  const formats = FORMAT_MAP[contentType];
-  if (!formats) return [];
-  return fetchGLBase({ format_in: formats }, 'POPULARITY_DESC', perPage);
+  const extra: Partial<MediaFilterVars> = {};
+  if (contentType === 'MANHWA') {
+    extra.type = 'MANGA';
+    extra.countryOfOrigin = 'KR';
+    extra.format_in = ['MANGA', 'ONE_SHOT'];
+  } else if (contentType === 'MANHUA') {
+    extra.type = 'MANGA';
+    extra.countryOfOrigin = 'CN';
+    extra.format_in = ['MANGA', 'ONE_SHOT'];
+  } else if (contentType === 'MOVIE') {
+    extra.type = 'ANIME';
+    extra.format_in = ['MOVIE'];
+  } else if (contentType === 'TV') {
+    extra.type = 'ANIME';
+    extra.format_in = ['TV', 'TV_SHORT', 'OVA', 'ONA'];
+  } else if (contentType === 'LIGHT_NOVEL') {
+    extra.type = 'MANGA';
+    extra.format_in = ['NOVEL'];
+  } else {
+    extra.type = 'MANGA';
+    extra.format_in = ['MANGA', 'ONE_SHOT'];
+  }
+  return fetchGLBase(extra, 'POPULARITY_DESC', perPage);
 }
 
 export async function getTitleById(id: string): Promise<ContentTitle | null> {
   const providerId = id.replace('ANILIST-', '');
   const query = `query ($id: Int) {
-    Media(id: $id, type: MANGA) {
+    Media(id: $id) {
       ${MEDIA_FIELDS}
     }
   }`;

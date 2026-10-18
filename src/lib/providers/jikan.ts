@@ -161,36 +161,40 @@ function normalizeJikan(m: JikanManga): ContentTitle {
 
 /** Search GL manga/manhwa via Jikan MAL. */
 export async function jikanSearchGL(filter: ContentFilter, page = 1, perPage = 24): Promise<PaginatedResult> {
-  const params = new URLSearchParams({
-    genres: '74', // MAL genre ID 74 = Girls Love (Yuri)
-    page: String(page),
-    limit: String(Math.min(perPage, 25)), // Jikan max 25/page
-    order_by: mapSortToJikan(filter.sort),
-    sort: 'desc',
-  });
+  try {
+    const params = new URLSearchParams({
+      genres: '74', // MAL genre ID 74 = Girls Love (Yuri)
+      page: String(page),
+      limit: String(Math.min(perPage, 25)), // Jikan max 25/page
+      order_by: mapSortToJikan(filter.sort),
+      sort: 'desc',
+    });
 
-  if (filter.query) params.set('q', filter.query);
-  if (filter.status && filter.status !== 'ALL') {
-    const s = mapStatusToJikan(filter.status);
-    if (s) params.set('status', s);
+    if (filter.query) params.set('q', filter.query);
+    if (filter.status && filter.status !== 'ALL') {
+      const s = mapStatusToJikan(filter.status);
+      if (s) params.set('status', s);
+    }
+    if (filter.year) {
+      params.set('start_date', `${filter.year}-01-01`);
+      params.set('end_date', `${filter.year}-12-31`);
+    }
+
+    const resp = await jikanFetch<JikanPageResponse<JikanManga>>(`/manga?${params}`);
+    const items = (resp.data || [])
+      .map(normalizeJikan)
+      .filter((t) => GL_ALLOWED_CLASSIFICATIONS.includes(t.glClassification));
+
+    return {
+      items,
+      page: resp.pagination?.current_page || page,
+      perPage: resp.pagination?.items?.per_page || perPage,
+      total: resp.pagination?.items?.total || items.length,
+      hasNextPage: resp.pagination?.has_next_page || false,
+    };
+  } catch {
+    return { items: [], page, perPage, total: 0, hasNextPage: false };
   }
-  if (filter.year) {
-    params.set('start_date', `${filter.year}-01-01`);
-    params.set('end_date', `${filter.year}-12-31`);
-  }
-
-  const resp = await jikanFetch<JikanPageResponse<JikanManga>>(`/manga?${params}`);
-  const items = resp.data
-    .map(normalizeJikan)
-    .filter((t) => GL_ALLOWED_CLASSIFICATIONS.includes(t.glClassification));
-
-  return {
-    items,
-    page: resp.pagination.current_page,
-    perPage: resp.pagination.items.per_page,
-    total: resp.pagination.items.total,
-    hasNextPage: resp.pagination.has_next_page,
-  };
 }
 
 /** Get a single title by MAL ID from Jikan. */
