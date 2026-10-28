@@ -87,6 +87,7 @@ async function run() {
     assert.equal(typeof mangadex.mangadexGetById, 'function');
     assert.equal(typeof mangadex.mangadexGetChapters, 'function');
     assert.equal(typeof mangadex.mangadexGetChapterPages, 'function');
+    assert.equal(typeof mangadex.mangadexFindMangaId, 'function');
   });
 
   await test('jikan.ts exports search, popular, and byId helpers', async () => {
@@ -124,6 +125,7 @@ async function run() {
       'getTitleById',
       'mangadexGetChapters',
       'mangadexGetChapterPages',
+      'mangadexFindMangaId',
     ];
     for (const fn of required) {
       assert.equal(typeof index[fn], 'function', `index.ts missing unified export: ${fn}`);

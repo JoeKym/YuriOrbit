@@ -290,6 +290,60 @@ export async function mangadexGetById(id: string): Promise<ContentTitle | null> 
 }
 
 /** Fetch the chapter list for a MangaDex manga ID. */
+/** Find a MangaDex manga ID by title or alternate titles. */
+export async function mangadexFindMangaId(title: string, altTitles?: string[]): Promise<string | null> {
+  const candidates: string[] = [];
+  const addCandidate = (s?: string) => {
+    if (!s) return;
+    const clean = s.trim();
+    if (clean && !candidates.includes(clean)) candidates.push(clean);
+    const noParen = clean.split('(')[0].split(' - ')[0].trim();
+    if (noParen && !candidates.includes(noParen)) candidates.push(noParen);
+  };
+
+  addCandidate(title);
+  if (altTitles) {
+    for (const alt of altTitles) addCandidate(alt);
+  }
+
+  for (const cand of candidates.slice(0, 4)) {
+    try {
+      const resp = await mdFetch<MDListResponse<MDManga>>('/manga', {
+        title: cand,
+        limit: '10',
+        contentRating: ['safe', 'suggestive', 'erotica'],
+      });
+
+      const items = resp.data || [];
+      if (items.length === 0) continue;
+
+      for (const item of items) {
+        const attrs = item.attributes;
+        const allTitles = Object.values(attrs.title || {});
+        if (Array.isArray(attrs.altTitles)) {
+          for (const alt of attrs.altTitles) {
+            allTitles.push(...Object.values(alt || {}));
+          }
+        }
+
+        const lowerTitles = allTitles.map((t) => typeof t === 'string' ? t.toLowerCase().trim() : '');
+        for (const c of candidates) {
+          if (lowerTitles.includes(c.toLowerCase().trim())) {
+            return item.id;
+          }
+        }
+      }
+
+      return items[0].id;
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
+/** Fetch the chapter list for a MangaDex manga ID with deduplication and order. */
 export async function mangadexGetChapters(mangaId: string, page = 1, perPage = 100): Promise<ChapterInfo[]> {
   const mdId = mangaId.replace('MANGADEX-', '');
   try {
@@ -298,17 +352,43 @@ export async function mangadexGetChapters(mangaId: string, page = 1, perPage = 1
       'order[chapter]': 'asc',
       limit: String(Math.min(perPage, 500)),
       offset: String((page - 1) * perPage),
-      contentRating: ['safe', 'suggestive'],
+      contentRating: ['safe', 'suggestive', 'erotica'],
     });
 
-    return resp.data.map((ch) => ({
-      id: ch.id,
-      number: parseFloat(ch.attributes.chapter || '0'),
-      title: ch.attributes.title || undefined,
-      pageCount: ch.attributes.pages,
-      readable: !ch.attributes.externalUrl,
-      externalUrl: ch.attributes.externalUrl || undefined,
-    }));
+    let data = resp.data || [];
+    if (data.length === 0) {
+      const fallbackResp = await mdFetch<MDListResponse<MDChapter>>(`/manga/${mdId}/feed`, {
+        'order[chapter]': 'asc',
+        limit: String(Math.min(perPage, 500)),
+        contentRating: ['safe', 'suggestive', 'erotica'],
+      });
+      data = fallbackResp.data || [];
+    }
+
+    const chapterMap = new Map<number, ChapterInfo>();
+    for (const ch of data) {
+      const num = parseFloat(ch.attributes.chapter || '0');
+      const isReadable = !ch.attributes.externalUrl && (ch.attributes.pages || 0) > 0;
+      const chapterObj: ChapterInfo = {
+        id: ch.id,
+        number: num,
+        title: ch.attributes.title || (num > 0 ? `Chapter ${num}` : 'Oneshot'),
+        pageCount: ch.attributes.pages,
+        readable: isReadable,
+        externalUrl: ch.attributes.externalUrl || undefined,
+      };
+
+      const existing = chapterMap.get(num);
+      if (!existing) {
+        chapterMap.set(num, chapterObj);
+      } else if (!existing.readable && isReadable) {
+        chapterMap.set(num, chapterObj);
+      } else if (existing.readable && isReadable && (chapterObj.pageCount || 0) > (existing.pageCount || 0)) {
+        chapterMap.set(num, chapterObj);
+      }
+    }
+
+    return Array.from(chapterMap.values()).sort((a, b) => a.number - b.number);
   } catch {
     return [];
   }

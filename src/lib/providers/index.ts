@@ -15,7 +15,7 @@ import {
   getTitleById as anilistById,
 } from './anilist';
 import { jikanSearchGL, jikanGetPopular, jikanGetById } from './jikan';
-import { mangadexSearchGL, mangadexGetPopular, mangadexGetById, mangadexGetChapters, mangadexGetChapterPages } from './mangadex';
+import { mangadexSearchGL, mangadexGetPopular, mangadexGetById, mangadexGetChapters, mangadexGetChapterPages, mangadexFindMangaId } from './mangadex';
 import { tmdbGetGLMovies, tmdbGetGLDramas, tmdbGetById, tmdbSearchGL } from './tmdb';
 import { GL_ALLOWED_CLASSIFICATIONS } from './classify';
 
@@ -23,7 +23,7 @@ export { classifyGL, filterGL, GL_ALLOWED_CLASSIFICATIONS } from './classify';
 export { normalizeAniList } from './normalize';
 
 // Re-export chapter helpers from MangaDex
-export { mangadexGetChapters, mangadexGetChapterPages };
+export { mangadexGetChapters, mangadexGetChapterPages, mangadexFindMangaId };
 
 /** De-duplicate titles from multiple providers using a stable key. */
 function dedupe(titles: ContentTitle[]): ContentTitle[] {
