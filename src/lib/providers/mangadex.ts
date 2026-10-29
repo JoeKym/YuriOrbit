@@ -6,7 +6,11 @@
 import type { ContentTitle, PaginatedResult, ContentFilter, ChapterInfo, Tag } from '@/types/content';
 import { classifyGL, GL_ALLOWED_CLASSIFICATIONS } from './classify';
 
-const MANGADEX_BASE = 'https://api.mangadex.org';
+const env = (import.meta as { env?: Record<string, string> }).env || {};
+const isBrowser = typeof window !== 'undefined';
+// Route via same-origin Cloudflare Pages Functions / Vite proxy in the browser,
+// or fallback to the direct MangaDex endpoint in Node/test environments.
+const MANGADEX_BASE = env.VITE_MANGADEX_API_URL || (isBrowser ? '/api/mangadex' : 'https://api.mangadex.org');
 const TIMEOUT = 15000;
 const REQUEST_DELAY = 300; // Be polite to MangaDex
 
