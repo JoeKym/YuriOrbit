@@ -20,10 +20,10 @@ YuriOrbit is a community-first media catalog and discovery platform dedicated to
 ## Tech Stack
 
 - **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons, React Router v7
-- **Edge Functions / Proxies:** Cloudflare Pages Functions (`functions/api/mangadex`, `functions/api/tmdb`) with edge caching and CORS handling
+- **MangaDex Proxy:** Lightweight Node proxy (`proxy/server.mjs`) with CORS headers and health check
 - **API Aggregation:** AniList GraphQL, MangaDex REST, Jikan REST, TMDB API
 - **Auth:** Kinde Auth (`@kinde-oss/kinde-auth-react`)
-- **Hosting:** Cloudflare Pages / Render
+- **Hosting:** Render (Static Site for frontend, Web Service for proxy)
 
 ---
 
@@ -52,7 +52,7 @@ YuriOrbit is a community-first media catalog and discovery platform dedicated to
    cp .env.example .env
    ```
 
-4. Start the development server (with built-in API proxies):
+4. Start the development server (with Vite's built-in API proxy):
    ```bash
    npm run dev
    ```
@@ -62,24 +62,26 @@ YuriOrbit is a community-first media catalog and discovery platform dedicated to
    npm run test
    ```
 
+6. Run the local MangaDex proxy (optional):
+   ```bash
+   npm run proxy
+   ```
+
 ---
 
-## Deployment to Cloudflare Pages
+## Deployment to Render
 
-Cloudflare Pages hosts both the static frontend and the serverless Edge Functions in `functions/`:
+YuriOrbit is configured as a multi-service Render Blueprint in `render.yaml`:
 
-1. In the **Cloudflare Dashboard**, navigate to **Compute (Workers & Pages)** > **Create** > **Pages** > **Connect to Git**.
-2. Select repository: `JoeKym/YuriOrbit`.
-3. Set the build configuration:
-   - **Framework preset:** `Vite`
-   - **Build command:** `npm run build`
-   - **Build output directory:** `dist`
-4. Set Environment Variables (in **Settings** > **Environment variables**):
-   - `VITE_KINDE_CLIENT_ID`: Your Kinde Client ID
-   - `VITE_KINDE_DOMAIN`: Your Kinde Domain (e.g. `https://your-domain.kinde.com`)
-   - `VITE_KINDE_REDIRECT_URI`: Your production URL (e.g. `https://yuriorbit.pages.dev`)
-   - `VITE_KINDE_LOGOUT_REDIRECT_URI`: Your production URL
-   - Optional Server Secrets (used by Pages Functions):
-     - `TMDB_READ_ACCESS_TOKEN` or `TMDB_API_KEY`: Custom TMDB key
-     - `MANGADEX_USER_AGENT`: Custom User-Agent (defaults to `YuriOrbit/1.0`)
-5. Click **Save and Deploy**.
+1. **`yuriorbit` (Static Site)**:
+   - Hosts the pre-built React frontend at `yuriorbit.onrender.com`.
+   - Fast, globally distributed static CDN with instant loads (no cold starts).
+   - SPA route rewrite (`/*` -> `/index.html`).
+   - Connects to the MangaDex proxy via `VITE_MANGADEX_API_URL`.
+
+2. **`yuriorbit-proxy` (Web Service)**:
+   - Lightweight Node server (`proxy/server.mjs`) deployed on Render at `yuriorbit-proxy.onrender.com`.
+   - Resolves browser CORS blocks by proxying requests to `https://api.mangadex.org`.
+   - Health check available at `/health`.
+
+In Render, connect the repo with your Blueprint or create the static site and proxy web service as defined in `render.yaml`.

@@ -1,4 +1,5 @@
 services:
+  # YuriOrbit Frontend (Static Site on Render)
   - type: web
     name: yuriorbit
     runtime: static
@@ -21,3 +22,17 @@ services:
         sync: false
       - key: VITE_FIRECRAWL_API_KEY
         sync: false
+      - key: VITE_MANGADEX_API_URL
+        value: https://yuriorbit-proxy.onrender.com
+
+  # MangaDex Lightweight Proxy (Web Service on Render)
+  - type: web
+    name: yuriorbit-proxy
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node proxy/server.mjs
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
