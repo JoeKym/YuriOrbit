@@ -1,7 +1,10 @@
-interface Env {}
+interface Env {
+  MANGADEX_API_KEY?: string;
+  MANGADEX_ACCESS_TOKEN?: string;
+}
 
 export const onRequest: PagesFunction<Env> = async (context) => {
-  const { request } = context;
+  const { request, env } = context;
 
   // Handle CORS preflight
   if (request.method === 'OPTIONS') {
@@ -21,7 +24,15 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   const headers = new Headers();
   headers.set('Accept', 'application/json');
-  headers.set('User-Agent', request.headers.get('user-agent') || 'YuriOrbit/1.0 (https://github.com/JoeKym/YuriOrbit)');
+  // MangaDex requires a dedicated client User-Agent. Forwarding browser user agents
+  // from datacenter IPs causes MangaDex's Cloudflare DDoS protection to return verification HTML.
+  headers.set('User-Agent', 'YuriOrbit/1.0.0 (+https://github.com/JoeKym/YuriOrbit; mail.jkyme@gmail.com)');
+
+  if (env.MANGADEX_ACCESS_TOKEN) {
+    headers.set('Authorization', `Bearer ${env.MANGADEX_ACCESS_TOKEN}`);
+  } else if (env.MANGADEX_API_KEY) {
+    headers.set('Authorization', `Bearer ${env.MANGADEX_API_KEY}`);
+  }
 
   try {
     const upstreamResponse = await fetch(targetUrl.toString(), {

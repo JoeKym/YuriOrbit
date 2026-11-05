@@ -43,6 +43,7 @@ export function HomePage() {
         const pool = popular.length > 0 ? popular : trending;
 
         data['popularManga'] = pool.filter((t) => t.contentType === 'MANGA').slice(0, 20);
+        data['anime'] = pool.filter((t) => t.contentType === 'TV' || t.contentType === 'MOVIE').slice(0, 20);
         data['manhwa'] = pool.filter((t) => t.contentType === 'MANHWA').slice(0, 20);
         data['manhua'] = pool.filter((t) => t.contentType === 'MANHUA').slice(0, 20);
         data['novels'] = pool.filter((t) => t.contentType === 'LIGHT_NOVEL').slice(0, 20);
@@ -125,6 +126,7 @@ export function HomePage() {
 
         <Carousel title="Trending Now" titles={get('trending')} loading={loading} viewAllLink="/trending" />
         <Carousel title="Popular GL Manga" titles={get('popularManga')} loading={loading} viewAllLink="/manga" />
+        <Carousel title="Anime & Adaptations" titles={get('anime')} loading={loading} viewAllLink="/anime" />
         <Carousel title="Manhwa" titles={get('manhwa')} loading={loading} viewAllLink="/manhwa" />
         <Carousel title="Manhua" titles={get('manhua')} loading={loading} viewAllLink="/manhua" />
         <Carousel title="GL Novels" titles={get('novels')} loading={loading} viewAllLink="/novels" />

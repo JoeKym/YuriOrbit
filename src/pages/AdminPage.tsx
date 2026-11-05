@@ -5,7 +5,7 @@ import { useIsAdmin } from '@/lib/auth/admin';
 
 export function AdminPage() {
   const { user, isAuthenticated, isLoading, login, logout } = useKindeAuth();
-  const { isAdmin, isCheckingAdmin } = useIsAdmin();
+  const { isAdmin, isCheckingAdmin, adminReason } = useIsAdmin();
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
@@ -115,6 +115,9 @@ export function AdminPage() {
                     </span>
                   </div>
                   <p className="text-xs text-ink-400">{user?.email}</p>
+                  {adminReason && (
+                    <p className="text-[11px] text-ink-400 mt-0.5">Authorization: <span className="text-rose-300">{adminReason}</span></p>
+                  )}
                 </div>
               </div>
 

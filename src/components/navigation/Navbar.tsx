@@ -226,7 +226,18 @@ export function Navbar() {
           {/* User / Auth Section */}
           {!isLoading && (
             isAuthenticated ? (
-              <div className="relative" ref={userMenuRef}>
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className="hidden sm:flex items-center gap-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 px-2.5 py-1 text-xs font-medium text-rose-300 hover:bg-rose-500/20 hover:text-rose-200 transition-colors"
+                    title="Admin Console"
+                  >
+                    <Shield className="h-3.5 w-3.5 text-rose-400" />
+                    <span>Admin</span>
+                  </Link>
+                )}
+                <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center gap-2 rounded-full border border-ink-700/80 bg-ink-900/90 py-1 pl-1 pr-2.5 transition-all hover:border-ink-600 hover:bg-ink-850"
@@ -296,6 +307,7 @@ export function Navbar() {
                     </div>
                   </div>
                 )}
+              </div>
               </div>
             ) : (
               <div className="flex items-center gap-2">
