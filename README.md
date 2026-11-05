@@ -105,5 +105,6 @@ YuriOrbit can be deployed directly to Cloudflare Pages with zero cold starts:
    - `VITE_KINDE_DOMAIN`: Your Kinde Domain
    - `VITE_KINDE_REDIRECT_URI`: `https://<your-project>.pages.dev`
    - `VITE_KINDE_LOGOUT_REDIRECT_URI`: `https://<your-project>.pages.dev`
-   - `TMDB_API_KEY` *(optional server secret for Pages Functions)*: Your TMDB API key
+   - `TMDB_READ_ACCESS_TOKEN` *(preferred; server-side secret for Pages Functions)*: Your TMDB API Read Access Token (v4). Store it as a Cloudflare secret, not a `VITE_` variable.
+   - `TMDB_API_KEY` *(fallback; optional server-side secret for Pages Functions)*: Your TMDB API Key (v3), used only when the Read Access Token is not configured. Store it as a Cloudflare secret, not a `VITE_` variable.
 5. Deploy. Cloudflare automatically hosts the static assets on its edge CDN and mounts the serverless functions in `functions/api/` on `/api/*` on the same domain.
