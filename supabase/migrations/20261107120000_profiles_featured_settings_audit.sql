@@ -1,25 +1,14 @@
 /*
 # YuriOrbit: public profiles, featured titles, site settings, admin audit log
 
-## Summary
-Backs three new surfaces:
-  1. /user/{username}  -> public profile + public library (profiles table)
-  2. Homepage "Editor's Picks" -> admin-curated featured titles
-  3. Site-wide announcement banner + admin audit trail
+Independent Supabase project (not Bolt-managed) migration.
+Project: https://kqsrojnzmdcxhuwulmgf.supabase.co
+Applies on top of the existing library_entries table (user_id uuid -> auth.users).
 
-## New Tables
-- `profiles`      one row per user: username, display_name, bio, avatar_url, is_public
-- `featured_titles`  admin-pinned titles shown on the homepage
-- `site_settings`    key/value site configuration (announcement banner)
-- `admin_audit_log`  append-only record of privileged admin actions
-
-## Security
-- RLS enabled on every table.
-- `profiles`: readable by anyone when `is_public`, always readable/updatable by the owner.
-- `library_entries`: gains a policy letting anyone read entries of a PUBLIC profile.
-- `featured_titles` / `site_settings`: publicly readable, writable only by the
-  service role (the admin Pages Function), which bypasses RLS.
-- `admin_audit_log`: no policies and no grants, so only the service role can touch it.
+Backs:
+  1. /user/{username}          -> profiles + public-library read policy
+  2. Homepage "Editor's Picks" -> featured_titles
+  3. Site-wide announcement banner + admin audit trail -> site_settings + admin_audit_log
 
 Safe to re-run: every statement is idempotent.
 */
@@ -39,7 +28,6 @@ CREATE TABLE IF NOT EXISTS profiles (
   CONSTRAINT bio_length CHECK (bio IS NULL OR char_length(bio) <= 280)
 );
 
--- usernames are unique case-insensitively
 CREATE UNIQUE INDEX IF NOT EXISTS profiles_username_lower_idx ON profiles (lower(username));
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
@@ -65,6 +53,8 @@ CREATE POLICY "update_own_profile"
 
 -- ─── public library read access ──────────────────────────────────────────────
 
+-- library_entries already exists in this project with user_id uuid -> auth.users(id).
+-- This policy lets anyone read the library of a PUBLIC profile.
 DROP POLICY IF EXISTS "read_public_profile_libraries" ON library_entries;
 CREATE POLICY "read_public_profile_libraries"
   ON library_entries FOR SELECT TO anon, authenticated
@@ -115,6 +105,12 @@ DROP POLICY IF EXISTS "read_site_settings" ON site_settings;
 CREATE POLICY "read_site_settings"
   ON site_settings FOR SELECT TO anon, authenticated
   USING (true);
+
+-- Seed the announcement-banner key so the banner component never crashes.
+-- The value is the shape the frontend expects; toggles are driven by the frontend.
+INSERT INTO site_settings (key, value, updated_by)
+VALUES ('announcement_banner', '{"enabled":false,"text":null,"link":null,"linkText":null}', 'migration')
+ON CONFLICT (key) DO NOTHING;
 
 -- ─── admin audit log ─────────────────────────────────────────────────────────
 
