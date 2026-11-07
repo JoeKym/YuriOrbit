@@ -2,9 +2,17 @@ import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, BookOpen, ArrowRight } from 'lucide-react';
 import { Carousel } from '@/components/content/Carousel';
-import type { ContentTitle } from '@/types/content';
+import type { ContentTitle, ContentType } from '@/types/content';
 import { GL_ALLOWED_CLASSIFICATIONS } from '@/lib/providers/classify';
 import { getTrendingGL, getPopularGL, getRecentGL, getCompletedGL } from '@/lib/providers';
+import { supabase } from '@/lib/supabase';
+
+interface FeaturedRow {
+  title_id: string;
+  title: string;
+  cover_image: string | null;
+  content_type: string | null;
+}
 
 function filterGLTitles(titles: ContentTitle[]): ContentTitle[] {
   return titles.filter((t) => GL_ALLOWED_CLASSIFICATIONS.includes(t.glClassification));
@@ -12,6 +20,7 @@ function filterGLTitles(titles: ContentTitle[]): ContentTitle[] {
 
 export function HomePage() {
   const [sections, setSections] = useState<Record<string, ContentTitle[]>>({});
+  const [featured, setFeatured] = useState<ContentTitle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [loadKey, setLoadKey] = useState(0);
@@ -74,6 +83,41 @@ export function HomePage() {
     return () => { cancelled = true; };
   }, [loadKey]);
 
+  // Admin-curated Editor's Picks (public read via RLS; absent table is harmless).
+  useEffect(() => {
+    if (!supabase) return;
+    let cancelled = false;
+
+    supabase
+      .from('featured_titles')
+      .select('title_id,title,cover_image,content_type')
+      .order('position', { ascending: true })
+      .limit(24)
+      .then(({ data, error }) => {
+        if (cancelled || error || !data) return;
+        const picks = (data as FeaturedRow[]).map<ContentTitle>((row) => ({
+          id: row.title_id,
+          providerId: row.title_id,
+          provider: 'CURATED',
+          title: row.title,
+          altTitles: [],
+          contentType: (row.content_type || 'MANGA') as ContentType,
+          coverImage: row.cover_image ?? undefined,
+          genres: [],
+          tags: [],
+          status: 'UNKNOWN',
+          externalLinks: [],
+          relations: [],
+          glClassification: 'CONFIRMED_GL',
+        }));
+        setFeatured(picks);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const get = (key: string) => sections[key] || [];
 
   return (
@@ -125,8 +169,9 @@ export function HomePage() {
         )}
 
         <Carousel title="Trending Now" titles={get('trending')} loading={loading} viewAllLink="/trending" />
+        {featured.length > 0 && <Carousel title="Editor's Picks" titles={featured} />}
         <Carousel title="Popular GL Manga" titles={get('popularManga')} loading={loading} viewAllLink="/manga" />
-        <Carousel title="Anime & Adaptations" titles={get('anime')} loading={loading} viewAllLink="/discover" />
+        <Carousel title="Anime & Adaptations" titles={get('anime')} loading={loading} viewAllLink="/anime" />
         <Carousel title="Manhwa" titles={get('manhwa')} loading={loading} viewAllLink="/manhwa" />
         <Carousel title="Manhua" titles={get('manhua')} loading={loading} viewAllLink="/manhua" />
         <Carousel title="GL Novels" titles={get('novels')} loading={loading} viewAllLink="/novels" />

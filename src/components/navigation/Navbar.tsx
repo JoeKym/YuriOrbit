@@ -16,10 +16,12 @@ import {
   BookMarked,
   Settings,
   Layers,
+  UserRound,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/format';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useIsAdmin } from '@/lib/auth/admin';
+import { useMyProfile } from '@/hooks/useMyProfile';
 
 const FORMAT_ITEMS = [
   { to: '/manga', label: 'Manga', desc: 'Japanese Girls\' Love comics' },
@@ -27,6 +29,7 @@ const FORMAT_ITEMS = [
   { to: '/manhua', label: 'Manhua', desc: 'Chinese baihe comics' },
   { to: '/webtoons', label: 'Webtoons', desc: 'Vertical-scroll GL webtoons' },
   { to: '/novels', label: 'Novels', desc: 'Light novels & web fiction' },
+  { to: '/anime', label: 'Anime', desc: 'TV series, OVAs & films' },
   { to: '/movies', label: 'Movies', desc: 'Animated & live-action films' },
   { to: '/dramas', label: 'Dramas', desc: 'Live-action series & GL shows' },
 ];
@@ -34,6 +37,7 @@ const FORMAT_ITEMS = [
 export function Navbar() {
   const { logout, user, isAuthenticated, isLoading } = useAuth();
   const { isAdmin } = useIsAdmin();
+  const myProfile = useMyProfile();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [formatsOpen, setFormatsOpen] = useState(false);
@@ -271,6 +275,16 @@ export function Navbar() {
                     </div>
 
                     <div className="space-y-0.5">
+                      {myProfile?.username && (
+                        <Link
+                          to={`/user/${myProfile.username}`}
+                          className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-ink-200 hover:bg-ink-800 hover:text-ink-50 transition-colors"
+                        >
+                          <UserRound className="h-3.5 w-3.5 text-rose-400" />
+                          <span>Public profile</span>
+                        </Link>
+                      )}
+
                       <Link
                         to="/library"
                         className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-ink-200 hover:bg-ink-800 hover:text-ink-50 transition-colors"

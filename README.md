@@ -109,3 +109,50 @@ YuriOrbit can be deployed directly to Cloudflare Pages with zero cold starts:
 
    > **Important:** `VITE_*` variables are inlined into the JS bundle at **build time**. Adding or changing them in the Cloudflare dashboard does nothing until you trigger a new deployment. If `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` are missing the site still loads — sign-in is simply disabled and libraries stay local to the browser.
 5. Deploy. Cloudflare automatically hosts the static assets on its edge CDN and mounts the serverless functions in `functions/api/` on `/api/*` on the same domain.
+
+---
+
+## Public profiles, Anime hub & Admin console
+
+### 1. Apply the database migration
+
+The profile, Editor's Picks, site-settings and audit tables live in
+`supabase/migrations/20261107120000_profiles_featured_settings_audit.sql`.
+Paste it into the Supabase SQL editor and run it — it is idempotent and also adds
+the policy that lets anyone read the library of a **public** profile.
+
+Until it is applied everything still works: `/user/*` shows a "profiles aren't
+enabled yet" notice, and the homepage simply omits the Editor's Picks rail.
+
+### 2. Public profiles — `/user/{username}`
+
+Users claim a username under **Settings → Public profile**. Profiles are public by
+default; switching the public toggle off hides both the profile and its library
+from everyone except the owner.
+
+### 3. Admin console — `/admin`
+
+Admin access is enforced **server-side** by `functions/api/admin/[[path]].ts`:
+the caller's Supabase access token is verified against Supabase Auth, their email
+is checked against an allowlist, and only then are privileged queries performed
+with the service role key. The old client-side email check is now just UI.
+
+Add these to the Cloudflare Pages project (Settings → Environment variables):
+
+| Variable | Purpose |
+| --- | --- |
+| `SUPABASE_URL` | Project URL, e.g. `https://<project-ref>.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Secret key used server-side. **Never add a `VITE_` prefix** — that would ship it to the browser. |
+| `ADMIN_EMAILS` | Comma-separated admin emails (optional; the owner account is allowed by default) |
+
+`SUPABASE_SECRET_KEY` is accepted as an alternative to `SUPABASE_SERVICE_ROLE_KEY`
+when using Supabase's new-style keys.
+
+What the console does:
+
+- **Overview** — accounts, new signups, library entries by status, most-tracked titles
+- **Users** — search accounts, inspect library size, purge a library or delete an account
+- **Library entries** — search and moderate every tracked title
+- **Editor's Picks** — pin catalog titles to the homepage
+- **Site settings** — the site-wide announcement banner
+- **Audit log** — every privileged action, with actor and timestamp

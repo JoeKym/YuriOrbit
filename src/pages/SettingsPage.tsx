@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Settings as SettingsIcon, Trash2, Download, Upload, Info, CheckCircle2, BookOpen, Sliders } from 'lucide-react';
 import { useLibrary } from '@/hooks/useLibrary';
+import { ProfileSettings } from '@/components/settings/ProfileSettings';
 
 export function SettingsPage() {
   const { library, clearLibrary } = useLibrary();
@@ -181,6 +182,9 @@ export function SettingsPage() {
             </label>
           </div>
         </section>
+
+        {/* Public profile */}
+        <ProfileSettings />
 
         {/* Reader Preferences */}
         <section className="card-surface p-5">
