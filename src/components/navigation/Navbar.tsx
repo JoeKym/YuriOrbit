@@ -18,7 +18,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/format';
-import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { useIsAdmin } from '@/lib/auth/admin';
 
 const FORMAT_ITEMS = [
@@ -32,7 +32,7 @@ const FORMAT_ITEMS = [
 ];
 
 export function Navbar() {
-  const { login, register, logout, user, isAuthenticated, isLoading } = useKindeAuth();
+  const { logout, user, isAuthenticated, isLoading } = useAuth();
   const { isAdmin } = useIsAdmin();
 
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -311,18 +311,18 @@ export function Navbar() {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => login()}
+                <Link
+                  to="/auth"
                   className="rounded-lg px-3 py-1.5 text-xs font-semibold text-ink-200 hover:bg-ink-850 hover:text-ink-50 transition-colors"
                 >
                   Sign in
-                </button>
-                <button
-                  onClick={() => register()}
+                </Link>
+                <Link
+                  to="/auth?mode=signup"
                   className="rounded-lg bg-gradient-to-r from-rose-500 to-lavender-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:from-rose-600 hover:to-lavender-700 transition-all shadow-rose-500/20"
                 >
                   Sign up
-                </button>
+                </Link>
               </div>
             )
           )}
@@ -478,24 +478,20 @@ export function Navbar() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      login();
-                      setMobileOpen(false);
-                    }}
+                  <Link
+                    to="/auth"
+                    onClick={() => setMobileOpen(false)}
                     className="flex-1 rounded-xl border border-ink-700 bg-ink-900 py-2.5 text-center text-xs font-semibold text-ink-100 hover:bg-ink-850 transition-colors"
                   >
                     Sign in
-                  </button>
-                  <button
-                    onClick={() => {
-                      register();
-                      setMobileOpen(false);
-                    }}
+                  </Link>
+                  <Link
+                    to="/auth?mode=signup"
+                    onClick={() => setMobileOpen(false)}
                     className="flex-1 rounded-xl bg-gradient-to-r from-rose-500 to-lavender-600 py-2.5 text-center text-xs font-semibold text-white shadow-sm hover:from-rose-600 hover:to-lavender-700 transition-all"
                   >
                     Sign up
-                  </button>
+                  </Link>
                 </div>
               )}
             </div>

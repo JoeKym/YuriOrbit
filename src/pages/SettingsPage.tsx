@@ -239,7 +239,7 @@ export function SettingsPage() {
         <section className="card-surface p-5">
           <h2 className="mb-1 text-lg font-semibold text-ink-50">Data Management & Backup</h2>
           <p className="mb-4 text-xs text-ink-400">
-            Your reading library and bookmarks are stored privately in your browser's IndexedDB / local storage.
+            When signed in, your library is synced to your account and available across devices. When not signed in, data is stored locally in your browser.
           </p>
 
           <input
@@ -279,14 +279,14 @@ export function SettingsPage() {
           </div>
         </section>
 
-        {/* Local Storage Mode Notice */}
+        {/* Storage Mode Notice */}
         <section className="card-surface p-5">
           <div className="flex gap-3">
             <Info className="h-5 w-5 flex-shrink-0 text-lavender-400" />
             <div>
-              <h2 className="mb-1 text-sm font-semibold text-ink-50">Local-First Storage</h2>
+              <h2 className="mb-1 text-sm font-semibold text-ink-50">Cloud-Synced Library</h2>
               <p className="text-xs text-ink-400 leading-relaxed">
-                YuriOrbit stores your library, bookmarks, and preferences locally in your browser. No third-party tracking or database sync is required. Create periodic backups using the Export feature if you use incognito browsing or frequently clear browser cache.
+                Sign in to sync your library across devices. Your saved titles, reading progress, ratings, and notes are stored securely in your account. When not signed in, data stays in your browser. Use Export to keep a backup.
               </p>
             </div>
           </div>
