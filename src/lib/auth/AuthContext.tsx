@@ -22,6 +22,8 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+const AUTH_UNAVAILABLE = 'Authentication is not configured for this deployment.';
+
 function mapUser(user: User | null): AuthUser | null {
   if (!user) return null;
   const meta = user.user_metadata ?? {};
@@ -39,6 +41,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!supabase) {
+      setIsLoading(false);
+      return;
+    }
+
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setIsLoading(false);
@@ -53,16 +60,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
+    if (!supabase) return { error: AUTH_UNAVAILABLE };
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error: error?.message ?? null };
   }, []);
 
   const register = useCallback(async (email: string, password: string) => {
+    if (!supabase) return { error: AUTH_UNAVAILABLE };
     const { error } = await supabase.auth.signUp({ email, password });
     return { error: error?.message ?? null };
   }, []);
 
   const logout = useCallback(async () => {
+    if (!supabase) return;
     await supabase.auth.signOut();
   }, []);
 

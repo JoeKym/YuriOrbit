@@ -126,7 +126,7 @@ export function HomePage() {
 
         <Carousel title="Trending Now" titles={get('trending')} loading={loading} viewAllLink="/trending" />
         <Carousel title="Popular GL Manga" titles={get('popularManga')} loading={loading} viewAllLink="/manga" />
-        <Carousel title="Anime & Adaptations" titles={get('anime')} loading={loading} viewAllLink="/anime" />
+        <Carousel title="Anime & Adaptations" titles={get('anime')} loading={loading} viewAllLink="/discover" />
         <Carousel title="Manhwa" titles={get('manhwa')} loading={loading} viewAllLink="/manhwa" />
         <Carousel title="Manhua" titles={get('manhua')} loading={loading} viewAllLink="/manhua" />
         <Carousel title="GL Novels" titles={get('novels')} loading={loading} viewAllLink="/novels" />

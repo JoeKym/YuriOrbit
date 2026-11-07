@@ -181,7 +181,7 @@ export function useLibrary() {
       setLoaded(false);
       setCloudError(null);
 
-      if (isAuthenticated) {
+      if (isAuthenticated && supabase) {
         try {
           const { data, error } = await supabase
             .from('library_entries')
@@ -244,6 +244,7 @@ export function useLibrary() {
   // ─── Cloud persistence helpers ──────────────────────────────────────────────
 
   const upsertCloud = useCallback(async (entry: LibraryEntry) => {
+    if (!supabase) throw new Error('Cloud sync is not configured.');
     const { error } = await supabase
       .from('library_entries')
       .upsert(entryToRow(entry), { onConflict: 'user_id,title_id' });
@@ -251,6 +252,7 @@ export function useLibrary() {
   }, []);
 
   const deleteCloud = useCallback(async (titleId: string) => {
+    if (!supabase) throw new Error('Cloud sync is not configured.');
     const { error } = await supabase
       .from('library_entries')
       .delete()
@@ -358,7 +360,7 @@ export function useLibrary() {
 
   const clearLibrary = useCallback(async () => {
     setLibrary({});
-    if (isAuthenticated) {
+    if (isAuthenticated && supabase) {
       const { error } = await supabase.from('library_entries').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       if (error) setCloudError(error.message);
     } else {
@@ -395,6 +397,7 @@ export function useLibrary() {
 // ─── Migration helper: import local library to cloud on first sign-in ────────
 
 export async function migrateLocalToCloud(): Promise<{ imported: number; error: string | null }> {
+  if (!supabase) return { imported: 0, error: 'Cloud sync is not configured.' };
   const local = await loadLocal();
   const localEntries = Object.values(local);
   if (localEntries.length === 0) return { imported: 0, error: null };
