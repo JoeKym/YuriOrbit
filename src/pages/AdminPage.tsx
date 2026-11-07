@@ -12,7 +12,9 @@ import {
   Sparkles,
   Star,
   Users,
+  X,
 } from 'lucide-react';
+import { NotFoundPage } from '@/pages/NotFoundPage';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { adminApi } from '@/lib/admin/api';
@@ -26,8 +28,8 @@ import { AuditTab } from '@/components/admin/AuditTab';
 
 type TabKey = 'overview' | 'users' | 'library' | 'featured' | 'settings' | 'audit';
 
-const TABS: { key: TabKey; label: string; icon: typeof Users }[] = [
-  { key: 'overview', label: 'Overview', icon: LayoutDashboard },
+const TABS: { key: TabKey; label: string; icon: typeof X }[] = [
+  { key: 'overview', label: 'Overview', icon: X },
   { key: 'users', label: 'Users', icon: Users },
   { key: 'library', label: 'Library entries', icon: ListChecks },
   { key: 'featured', label: "Editor's Picks", icon: Sparkles },
@@ -80,111 +82,12 @@ export function AdminPage() {
   }, [isAuthenticated, isLoading]);
 
   if (isLoading || checking) {
-    return (
-      <div className="mx-auto max-w-3xl px-4 py-16 md:px-6">
-        <div className="card-surface p-8 text-center text-sm text-ink-300">Checking admin access…</div>
-      </div>
-    );
+    return <div className="mx-auto max-w-3xl px-4 py-16 md:px-6">Checking admin access…</div>;
   }
 
-  if (!isAuthenticated) {
-    return (
-      <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
-        <div className="card-surface p-8">
-          <div className="mb-6 flex gap-4">
-            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-ink-800 text-warning-400">
-              <KeyRound className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold text-ink-50">Authentication required</h1>
-              <p className="mt-1 text-sm leading-relaxed text-ink-400">
-                Sign in with an authorised administrator account to open the console.
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Link to="/auth" className="btn-primary flex items-center gap-2">
-              <KeyRound className="h-4 w-4" /> Sign in
-            </Link>
-            <Link to="/" className="btn-secondary">
-              Back to home
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!authorised) {
-    const isSetupProblem = problem?.needsSetup || problem?.status === 501;
-
-    return (
-      <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
-        <div className="card-surface p-8">
-          <div className="mb-6 flex gap-4">
-            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-400">
-              <ShieldAlert className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold text-ink-50">
-                {isSetupProblem ? 'Admin console not configured' : 'Admin access restricted'}
-              </h1>
-              <p className="mt-1 text-sm leading-relaxed text-ink-300">
-                {problem?.message || 'This account does not have administrator privileges.'}
-              </p>
-              {!isSetupProblem && user?.email && (
-                <p className="mt-2 text-xs text-ink-400">
-                  Signed in as <span className="font-semibold text-rose-300">{user.email}</span>
-                </p>
-              )}
-            </div>
-          </div>
-
-          {isSetupProblem ? (
-            <div className="mb-6 space-y-2 rounded-lg border border-ink-800 bg-ink-850 p-4 text-xs text-ink-400">
-              <p className="font-medium text-ink-200">Add these to your Cloudflare Pages project:</p>
-              <ul className="ml-4 list-disc space-y-1">
-                <li>
-                  <code className="rounded bg-ink-900 px-1.5 py-0.5 text-ink-200">SUPABASE_URL</code> — your
-                  project URL
-                </li>
-                <li>
-                  <code className="rounded bg-ink-900 px-1.5 py-0.5 text-ink-200">SUPABASE_SERVICE_ROLE_KEY</code>{' '}
-                  — the secret key, server-side only
-                </li>
-                <li>
-                  <code className="rounded bg-ink-900 px-1.5 py-0.5 text-ink-200">ADMIN_EMAILS</code> —
-                  comma-separated admin emails (optional)
-                </li>
-              </ul>
-              <p className="pt-1">
-                Never expose the service role key with a <code>VITE_</code> prefix; it must stay server-side.
-              </p>
-            </div>
-          ) : (
-            <div className="mb-6 rounded-lg border border-ink-800 bg-ink-850 p-4 text-xs text-ink-400">
-              <p className="font-medium text-ink-200">Authorised admin accounts:</p>
-              <p className="mt-1 break-words text-rose-300">
-                {allowlist.length > 0 ? allowlist.join(', ') : 'none configured'}
-              </p>
-              <p className="mt-2">
-                Add your email to the <code className="rounded bg-ink-900 px-1.5 py-0.5 text-ink-200">ADMIN_EMAILS</code>{' '}
-                variable in Cloudflare, then redeploy.
-              </p>
-            </div>
-          )}
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Link to="/" className="btn-primary">
-              Return to homepage
-            </Link>
-            <Link to="/library" className="btn-secondary">
-              <BookOpen className="h-4 w-4" /> My library
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
+  // Unauthorized — whether not logged in or not an admin — show 404
+  if (!isAuthenticated || !authorised) {
+    return <NotFoundPage />;
   }
 
   return (
@@ -192,7 +95,7 @@ export function AdminPage() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500 to-lavender-600">
-            <Shield className="h-5 w-5 text-white" />
+            <X className="h-5 w-5 text-white" />
           </div>
           <div>
             <h1 className="font-display text-2xl font-semibold text-ink-50">Admin console</h1>
@@ -216,9 +119,7 @@ export function AdminPage() {
               onClick={() => setTab(item.key)}
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
-                isActive
-                  ? 'bg-rose-500/15 text-rose-300'
-                  : 'text-ink-300 hover:bg-ink-850 hover:text-ink-100'
+                isActive ? 'bg-rose-500/15 text-rose-300' : 'text-ink-300 hover:bg-ink-850 hover:text-ink-100'
               )}
             >
               <Icon className="h-3.5 w-3.5" />
