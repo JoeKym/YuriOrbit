@@ -63,7 +63,7 @@ export function Footer() {
 
             {/* JoeKym Labs Developer Label */}
             <a
-              href="https://joekymlabs.onrender.com"
+              href="https://joekymlabs.pages.dev"
               target="_blank"
               rel="noopener noreferrer"
               className="group inline-flex items-center gap-2 rounded-lg border border-ink-800 bg-ink-900/60 px-3 py-1.5 text-xs text-ink-300 transition-all hover:border-rose-500/40 hover:bg-ink-850 hover:text-ink-100"
@@ -100,7 +100,7 @@ export function Footer() {
           <p className="text-xs text-ink-400">
             © {new Date().getFullYear()} YuriOrbit. Built with care by{' '}
             <a
-              href="https://joekymlabs.onrender.com"
+              href="https://joekymlabs.pages.dev"
               target="_blank"
               rel="noopener noreferrer"
               className="text-ink-300 hover:text-rose-400 underline underline-offset-2 transition-colors font-medium"
