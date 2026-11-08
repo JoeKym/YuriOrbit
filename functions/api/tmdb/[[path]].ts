@@ -14,7 +14,7 @@ export const onRequest: PagesFunction = async (context) => {
   }
 
   const url = new URL(request.url);
-  const targetPath = url.pathname.replace(/^\\/api\\/tmdb/, '') || '/';
+  const targetPath = url.pathname.replace(/^\/api\/tmdb/, '') || '/';
   const targetUrl = new URL(targetPath + url.search, 'https://api.themoviedb.org/3');
 
   // TMDB proxy - forward request to TMDB API
