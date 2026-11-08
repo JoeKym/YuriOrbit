@@ -17,26 +17,16 @@ export const onRequest: PagesFunction = async (context) => {
   const targetPath = url.pathname.replace(/^\\/api\\/tmdb/, '') || '/';
   const targetUrl = new URL(targetPath + url.search, 'https://api.themoviedb.org/3');
 
-  // Inject server-side secret if available and query param not already present
-  if (env.TMDB_API_KEY && !targetUrl.searchParams.has('api_key')) {
-    targetUrl.searchParams.set('api_key', env.TMDB_API_KEY);
-  }
-
-  const headers = new Headers();
-  headers.set('Accept', 'application/json');
-  if (env.TMDB_READ_ACCESS_TOKEN) {
-    headers.set('Authorization', `Bearer ${env.TMDB_READ_ACCESS_TOKEN}`);
-  }
+  // TMDB proxy - forward request to TMDB API
+  const fetchOptions: RequestInit = {
+    method: request.method,
+    headers: new Headers({
+      'Accept': 'application/json',
+    }),
+  };
 
   try {
-    const upstreamResponse = await fetch(targetUrl.toString(), {
-      method: request.method,
-      headers,
-      cf: {
-        cacheTtl: 3600,
-        cacheEverything: true,
-      },
-    });
+    const upstreamResponse = await fetch(targetUrl.toString(), fetchOptions);
 
     const responseHeaders = new Headers(upstreamResponse.headers);
     responseHeaders.set('Access-Control-Allow-Origin', '*');
