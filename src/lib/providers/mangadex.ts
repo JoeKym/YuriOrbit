@@ -3,8 +3,10 @@
  * Used for manga/manhwa/manhua chapter lists and GL content discovery.
  * Docs: https://api.mangadex.org/docs/
  */
-import type { ContentTitle, PaginatedResult, ContentFilter, ChapterInfo, Tag } from '@/types/content';
+import type { ContentTitle, PaginatedResult, ContentFilter, ChapterInfo, Tag, MaturityLevel } from '@/types/content';
 import { classifyGL, GL_ALLOWED_CLASSIFICATIONS } from './classify';
+import { getMaturityLevel } from '@/lib/content/maturity-preference';
+import { mangadexContentRatings } from '@/lib/content/maturity';
 
 const env = (import.meta as { env?: Record<string, string> }).env || {};
 const isBrowser = typeof window !== 'undefined';
@@ -151,6 +153,16 @@ const GL_TAG_IDS = [
   'a3c67850-4684-404e-9b7f-c69850ee5da6', // Girls' Love
 ];
 
+/** MangaDex publishes its own four-step content rating; keep it verbatim. */
+function mapMDMaturity(contentRating?: string): MaturityLevel {
+  switch (contentRating) {
+    case 'suggestive': return 'SUGGESTIVE';
+    case 'erotica': return 'EROTICA';
+    case 'pornographic': return 'PORNOGRAPHIC';
+    default: return 'SAFE';
+  }
+}
+
 // MangaDex tag IDs to exclude (BL)
 const EXCLUDE_TAG_IDS = [
   '5920b825-4181-4a17-beeb-9baec0c9d5cc', // Boys' Love
@@ -229,6 +241,12 @@ function normalizeMangaDex(m: MDManga): ContentTitle {
 
   const glClassification = classifyGL({ genres, tags, description, title, altTitles });
 
+  // Author/artist names are only present when the request asked for them.
+  const creators = m.relationships
+    .filter((r) => (r.type === 'author' || r.type === 'artist') && r.attributes?.name)
+    .map((r) => r.attributes!.name!)
+    .filter((name, index, all) => all.indexOf(name) === index);
+
   return {
     id: `MANGADEX-${m.id}`,
     providerId: m.id,
@@ -240,6 +258,8 @@ function normalizeMangaDex(m: MDManga): ContentTitle {
     coverImage,
     genres,
     tags,
+    creators: creators.length > 0 ? creators : undefined,
+    maturityRating: mapMDMaturity(attrs.contentRating),
     status: mapMDStatusInternal(attrs.status),
     releaseYear: attrs.year,
     externalLinks: [
@@ -264,11 +284,12 @@ export async function mangadexSearchGL(filter: ContentFilter, page = 1, perPage 
   const params: Record<string, string | string[]> = {
     includedTags: GL_TAG_IDS,
     excludedTags: EXCLUDE_TAG_IDS,
-    includes: ['cover_art'],
+    includes: ['cover_art', 'author', 'artist'],
     limit: String(Math.min(perPage, 100)),
     offset: String(offset),
     availableTranslatedLanguage: ['en'],
-    contentRating: ['safe', 'suggestive'],
+    // Only ask MangaDex for what this visitor is allowed to see.
+    contentRating: mangadexContentRatings(getMaturityLevel()),
     [`order[${orderField}]`]: orderDir || 'desc',
   };
 
@@ -321,7 +342,7 @@ export async function mangadexGetById(id: string): Promise<ContentTitle | null> 
   const mdId = id.replace('MANGADEX-', '');
   try {
     const resp = await mdFetch<{ result: string; data: MDManga }>(`/manga/${mdId}`, {
-      includes: ['cover_art'],
+      includes: ['cover_art', 'author', 'artist'],
     });
     return normalizeMangaDex(resp.data);
   } catch {
@@ -351,7 +372,8 @@ export async function mangadexFindMangaId(title: string, altTitles?: string[]): 
       const resp = await mdFetch<MDListResponse<MDManga>>('/manga', {
         title: cand,
         limit: '10',
-        contentRating: ['safe', 'suggestive', 'erotica'],
+        contentRating: mangadexContentRatings(getMaturityLevel()),
+        includes: ['cover_art', 'author', 'artist'],
       });
 
       const items = resp.data || [];
@@ -392,7 +414,7 @@ export async function mangadexGetChapters(mangaId: string, page = 1, perPage = 1
       'order[chapter]': 'asc',
       limit: String(Math.min(perPage, 500)),
       offset: String((page - 1) * perPage),
-      contentRating: ['safe', 'suggestive', 'erotica'],
+      contentRating: mangadexContentRatings(getMaturityLevel()),
     });
 
     let data = resp.data || [];
@@ -400,7 +422,7 @@ export async function mangadexGetChapters(mangaId: string, page = 1, perPage = 1
       const fallbackResp = await mdFetch<MDListResponse<MDChapter>>(`/manga/${mdId}/feed`, {
         'order[chapter]': 'asc',
         limit: String(Math.min(perPage, 500)),
-        contentRating: ['safe', 'suggestive', 'erotica'],
+        contentRating: mangadexContentRatings(getMaturityLevel()),
       });
       data = fallbackResp.data || [];
     }

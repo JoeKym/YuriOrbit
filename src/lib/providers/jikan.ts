@@ -5,6 +5,7 @@
 import type { ContentTitle, PaginatedResult, ContentFilter } from '@/types/content';
 import { classifyGL, GL_ALLOWED_CLASSIFICATIONS } from './classify';
 import { normalizeAniList } from './normalize';
+import { inferMaturity } from '@/lib/content/maturity';
 
 const JIKAN_BASE = 'https://api.jikan.moe/v4';
 const REQUEST_DELAY = 500; // Jikan rate limit: 3 req/s burst, 60/min
@@ -130,6 +131,14 @@ function normalizeJikan(m: JikanManga): ContentTitle {
 
   const releaseYear = m.published?.from ? new Date(m.published.from).getFullYear() : undefined;
 
+  // MAL flags adult works through `explicit_genres` rather than a rating field.
+  const explicit = (m.explicit_genres || []).map((g) => g.name.toLowerCase().trim());
+  const maturityRating = explicit.includes('hentai')
+    ? 'PORNOGRAPHIC'
+    : explicit.length > 0
+      ? 'EROTICA'
+      : inferMaturity({ genres: allGenres, description: m.synopsis });
+
   return {
     id: `JIKAN-${m.mal_id}`,
     providerId: String(m.mal_id),
@@ -151,6 +160,7 @@ function normalizeJikan(m: JikanManga): ContentTitle {
       { url: m.url, site: 'MyAnimeList', type: 'METADATA' },
     ],
     relations: [],
+    maturityRating,
     glClassification,
     sourceUrl: m.url,
     updatedAt: new Date().toISOString(),

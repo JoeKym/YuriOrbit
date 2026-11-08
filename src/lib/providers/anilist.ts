@@ -1,5 +1,8 @@
 import type { ContentTitle, ContentFilter, PaginatedResult, ContentType } from '@/types/content';
 import { normalizeAniList } from './normalize';
+import { getMaturityLevel } from '@/lib/content/maturity-preference';
+import { maturityRank } from '@/lib/content/maturity';
+import { GL_ALLOWED_CLASSIFICATIONS } from './classify';
 
 const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
 const REQUEST_TIMEOUT = 15000;
@@ -112,13 +115,24 @@ interface MediaFilterVars {
   seasonYear?: number;
   search?: string;
   countryOfOrigin?: string;
+  /** `false` hides adult titles, `null` requests everything. */
+  isAdult?: boolean | null;
+}
+
+/**
+ * AniList's `isAdult` is a hard filter, so it follows the visitor's maturity
+ * setting: `false` for Safe/Suggestive, `null` (no filter) once erotica and
+ * pornographic content is allowed.
+ */
+function adultFilter(): boolean | null {
+  return maturityRank(getMaturityLevel()) >= maturityRank('EROTICA') ? null : false;
 }
 
 function buildPageQuery(sortEnum: string): string {
-  return `query ($page: Int, $perPage: Int, $type: MediaType, $tag_in: [String], $genre: String, $format_in: [MediaFormat], $status_in: [MediaStatus], $seasonYear: Int, $search: String, $countryOfOrigin: CountryCode) {
+  return `query ($page: Int, $perPage: Int, $type: MediaType, $tag_in: [String], $genre: String, $format_in: [MediaFormat], $status_in: [MediaStatus], $seasonYear: Int, $search: String, $countryOfOrigin: CountryCode, $isAdult: Boolean) {
   Page(page: $page, perPage: $perPage) {
     pageInfo { currentPage hasNextPage total perPage lastPage }
-    media(type: $type, tag_in: $tag_in, genre: $genre, format_in: $format_in, status_in: $status_in, seasonYear: $seasonYear, search: $search, countryOfOrigin: $countryOfOrigin, sort: [${sortEnum}], isAdult: false) {
+    media(type: $type, tag_in: $tag_in, genre: $genre, format_in: $format_in, status_in: $status_in, seasonYear: $seasonYear, search: $search, countryOfOrigin: $countryOfOrigin, sort: [${sortEnum}], isAdult: $isAdult) {
       ${MEDIA_FIELDS}
     }
   }
@@ -127,7 +141,7 @@ function buildPageQuery(sortEnum: string): string {
 
 async function fetchFiltered(vars: MediaFilterVars, sortEnum: string): Promise<PaginatedResult> {
   const query = buildPageQuery(sortEnum);
-  const data = await anilistQuery(query, vars as unknown as Record<string, unknown>) as {
+  const data = await anilistQuery(query, { ...vars, isAdult: vars.isAdult ?? adultFilter() } as unknown as Record<string, unknown>) as {
     Page: { pageInfo: { hasNextPage: boolean; total: number; currentPage: number; perPage: number }, media: unknown[] }
   };
   const items = (data.Page.media || []).map((m) => normalizeAniList(m as Parameters<typeof normalizeAniList>[0]));
@@ -231,6 +245,94 @@ export async function getGLByContentType(contentType: ContentType, perPage = 30)
     extra.format_in = ['MANGA', 'ONE_SHOT'];
   }
   return fetchGLBase(extra, 'POPULARITY_DESC', perPage);
+}
+
+// ─── Creator search ──────────────────────────────────────────────────────────
+
+/** Smaller field set for staff lookups — creator queries return many titles. */
+const MEDIA_FIELDS_LIGHT = `
+  id
+  idMal
+  title { romaji english native }
+  synonyms
+  description
+  countryOfOrigin
+  genres
+  tags { id name rank }
+  averageScore
+  popularity
+  status
+  startDate { year }
+  coverImage { extraLarge large }
+  bannerImage
+  format
+  siteUrl
+  isAdult
+`;
+
+export interface CreatorMatch {
+  name: string;
+  titles: ContentTitle[];
+}
+
+/**
+ * Find GL titles by creator (author, artist, director, voice actor).
+ *
+ * AniList's media search only looks at titles and synonyms, so a name like
+ * "Milk Morinaga" returns nothing there. Searching the Staff type and walking
+ * `staffMedia` fixes that; manga and anime credits are fetched together.
+ */
+export async function searchGLByCreator(query: string, perPage = 3): Promise<CreatorMatch[]> {
+  const trimmed = query.trim();
+  if (trimmed.length < 3) return [];
+
+  const gql = `query ($q: String, $perPage: Int) {
+    Page(page: 1, perPage: $perPage) {
+      staff(search: $q, sort: SEARCH_MATCH) {
+        id
+        name { full native }
+        manga: staffMedia(type: MANGA, sort: POPULARITY_DESC, perPage: 12) { ${MEDIA_FIELDS_LIGHT} }
+        anime: staffMedia(type: ANIME, sort: POPULARITY_DESC, perPage: 12) { ${MEDIA_FIELDS_LIGHT} }
+      }
+    }
+  }`;
+
+  try {
+    const data = await anilistQuery(gql, { q: trimmed, perPage }) as {
+      Page: {
+        staff: {
+          id: number;
+          name?: { full?: string; native?: string };
+          manga?: unknown[];
+          anime?: unknown[];
+        }[];
+      };
+    };
+
+    const matches: CreatorMatch[] = [];
+    for (const member of data.Page.staff || []) {
+      const name = member.name?.full || member.name?.native;
+      if (!name) continue;
+
+      const seen = new Set<string>();
+      const titles: ContentTitle[] = [];
+      for (const media of [...(member.manga || []), ...(member.anime || [])]) {
+        const normalized = normalizeAniList(media as Parameters<typeof normalizeAniList>[0]);
+        if (!GL_ALLOWED_CLASSIFICATIONS.includes(normalized.glClassification)) continue;
+        if (normalized.isAdult && adultFilter() !== null) continue;
+        if (seen.has(normalized.id)) continue;
+        seen.add(normalized.id);
+        titles.push({ ...normalized, creators: [name] });
+      }
+
+      if (titles.length > 0) {
+        matches.push({ name, titles: titles.slice(0, 12) });
+      }
+    }
+    return matches;
+  } catch {
+    return [];
+  }
 }
 
 export async function getTitleById(id: string): Promise<ContentTitle | null> {

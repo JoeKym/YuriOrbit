@@ -17,6 +17,7 @@ import {
   getGLByGenre as anilistByGenre,
   getGLByContentType as anilistByType,
   getTitleById as anilistById,
+  searchGLByCreator as anilistByCreator,
 } from './anilist';
 import { jikanSearchGL, jikanGetPopular, jikanGetById } from './jikan';
 import {
@@ -27,9 +28,11 @@ import {
   mangadexGetChapterPages,
   mangadexFindMangaId,
 } from './mangadex';
-import { tmdbGetGLMovies, tmdbGetGLDramas, tmdbGetById, tmdbSearchGL } from './tmdb';
+import { tmdbGetGLMovies, tmdbGetGLDramas, tmdbGetById, tmdbSearchGL, tmdbSearchGLByCreator } from './tmdb';
 import { GL_ALLOWED_CLASSIFICATIONS } from './classify';
 import { getCached, setCached, clearProviderCache } from './cache';
+import { getMaturityLevel } from '@/lib/content/maturity-preference';
+import { filterByMaturity } from '@/lib/content/maturity';
 import { canonicalizeTitle, canonicalizeTitles } from '@/lib/catalog/canonical';
 import { findRegisteredBySlug, getRegisteredTitle, registerTitles } from '@/lib/catalog/registry';
 import { isLegacyProviderId, slugToQuery, slugifyTitle, titleKey } from '@/lib/catalog/identity';
@@ -45,10 +48,23 @@ function isGL(title: ContentTitle): boolean {
   return GL_ALLOWED_CLASSIFICATIONS.includes(title.glClassification);
 }
 
+/**
+ * Everything that leaves this module goes through the visitor's maturity
+ * filter, so no page has to remember to apply it.
+ */
+function visible(titles: ContentTitle[]): ContentTitle[] {
+  return filterByMaturity(titles, getMaturityLevel());
+}
+
+/** Cache keys carry the maturity level: queries differ per level (adult flags). */
+function levelKey(): string {
+  return getMaturityLevel();
+}
+
 // ─── Trending / Popular ────────────────────────────────────────────────────────
 
 export async function getTrendingGL(perPage = 20): Promise<ContentTitle[]> {
-  const cacheKey = `trending_${perPage}`;
+  const cacheKey = `trending_${perPage}_${levelKey()}`;
   const cached = getCached<ContentTitle[]>(cacheKey);
   if (cached && cached.length > 0) return cached;
 
@@ -61,14 +77,14 @@ export async function getTrendingGL(perPage = 20): Promise<ContentTitle[]> {
   if (anilist.status === 'fulfilled') results.push(...anilist.value);
   if (jikan.status === 'fulfilled') results.push(...jikan.value);
 
-  const final = canonicalizeTitles(results.filter(isGL)).slice(0, perPage * 2);
+  const final = visible(canonicalizeTitles(results.filter(isGL)).slice(0, perPage * 2));
 
   if (final.length > 0) setCached(cacheKey, final);
   return final;
 }
 
 export async function getPopularGL(perPage = 50): Promise<ContentTitle[]> {
-  const cacheKey = `popular_${perPage}`;
+  const cacheKey = `popular_${perPage}_${levelKey()}`;
   const cached = getCached<ContentTitle[]>(cacheKey);
   if (cached && cached.length > 0) return cached;
 
@@ -83,38 +99,38 @@ export async function getPopularGL(perPage = 50): Promise<ContentTitle[]> {
   if (jikan.status === 'fulfilled') results.push(...jikan.value);
   if (mangadex.status === 'fulfilled') results.push(...mangadex.value);
 
-  const final = canonicalizeTitles(results.filter(isGL)).slice(0, perPage * 2);
+  const final = visible(canonicalizeTitles(results.filter(isGL)).slice(0, perPage * 2));
 
   if (final.length > 0) setCached(cacheKey, final);
   return final;
 }
 
 export async function getRecentGL(perPage = 20): Promise<ContentTitle[]> {
-  const cacheKey = `recent_${perPage}`;
+  const cacheKey = `recent_${perPage}_${levelKey()}`;
   const cached = getCached<ContentTitle[]>(cacheKey);
   if (cached && cached.length > 0) return cached;
 
-  const results = canonicalizeTitles(await anilistRecent(perPage));
+  const results = visible(canonicalizeTitles(await anilistRecent(perPage)));
   if (results.length > 0) setCached(cacheKey, results);
   return results;
 }
 
 export async function getCompletedGL(perPage = 20): Promise<ContentTitle[]> {
-  const cacheKey = `completed_${perPage}`;
+  const cacheKey = `completed_${perPage}_${levelKey()}`;
   const cached = getCached<ContentTitle[]>(cacheKey);
   if (cached && cached.length > 0) return cached;
 
-  const results = canonicalizeTitles(await anilistCompleted(perPage));
+  const results = visible(canonicalizeTitles(await anilistCompleted(perPage)));
   if (results.length > 0) setCached(cacheKey, results);
   return results;
 }
 
 export async function getGLByGenre(genre: string, perPage = 20): Promise<ContentTitle[]> {
-  const cacheKey = `genre_${genre}_${perPage}`;
+  const cacheKey = `genre_${genre}_${perPage}_${levelKey()}`;
   const cached = getCached<ContentTitle[]>(cacheKey);
   if (cached && cached.length > 0) return cached;
 
-  const results = canonicalizeTitles(await anilistByGenre(genre, perPage));
+  const results = visible(canonicalizeTitles(await anilistByGenre(genre, perPage)));
   if (results.length > 0) setCached(cacheKey, results);
   return results;
 }
@@ -123,7 +139,7 @@ export async function getGLByContentType(
   contentType: ContentTitle['contentType'],
   perPage = 30
 ): Promise<ContentTitle[]> {
-  const cacheKey = `type_${contentType}_${perPage}`;
+  const cacheKey = `type_${contentType}_${perPage}_${levelKey()}`;
   const cached = getCached<ContentTitle[]>(cacheKey);
   if (cached && cached.length > 0) return cached;
 
@@ -139,7 +155,7 @@ export async function getGLByContentType(
     results = await anilistByType(contentType, perPage);
   }
 
-  const final = canonicalizeTitles(results.filter(isGL));
+  const final = visible(canonicalizeTitles(results.filter(isGL)));
   if (final.length > 0) setCached(cacheKey, final);
   return final;
 }
@@ -184,7 +200,7 @@ export async function searchGLTitles(
   }
 
   // Cross-provider duplicates collapse into one canonical entry here.
-  const deduped = canonicalizeTitles(items.filter(isGL));
+  const deduped = visible(canonicalizeTitles(items.filter(isGL)));
 
   return {
     items: deduped,
@@ -193,6 +209,64 @@ export async function searchGLTitles(
     total,
     hasNextPage,
   };
+}
+
+// ─── Creator Lookup ───────────────────────────────────────────────────────────
+
+export interface CreatorGroup {
+  name: string;
+  titles: ContentTitle[];
+}
+
+/**
+ * Search by creator across AniList (authors, artists, directors of anime) and
+ * TMDB (live-action writers, directors, cast). Results are grouped per person.
+ */
+export async function getCreatorTitles(query: string, perPage = 3): Promise<CreatorGroup[]> {
+  const trimmed = query.trim();
+  if (trimmed.length < 3) return [];
+
+  const [anilist, tmdb] = await Promise.allSettled([
+    anilistByCreator(trimmed, perPage),
+    tmdbSearchGLByCreator(trimmed),
+  ]);
+
+  const groups: CreatorGroup[] = [];
+  const seenNames = new Set<string>();
+
+  const push = (name: string, titles: ContentTitle[]) => {
+    const key = name.toLowerCase();
+    if (seenNames.has(key)) return;
+    const canonical = visible(canonicalizeTitles(titles.filter(isGL)));
+    if (canonical.length === 0) return;
+    seenNames.add(key);
+    groups.push({ name, titles: canonical });
+  };
+
+  if (anilist.status === 'fulfilled') {
+    for (const match of anilist.value) push(match.name, match.titles);
+  }
+  if (tmdb.status === 'fulfilled') {
+    for (const match of tmdb.value) push(match.name, match.titles);
+  }
+
+  return groups;
+}
+
+/**
+ * Resolve an exact id instead of searching: provider ids (`ANILIST-…`,
+ * `MANGADEX-…`, `TMDB-movie-…`), Jikan ids, and YuriOrbit slugs already seen
+ * this session. No network call for unknown strings — the caller can then fall
+ * back to a normal text search.
+ */
+export function resolveDirectTitle(raw: string): ContentTitle | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  const registered = getRegisteredTitle(trimmed) ?? findRegisteredBySlug(trimmed);
+  if (registered) return registered;
+
+  return null;
 }
 
 // ─── Single Title Lookup ───────────────────────────────────────────────────────

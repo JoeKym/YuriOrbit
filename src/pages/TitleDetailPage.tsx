@@ -9,6 +9,9 @@ import { CONTENT_TYPE_LABELS, LIBRARY_STATUS_LABELS } from '@/types/content';
 import { getTitleById } from '@/lib/providers';
 import { useLibrary } from '@/hooks/useLibrary';
 import { cn, formatScore, getFallbackCover, getFallbackBanner, getStatusLabel, getStatusColor } from '@/lib/utils/format';
+import { useMaturity } from '@/hooks/useMaturity';
+import { maturityOf, isWithinMaturity } from '@/lib/content/maturity';
+import { MATURITY_LABELS } from '@/types/content';
 
 const STATUSES: LibraryStatus[] = ['CURRENT', 'PLANNED', 'COMPLETED', 'ON_HOLD', 'DROPPED', 'FAVOURITE'];
 
@@ -20,6 +23,7 @@ export function TitleDetailPage() {
   const [showStatusMenu, setShowStatusMenu] = useState(false);
 
   const { isInLibrary, addToLibrary, removeFromLibrary, getEntry, updateProgress, updateRating, updateNotes } = useLibrary();
+  const { level } = useMaturity();
 
   useEffect(() => {
     let cancelled = false;
@@ -72,6 +76,32 @@ export function TitleDetailPage() {
 
   const isReadable = ['MANGA', 'MANHWA', 'MANHUA', 'WEBTOON'].includes(title.contentType);
   const isWatchable = ['MOVIE', 'TV', 'DRAMA'].includes(title.contentType);
+  const maturity = maturityOf(title);
+  const hiddenByFilter = !isWithinMaturity(title, level);
+
+  if (hiddenByFilter) {
+    return (
+      <div className="mx-auto flex max-w-xl flex-col items-center px-4 py-24 text-center md:px-6">
+        <img
+          src={title.coverImage || getFallbackCover(title.title)}
+          alt={title.title}
+          className="mb-5 h-40 w-28 rounded-xl object-cover opacity-40 blur-sm"
+        />
+        <p className="mb-1 text-[11px] uppercase tracking-wider text-rose-300">
+          {MATURITY_LABELS[maturity]} · hidden by your content filter
+        </p>
+        <h1 className="font-display text-2xl font-semibold text-ink-50">{title.title}</h1>
+        <p className="mt-3 text-sm leading-relaxed text-ink-300">
+          This title is rated {MATURITY_LABELS[maturity].toLowerCase()}, which is above the level you chose
+          ({MATURITY_LABELS[level]}). Nothing about it is loaded until you change your filter.
+        </p>
+        <div className="mt-5 flex flex-wrap justify-center gap-2">
+          <Link to="/settings" className="btn-primary text-xs">Change content filter</Link>
+          <Link to="/discover" className="btn-secondary text-xs">Back to Discover</Link>
+        </div>
+      </div>
+    );
+  }
 
   const handleShare = async () => {
     const url = window.location.href;
@@ -114,11 +144,23 @@ export function TitleDetailPage() {
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               <span className="chip">{CONTENT_TYPE_LABELS[title.contentType]}</span>
               <span className={cn('text-sm font-medium', getStatusColor(title.status))}>{getStatusLabel(title.status)}</span>
               {title.glClassification === 'GL_RELATED' && (
                 <span className="chip" style={{ borderColor: '#f59e0b40', color: '#fbbf24', background: '#f59e0b15' }}>GL-Related</span>
+              )}
+              {maturity !== 'SAFE' && (
+                <span
+                  className="chip"
+                  style={
+                    maturity === 'SUGGESTIVE'
+                      ? { borderColor: '#f59e0b40', color: '#fbbf24', background: '#f59e0b15' }
+                      : { borderColor: '#f43f5e60', color: '#fda4af', background: '#f43f5e1a' }
+                  }
+                >
+                  {maturity === 'SUGGESTIVE' ? 'Suggestive' : '18+ Explicit'}
+                </span>
               )}
             </div>
 
