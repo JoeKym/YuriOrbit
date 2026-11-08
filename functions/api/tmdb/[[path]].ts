@@ -6,7 +6,7 @@ interface Env {
 export const onRequest: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
 
-  // Handle CORS preflight
+  // Handle CORS preflight - TMDB proxy
   if (request.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
@@ -19,7 +19,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   }
 
   const url = new URL(request.url);
-  const targetPath = url.pathname.replace(/^\/api\/tmdb/, '') || '/';
+  const targetPath = url.pathname.replace(/^\\/api\\/tmdb/, '') || '/';
   const targetUrl = new URL(targetPath + url.search, 'https://api.themoviedb.org/3');
 
   // Inject server-side secret if available and query param not already present
@@ -37,10 +37,6 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     const upstreamResponse = await fetch(targetUrl.toString(), {
       method: request.method,
       headers,
-      cf: {
-        cacheTtl: 3600,
-        cacheEverything: true,
-      },
     });
 
     const responseHeaders = new Headers(upstreamResponse.headers);
