@@ -26,25 +26,23 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   if (env.TMDB_API_KEY && !targetUrl.searchParams.has('api_key')) {
     targetUrl.searchParams.set('api_key', env.TMDB_API_KEY);
   }
-
-  const headers = new Headers();
-  headers.set('Accept', 'application/json');
+  const requestHeaders: Record<string, string> = {
+    Accept: 'application/json',
+  };
   if (env.TMDB_READ_ACCESS_TOKEN) {
-    headers.set('Authorization', `Bearer ${env.TMDB_READ_ACCESS_TOKEN}`);
+    requestHeaders['Authorization'] = `Bearer ${env.TMDB_READ_ACCESS_TOKEN}`;
   }
 
   try {
     const upstreamResponse = await fetch(targetUrl.toString(), {
       method: request.method,
-      headers,
-      cf: {
-        cacheTtl: 3600,
-        cacheEverything: true,
-      },
+      headers: requestHeaders,
     });
 
     const responseHeaders = new Headers(upstreamResponse.headers);
     responseHeaders.set('Access-Control-Allow-Origin', '*');
+    responseHeaders.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    responseHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
 
     return new Response(upstreamResponse.body, {
       status: upstreamResponse.status,
