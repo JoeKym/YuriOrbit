@@ -1,7 +1,13 @@
-export const onRequest: PagesFunction = async (context) => {
-  const { request } = context;
+interface Env {
+  TMDB_READ_ACCESS_TOKEN?: string;
+  TMDB_API_KEY?: string;
+  VITE_TMDB_API_KEY?: string;
+}
 
-  // Handle CORS preflight - TMDB proxy
+export const onRequest: PagesFunction<Env> = async (context) => {
+  const { request, env } = context;
+
+  // Handle CORS preflight
   if (request.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
@@ -14,19 +20,37 @@ export const onRequest: PagesFunction = async (context) => {
   }
 
   const url = new URL(request.url);
-  const targetPath = url.pathname.replace(/^\/api\/tmdb/, '') || '/';
-  const targetUrl = new URL(targetPath + url.search, 'https://api.themoviedb.org/3');
+  const subPath = url.pathname.replace(/^\/api\/tmdb\/?/, '');
+  const targetUrl = new URL('https://api.themoviedb.org/3/' + subPath + url.search);
 
-  // TMDB proxy - forward request to TMDB API
-  const fetchOptions: RequestInit = {
-    method: request.method,
-    headers: new Headers({
-      'Accept': 'application/json',
-    }),
-  };
+  const headers = new Headers();
+  headers.set('Accept', 'application/json');
+
+  // Forward incoming Authorization header if present
+  const incomingAuth = request.headers.get('Authorization');
+  if (incomingAuth) {
+    headers.set('Authorization', incomingAuth);
+  }
+
+  // Attach server-side credentials if available
+  const token = env.TMDB_READ_ACCESS_TOKEN;
+  const apiKey = env.TMDB_API_KEY || env.VITE_TMDB_API_KEY;
+
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  } else if (apiKey && !targetUrl.searchParams.has('api_key') && !headers.has('Authorization')) {
+    targetUrl.searchParams.set('api_key', apiKey);
+  }
 
   try {
-    const upstreamResponse = await fetch(targetUrl.toString(), fetchOptions);
+    const upstreamResponse = await fetch(targetUrl.toString(), {
+      method: request.method,
+      headers,
+      cf: {
+        cacheTtl: 300,
+        cacheEverything: true,
+      },
+    });
 
     const responseHeaders = new Headers(upstreamResponse.headers);
     responseHeaders.set('Access-Control-Allow-Origin', '*');
