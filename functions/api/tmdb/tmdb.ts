@@ -14,7 +14,7 @@ export const onRequest: PagesFunction = async (context) => {
   }
 
   const url = new URL(request.url);
-  const targetPath = url.pathname.replace(/^\\/api\\/tmdb/, '') || '/';
+  const targetPath = url.pathname.replace(/^\/api\/tmdb/, '') || '/';
   const targetUrl = new URL(targetPath, 'https://api.themoviedb.org/3');
 
   try {
