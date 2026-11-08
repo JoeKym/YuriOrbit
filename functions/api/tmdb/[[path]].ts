@@ -23,14 +23,9 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   const targetUrl = new URL(targetPath + url.search, 'https://api.themoviedb.org/3');
 
   // Inject server-side secret if available and query param not already present
-  // TMDB: also inject read access token if available as Bearer auth
   if (env.TMDB_API_KEY && !targetUrl.searchParams.has('api_key')) {
     targetUrl.searchParams.set('api_key', env.TMDB_API_KEY);
   }
-  if (env.TMDB_READ_ACCESS_TOKEN) {
-    headers.set('Authorization', `Bearer ${env.TMDB_READ_ACCESS_TOKEN}`);
-  }
-
   const requestHeaders: Record<string, string> = {
     Accept: 'application/json',
   };
@@ -66,4 +61,4 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       }
     );
   }
-;
+};
