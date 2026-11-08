@@ -1,10 +1,5 @@
-interface Env {
-  TMDB_API_KEY?: string;
-  TMDB_READ_ACCESS_TOKEN?: string;
-}
-
-export const onRequest: PagesFunction<Env> = async (context) => {
-  const { request, env } = context;
+export const onRequest: PagesFunction = async (context) => {
+  const { request } = context;
 
   // Handle CORS preflight - TMDB proxy
   if (request.method === 'OPTIONS') {
