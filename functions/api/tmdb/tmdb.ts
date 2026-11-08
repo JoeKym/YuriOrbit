@@ -1,10 +1,5 @@
-interface Env {
-  TMDB_API_KEY?: string;
-  TMDB_READ_ACCESS_TOKEN?: string;
-}
-
-export const onRequest: PagesFunction<Env> = async (context) => {
-  const { request, env } = context;
+export const onRequest: PagesFunction = async (context) => {
+  const { request } = context;
 
   // Handle CORS preflight - TMDB proxy
   if (request.method === 'OPTIONS') {
@@ -20,29 +15,15 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   const url = new URL(request.url);
   const targetPath = url.pathname.replace(/^\\/api\\/tmdb/, '') || '/';
-  const targetUrl = new URL(targetPath + url.search, 'https://api.themoviedb.org/3');
-
-  // Inject server-side secret if available and query param not already present
-  if (env.TMDB_API_KEY && !targetUrl.searchParams.has('api_key')) {
-    targetUrl.searchParams.set('api_key', env.TMDB_API_KEY);
-  }
-  const requestHeaders: Record<string, string> = {
-    Accept: 'application/json',
-  };
-  if (env.TMDB_READ_ACCESS_TOKEN) {
-    requestHeaders['Authorization'] = `Bearer ${env.TMDB_READ_ACCESS_TOKEN}`;
-  }
+  const targetUrl = new URL(targetPath, 'https://api.themoviedb.org/3');
 
   try {
     const upstreamResponse = await fetch(targetUrl.toString(), {
       method: request.method,
-      headers: requestHeaders,
     });
 
     const responseHeaders = new Headers(upstreamResponse.headers);
     responseHeaders.set('Access-Control-Allow-Origin', '*');
-    responseHeaders.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-    responseHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
 
     return new Response(upstreamResponse.body, {
       status: upstreamResponse.status,
