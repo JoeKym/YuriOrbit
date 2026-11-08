@@ -6,7 +6,7 @@ interface Env {
 export const onRequest: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
 
-  // Handle CORS preflight
+  // Handle CORS preflight - TMDB proxy
   if (request.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
