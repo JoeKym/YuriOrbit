@@ -1,21 +1,17 @@
 import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Activity,
-  BookOpen,
   Compass,
-  KeyRound,
   LayoutDashboard,
   ListChecks,
   Megaphone,
   Shield,
-  ShieldAlert,
   Sparkles,
   Star,
   Users,
-  X,
 } from 'lucide-react';
 import { NotFoundPage } from '@/pages/NotFoundPage';
-import { Link } from 'react-router-dom';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { adminApi } from '@/lib/admin/api';
 import { cn } from '@/lib/utils/format';
@@ -28,8 +24,8 @@ import { AuditTab } from '@/components/admin/AuditTab';
 
 type TabKey = 'overview' | 'users' | 'library' | 'featured' | 'settings' | 'audit';
 
-const TABS: { key: TabKey; label: string; icon: typeof X }[] = [
-  { key: 'overview', label: 'Overview', icon: X },
+const TABS: { key: TabKey; label: string; icon: typeof Shield }[] = [
+  { key: 'overview', label: 'Overview', icon: LayoutDashboard },
   { key: 'users', label: 'Users', icon: Users },
   { key: 'library', label: 'Library entries', icon: ListChecks },
   { key: 'featured', label: "Editor's Picks", icon: Sparkles },
@@ -37,14 +33,29 @@ const TABS: { key: TabKey; label: string; icon: typeof X }[] = [
   { key: 'audit', label: 'Audit log', icon: Activity },
 ];
 
+const TAB_KEYS = TABS.map((item) => item.key);
+
+function isTabKey(value: string | null): value is TabKey {
+  return !!value && (TAB_KEYS as string[]).includes(value);
+}
+
 export function AdminPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [checking, setChecking] = useState(true);
   const [authorised, setAuthorised] = useState(false);
-  const [allowlist, setAllowlist] = useState<string[]>([]);
-  const [problem, setProblem] = useState<{ message: string; status: number; needsSetup: boolean } | null>(null);
-  const [tab, setTab] = useState<TabKey>('overview');
+
+  // Tabs live in the URL: /admin?tab=users, /admin?tab=featured, …
+  const requested = searchParams.get('tab');
+  const tab: TabKey = isTabKey(requested) ? requested : 'overview';
+
+  const setTab = (key: TabKey) => {
+    const next = new URLSearchParams(searchParams);
+    if (key === 'overview') next.delete('tab');
+    else next.set('tab', key);
+    setSearchParams(next, { replace: true });
+  };
 
   useEffect(() => {
     if (isLoading) return;
@@ -52,7 +63,6 @@ export function AdminPage() {
     if (!isAuthenticated) {
       setChecking(false);
       setAuthorised(false);
-      setProblem(null);
       return;
     }
 
@@ -61,18 +71,7 @@ export function AdminPage() {
 
     adminApi.me().then((result) => {
       if (cancelled) return;
-      if (result.ok && result.data) {
-        setAuthorised(true);
-        setAllowlist(result.data.allowlist);
-        setProblem(null);
-      } else {
-        setAuthorised(false);
-        setProblem({
-          message: result.error || 'Admin access denied.',
-          status: result.status,
-          needsSetup: Boolean(result.needsSetup),
-        });
-      }
+      setAuthorised(Boolean(result.ok && result.data));
       setChecking(false);
     });
 
@@ -95,7 +94,7 @@ export function AdminPage() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500 to-lavender-600">
-            <X className="h-5 w-5 text-white" />
+            <Shield className="h-5 w-5 text-white" />
           </div>
           <div>
             <h1 className="font-display text-2xl font-semibold text-ink-50">Admin console</h1>
@@ -114,17 +113,18 @@ export function AdminPage() {
           const Icon = item.icon;
           const isActive = tab === item.key;
           return (
-            <button
+            <Link
               key={item.key}
-              onClick={() => setTab(item.key)}
+              to={item.key === 'overview' ? '/admin' : `/admin?tab=${item.key}`}
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
                 isActive ? 'bg-rose-500/15 text-rose-300' : 'text-ink-300 hover:bg-ink-850 hover:text-ink-100'
               )}
+              aria-current={isActive ? 'page' : undefined}
             >
               <Icon className="h-3.5 w-3.5" />
               {item.label}
-            </button>
+            </Link>
           );
         })}
         <span className="ml-auto hidden items-center gap-1.5 text-[11px] text-ink-500 sm:flex">

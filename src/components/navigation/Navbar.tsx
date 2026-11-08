@@ -17,6 +17,7 @@ import {
   Settings,
   Layers,
   UserRound,
+  ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/format';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -275,12 +276,20 @@ export function Navbar() {
                     </div>
 
                     <div className="space-y-0.5">
+                      <Link
+                        to="/profile"
+                        className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-ink-200 hover:bg-ink-800 hover:text-ink-50 transition-colors"
+                      >
+                        <UserRound className="h-3.5 w-3.5 text-rose-400" />
+                        <span>Your profile</span>
+                      </Link>
+
                       {myProfile?.username && (
                         <Link
                           to={`/user/${myProfile.username}`}
                           className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-ink-200 hover:bg-ink-800 hover:text-ink-50 transition-colors"
                         >
-                          <UserRound className="h-3.5 w-3.5 text-rose-400" />
+                          <ExternalLink className="h-3.5 w-3.5 text-lavender-400" />
                           <span>Public profile</span>
                         </Link>
                       )}

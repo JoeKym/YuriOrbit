@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { adminApi, type FeaturedTitle } from '@/lib/admin/api';
-import { getTitleById } from '@/lib/providers';
+import { getTitleById, searchGLTitles } from '@/lib/providers';
+import { extractTitleId } from '@/lib/catalog/identity';
 import { getFallbackCover } from '@/lib/utils/format';
 
 export function FeaturedTab() {
@@ -11,7 +12,12 @@ export function FeaturedTab() {
 
   const [titleId, setTitleId] = useState('');
   const [note, setNote] = useState('');
-  const [preview, setPreview] = useState<{ title: string; coverImage?: string; contentType: string } | null>(null);
+  const [preview, setPreview] = useState<{
+    id: string;
+    title: string;
+    coverImage?: string;
+    contentType: string;
+  } | null>(null);
   const [looking, setLooking] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -30,17 +36,32 @@ export function FeaturedTab() {
   }, [load]);
 
   const handleLookup = async () => {
-    const id = titleId.trim();
+    const id = extractTitleId(titleId);
     if (!id) return;
+
     setLooking(true);
     setMessage(null);
-    const found = await getTitleById(id);
+
+    let found = await getTitleById(id);
+
+    // Not a known id? Treat the input as a title and take the best match.
+    if (!found) {
+      const result = await searchGLTitles({ query: id.replace(/[-_]+/g, ' ') }, 1, 6);
+      found = result.items[0] ?? null;
+    }
+
     setLooking(false);
+
     if (found) {
-      setPreview({ title: found.title, coverImage: found.coverImage, contentType: found.contentType });
+      setPreview({
+        id: found.id,
+        title: found.title,
+        coverImage: found.coverImage,
+        contentType: found.contentType,
+      });
     } else {
       setPreview(null);
-      setMessage('Could not resolve that title id. Check it (for example ANILIST-86218).');
+      setMessage('Could not resolve that title. Paste a YuriOrbit link, or type the title name.');
     }
   };
 
@@ -52,7 +73,7 @@ export function FeaturedTab() {
     setSaving(true);
     setMessage(null);
     const result = await adminApi.addFeatured({
-      titleId: titleId.trim(),
+      titleId: preview.id,
       title: preview.title,
       coverImage: preview.coverImage,
       note: note.trim() || undefined,
@@ -84,8 +105,9 @@ export function FeaturedTab() {
           <Sparkles className="h-4 w-4 text-rose-400" /> Pin a title to the homepage
         </h2>
         <p className="mb-4 text-xs text-ink-400">
-          Picks appear in an Editor&rsquo;s Picks rail on the home page. Paste any catalog id, for example{' '}
-          <code className="rounded bg-ink-850 px-1.5 py-0.5 text-ink-200">ANILIST-86218</code>.
+          Picks appear in an Editor&rsquo;s Picks rail on the home page. Paste a YuriOrbit title link or id, for example{' '}
+          <code className="rounded bg-ink-850 px-1.5 py-0.5 text-ink-200">/title/yuri-on-ice</code> — or just type the
+          title name.
         </p>
 
         <div className="flex flex-wrap items-end gap-2">
@@ -97,7 +119,7 @@ export function FeaturedTab() {
                 setTitleId(e.target.value);
                 setPreview(null);
               }}
-              placeholder="ANILIST-86218"
+              placeholder="/title/yuri-on-ice"
               className="input-field py-2 text-xs"
             />
           </div>

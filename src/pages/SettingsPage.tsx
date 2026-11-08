@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Settings as SettingsIcon, Trash2, Download, Upload, Info, CheckCircle2, BookOpen, Sliders } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Settings as SettingsIcon, Trash2, Download, Upload, Info, CheckCircle2, BookOpen, Sliders, Pencil, UserRound } from 'lucide-react';
 import { useLibrary } from '@/hooks/useLibrary';
-import { ProfileSettings } from '@/components/settings/ProfileSettings';
 
 export function SettingsPage() {
   const { library, clearLibrary } = useLibrary();
@@ -183,8 +183,19 @@ export function SettingsPage() {
           </div>
         </section>
 
-        {/* Public profile */}
-        <ProfileSettings />
+        {/* Public profile — edited on /profile */}
+        <section className="card-surface p-5">
+          <div className="mb-1 flex items-center gap-2">
+            <UserRound className="h-4 w-4 text-rose-400" />
+            <h2 className="text-lg font-semibold text-ink-50">Public profile</h2>
+          </div>
+          <p className="mb-4 text-xs text-ink-400">
+            Username, display name, bio, avatar and visibility live on your profile page.
+          </p>
+          <Link to="/profile" className="btn-secondary text-xs">
+            <Pencil className="h-3.5 w-3.5" /> Go to profile
+          </Link>
+        </section>
 
         {/* Reader Preferences */}
         <section className="card-surface p-5">

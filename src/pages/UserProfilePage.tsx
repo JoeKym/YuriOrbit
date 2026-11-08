@@ -155,7 +155,7 @@ export function UserProfilePage() {
                 </span>
               )}
               {isOwner && (
-                <Link to="/settings" className="btn-secondary text-xs">
+                <Link to="/profile" className="btn-secondary text-xs">
                   Edit profile
                 </Link>
               )}

@@ -62,10 +62,19 @@ export interface SeasonInfo {
   airDate?: string;
 }
 
+export interface TitleSource {
+  provider: SourceProvider;
+  providerId: string;
+  url?: string;
+}
+
 export interface ContentTitle {
+  /** YuriOrbit id — a stable slug, e.g. `yuri-on-ice`. Never a provider id. */
   id: string;
   providerId: string;
   provider: SourceProvider;
+  /** Every upstream record this entry was merged from. */
+  sources?: TitleSource[];
   title: string;
   altTitles: string[];
   description?: string;

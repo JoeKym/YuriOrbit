@@ -6,6 +6,7 @@ import { GENRE_LIST } from '@/types/content';
 import { getPopularGL } from '@/lib/providers';
 import { GL_ALLOWED_CLASSIFICATIONS } from '@/lib/providers/classify';
 import { ContentCardSkeleton } from '@/components/content/ContentCard';
+import { getFallbackCover } from '@/lib/utils/format';
 
 const FEATURED_GENRES = ['Romance', 'Drama', 'Comedy', 'Fantasy', 'Historical', 'School Life', 'Slice of Life', 'Mystery', 'Supernatural', 'Science Fiction', 'Tragedy', 'Slow Burn', 'Action'];
 
@@ -115,10 +116,13 @@ export function GenresPage() {
                     >
                       <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-ink-850 shadow-card transition-all duration-300 group-hover:shadow-card-hover group-hover:ring-1 group-hover:ring-rose-500/20">
                         <img
-                          src={t.coverImage}
+                          src={t.coverImage || getFallbackCover(t.title)}
                           alt={t.title}
                           loading="lazy"
                           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = getFallbackCover(t.title);
+                          }}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-ink-950/90 to-transparent" />
                         <div className="absolute bottom-0 p-3">

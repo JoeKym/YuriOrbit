@@ -20,7 +20,6 @@ const GL_TAGS = new Set([
   "girls' love",
   'shoujo ai',
   'shoujo-ai',
-  'female protagonist',
   'female-female romance',
   'lesbian',
   'sapphic',
@@ -127,6 +126,35 @@ export function classifyGL(title: {
 
 export function filterGL(titles: ContentTitle[], allowed: GLClassification[] = ['CONFIRMED_GL', 'GL_RELATED']): ContentTitle[] {
   return titles.filter((t) => allowed.includes(t.glClassification));
+}
+
+/**
+ * How strongly a title reads as Girls' Love, 0–100.
+ *
+ * AniList's Yuri tag is user-voted and applied loosely (an isekai with one
+ * female-female scene can carry it at a low rank), while MangaDex's Girls' Love
+ * tag is curated. Used for ranking curated rails, not for filtering.
+ */
+export function glConfidence(title: {
+  glClassification?: GLClassification;
+  genres?: string[];
+  tags?: { name: string; rank?: number }[];
+  provider?: string;
+}): number {
+  let score = 0;
+
+  if (title.glClassification === 'CONFIRMED_GL') score += 40;
+  else if (title.glClassification === 'GL_RELATED') score += 15;
+
+  const genres = (title.genres || []).map((genre) => normalizeStr(genre));
+  if (genres.some((genre) => GL_GENRES.has(genre))) score += 25;
+
+  const tagHit = (title.tags || []).find((tag) => GL_TAGS.has(normalizeStr(tag.name)));
+  if (tagHit) score += 20 + Math.min(20, Math.round((tagHit.rank ?? 60) / 5));
+
+  if (title.provider === 'MANGADEX') score += 15;
+
+  return Math.min(100, score);
 }
 
 export const GL_ALLOWED_CLASSIFICATIONS: GLClassification[] = ['CONFIRMED_GL', 'GL_RELATED'];

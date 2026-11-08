@@ -2,6 +2,10 @@
  * Unified provider index for YuriOrbit.
  * Aggregates content from AniList, Jikan (MAL), MangaDex, and TMDB.
  * All providers are free and require no authentication.
+ *
+ * Every list that leaves this module is canonicalized: duplicates coming from
+ * two upstream providers are merged, and each title carries a YuriOrbit slug id
+ * (see `src/lib/catalog/canonical.ts`) instead of a provider id.
  */
 import type { ContentTitle, ContentFilter, PaginatedResult } from '@/types/content';
 import {
@@ -15,26 +19,30 @@ import {
   getTitleById as anilistById,
 } from './anilist';
 import { jikanSearchGL, jikanGetPopular, jikanGetById } from './jikan';
-import { mangadexSearchGL, mangadexGetPopular, mangadexGetById, mangadexGetChapters, mangadexGetChapterPages, mangadexFindMangaId } from './mangadex';
+import {
+  mangadexSearchGL,
+  mangadexGetPopular,
+  mangadexGetById,
+  mangadexGetChapters,
+  mangadexGetChapterPages,
+  mangadexFindMangaId,
+} from './mangadex';
 import { tmdbGetGLMovies, tmdbGetGLDramas, tmdbGetById, tmdbSearchGL } from './tmdb';
 import { GL_ALLOWED_CLASSIFICATIONS } from './classify';
 import { getCached, setCached, clearProviderCache } from './cache';
+import { canonicalizeTitle, canonicalizeTitles } from '@/lib/catalog/canonical';
+import { findRegisteredBySlug, getRegisteredTitle, registerTitles } from '@/lib/catalog/registry';
+import { isLegacyProviderId, slugToQuery, slugifyTitle, titleKey } from '@/lib/catalog/identity';
 
-export { classifyGL, filterGL, GL_ALLOWED_CLASSIFICATIONS } from './classify';
+export { classifyGL, filterGL, glConfidence, GL_ALLOWED_CLASSIFICATIONS } from './classify';
 export { normalizeAniList } from './normalize';
 export { getCached, setCached, clearProviderCache } from './cache';
 
 // Re-export chapter helpers from MangaDex
 export { mangadexGetChapters, mangadexGetChapterPages, mangadexFindMangaId };
 
-/** De-duplicate titles from multiple providers using a stable key. */
-function dedupe(titles: ContentTitle[]): ContentTitle[] {
-  const seen = new Set<string>();
-  return titles.filter((t) => {
-    if (seen.has(t.id)) return false;
-    seen.add(t.id);
-    return true;
-  });
+function isGL(title: ContentTitle): boolean {
+  return GL_ALLOWED_CLASSIFICATIONS.includes(title.glClassification);
 }
 
 // ─── Trending / Popular ────────────────────────────────────────────────────────
@@ -53,9 +61,7 @@ export async function getTrendingGL(perPage = 20): Promise<ContentTitle[]> {
   if (anilist.status === 'fulfilled') results.push(...anilist.value);
   if (jikan.status === 'fulfilled') results.push(...jikan.value);
 
-  const final = dedupe(results)
-    .filter((t) => GL_ALLOWED_CLASSIFICATIONS.includes(t.glClassification))
-    .slice(0, perPage * 2);
+  const final = canonicalizeTitles(results.filter(isGL)).slice(0, perPage * 2);
 
   if (final.length > 0) setCached(cacheKey, final);
   return final;
@@ -77,9 +83,7 @@ export async function getPopularGL(perPage = 50): Promise<ContentTitle[]> {
   if (jikan.status === 'fulfilled') results.push(...jikan.value);
   if (mangadex.status === 'fulfilled') results.push(...mangadex.value);
 
-  const final = dedupe(results)
-    .filter((t) => GL_ALLOWED_CLASSIFICATIONS.includes(t.glClassification))
-    .slice(0, perPage * 2);
+  const final = canonicalizeTitles(results.filter(isGL)).slice(0, perPage * 2);
 
   if (final.length > 0) setCached(cacheKey, final);
   return final;
@@ -90,7 +94,7 @@ export async function getRecentGL(perPage = 20): Promise<ContentTitle[]> {
   const cached = getCached<ContentTitle[]>(cacheKey);
   if (cached && cached.length > 0) return cached;
 
-  const results = await anilistRecent(perPage);
+  const results = canonicalizeTitles(await anilistRecent(perPage));
   if (results.length > 0) setCached(cacheKey, results);
   return results;
 }
@@ -100,7 +104,7 @@ export async function getCompletedGL(perPage = 20): Promise<ContentTitle[]> {
   const cached = getCached<ContentTitle[]>(cacheKey);
   if (cached && cached.length > 0) return cached;
 
-  const results = await anilistCompleted(perPage);
+  const results = canonicalizeTitles(await anilistCompleted(perPage));
   if (results.length > 0) setCached(cacheKey, results);
   return results;
 }
@@ -110,43 +114,43 @@ export async function getGLByGenre(genre: string, perPage = 20): Promise<Content
   const cached = getCached<ContentTitle[]>(cacheKey);
   if (cached && cached.length > 0) return cached;
 
-  const results = await anilistByGenre(genre, perPage);
+  const results = canonicalizeTitles(await anilistByGenre(genre, perPage));
   if (results.length > 0) setCached(cacheKey, results);
   return results;
 }
 
-export async function getGLByContentType(contentType: ContentTitle['contentType'], perPage = 30): Promise<ContentTitle[]> {
+export async function getGLByContentType(
+  contentType: ContentTitle['contentType'],
+  perPage = 30
+): Promise<ContentTitle[]> {
   const cacheKey = `type_${contentType}_${perPage}`;
   const cached = getCached<ContentTitle[]>(cacheKey);
   if (cached && cached.length > 0) return cached;
 
-  // For movies/dramas pull from TMDB with AniList fallback; for manga/manhwa/manhua use AniList
+  // Movies/dramas come from TMDB (live action & film) with an AniList fallback.
   let results: ContentTitle[] = [];
   if (contentType === 'MOVIE') {
     const tmdbResults = await tmdbGetGLMovies().catch(() => []);
-    if (tmdbResults.length > 0) {
-      results = tmdbResults;
-    } else {
-      results = await anilistByType('MOVIE', perPage);
-    }
+    results = tmdbResults.length > 0 ? tmdbResults : await anilistByType('MOVIE', perPage);
   } else if (contentType === 'TV' || contentType === 'DRAMA') {
     const tmdbResults = await tmdbGetGLDramas().catch(() => []);
-    if (tmdbResults.length > 0) {
-      results = tmdbResults;
-    } else {
-      results = await anilistByType('TV', perPage);
-    }
+    results = tmdbResults.length > 0 ? tmdbResults : await anilistByType('TV', perPage);
   } else {
     results = await anilistByType(contentType, perPage);
   }
 
-  if (results.length > 0) setCached(cacheKey, results);
-  return results;
+  const final = canonicalizeTitles(results.filter(isGL));
+  if (final.length > 0) setCached(cacheKey, final);
+  return final;
 }
 
 // ─── Search (unified across providers) ────────────────────────────────────────
 
-export async function searchGLTitles(filter: ContentFilter, page = 1, perPage = 20): Promise<PaginatedResult> {
+export async function searchGLTitles(
+  filter: ContentFilter,
+  page = 1,
+  perPage = 20
+): Promise<PaginatedResult> {
   const contentType = filter.contentType;
 
   const promises: Promise<PaginatedResult>[] = [
@@ -155,7 +159,13 @@ export async function searchGLTitles(filter: ContentFilter, page = 1, perPage = 
     jikanSearchGL(filter, page, perPage),
   ];
 
-  if (contentType === 'MOVIE' || contentType === 'TV' || contentType === 'DRAMA' || !contentType || contentType === 'ALL') {
+  if (
+    contentType === 'MOVIE' ||
+    contentType === 'TV' ||
+    contentType === 'DRAMA' ||
+    !contentType ||
+    contentType === 'ALL'
+  ) {
     promises.push(tmdbSearchGL(filter, page));
   }
 
@@ -173,10 +183,11 @@ export async function searchGLTitles(filter: ContentFilter, page = 1, perPage = 
     }
   }
 
-  const deduped = dedupe(items).filter((t) => GL_ALLOWED_CLASSIFICATIONS.includes(t.glClassification));
+  // Cross-provider duplicates collapse into one canonical entry here.
+  const deduped = canonicalizeTitles(items.filter(isGL));
 
   return {
-    items: deduped.slice(0, perPage * 3),
+    items: deduped,
     page,
     perPage,
     total,
@@ -186,18 +197,70 @@ export async function searchGLTitles(filter: ContentFilter, page = 1, perPage = 
 
 // ─── Single Title Lookup ───────────────────────────────────────────────────────
 
+async function fetchProviderTitle(id: string): Promise<ContentTitle | null> {
+  if (id.startsWith('ANILIST-')) return anilistById(id);
+  if (id.startsWith('JIKAN-')) return jikanGetById(id);
+  if (id.startsWith('MANGADEX-')) return mangadexGetById(id);
+  if (id.startsWith('TMDB-')) return tmdbGetById(id);
+  return anilistById(id);
+}
+
+/** Re-resolve a slug id against the providers (used for direct/deep links). */
+async function resolveSlug(slug: string): Promise<ContentTitle | null> {
+  // Slugs may carry a disambiguation suffix (`-2015`, `-2`) added when two works
+  // share a title; strip it before searching.
+  const withYear = /^(.*)-(\d{4})$/.exec(slug);
+  const baseSlug = withYear ? withYear[1] : slug.replace(/-\d+$/, '');
+  const wantedYear = withYear ? Number(withYear[2]) : undefined;
+
+  const query = slugToQuery(baseSlug);
+  if (!query) return null;
+
+  const result = await searchGLTitles({ query }, 1, 30);
+
+  const matchingTitle = result.items.filter((item) => slugifyTitle(item.title) === baseSlug);
+  const match =
+    (wantedYear ? matchingTitle.find((item) => item.releaseYear === wantedYear) : undefined) ??
+    matchingTitle[0] ??
+    result.items.find((item) => item.id === slug);
+
+  if (match) {
+    const resolved = { ...match, id: slug };
+    registerTitles([resolved]);
+    return resolved;
+  }
+
+  const wantedKey = titleKey(query);
+  const loose = result.items.find((item) => titleKey(item.title) === wantedKey);
+  if (loose) {
+    const resolved = { ...loose, id: slug };
+    registerTitles([resolved]);
+    return resolved;
+  }
+
+  return null;
+}
+
 export async function getTitleById(id: string): Promise<ContentTitle | null> {
+  if (!id) return null;
+
   const cacheKey = `title_${id}`;
   const cached = getCached<ContentTitle>(cacheKey);
   if (cached) return cached;
 
   let result: ContentTitle | null = null;
-  if (id.startsWith('ANILIST-')) result = await anilistById(id);
-  else if (id.startsWith('JIKAN-')) result = await jikanGetById(id);
-  else if (id.startsWith('MANGADEX-')) result = await mangadexGetById(id);
-  else if (id.startsWith('TMDB-')) result = await tmdbGetById(id);
-  else result = await anilistById(id);
 
-  if (result) setCached(cacheKey, result);
+  if (isLegacyProviderId(id)) {
+    // Old links and library rows still carry provider ids — keep them working.
+    const raw = await fetchProviderTitle(id);
+    if (raw) result = canonicalizeTitle(raw);
+  } else {
+    result = getRegisteredTitle(id) ?? findRegisteredBySlug(id) ?? (await resolveSlug(id));
+  }
+
+  if (result) {
+    registerTitles([result]);
+    setCached(cacheKey, result);
+  }
   return result;
 }

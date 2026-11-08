@@ -20,10 +20,16 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   const url = new URL(request.url);
   const targetPath = url.pathname.replace(/^\/api\/mangadex/, '') || '/';
-  const targetUrl = new URL(targetPath + url.search, 'https://api.mangadex.org');
+
+  // Covers live on uploads.mangadex.org. Proxying them keeps the browser on our
+  // own origin, which avoids Chrome's Opaque Response Blocking (ERR_BLOCKED_BY_ORB)
+  // that silently broke every MangaDex cover image.
+  const isCover = targetPath.startsWith('/covers/');
+  const upstreamOrigin = isCover ? 'https://uploads.mangadex.org' : 'https://api.mangadex.org';
+  const targetUrl = new URL(targetPath + url.search, upstreamOrigin);
 
   const headers = new Headers();
-  headers.set('Accept', 'application/json');
+  headers.set('Accept', isCover ? 'image/avif,image/webp,image/jpeg,image/png,image/*' : 'application/json');
   // MangaDex requires a dedicated client User-Agent. Forwarding browser user agents
   // from datacenter IPs causes MangaDex's Cloudflare DDoS protection to return verification HTML.
   headers.set('User-Agent', 'YuriOrbit/1.0.0 (+https://github.com/JoeKym/YuriOrbit; mail.jkyme@gmail.com)');
@@ -39,13 +45,17 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       method: request.method,
       headers,
       cf: {
-        cacheTtl: 300,
+        cacheTtl: isCover ? 86400 : 300,
         cacheEverything: true,
       },
     });
 
     const responseHeaders = new Headers(upstreamResponse.headers);
     responseHeaders.set('Access-Control-Allow-Origin', '*');
+    if (isCover) {
+      responseHeaders.set('Cache-Control', 'public, max-age=86400, immutable');
+      responseHeaders.set('Content-Disposition', 'inline');
+    }
 
     return new Response(upstreamResponse.body, {
       status: upstreamResponse.status,

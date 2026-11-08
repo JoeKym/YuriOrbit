@@ -4,6 +4,7 @@ import type { ContentTitle } from '@/types/content';
 import { CONTENT_TYPE_LABELS } from '@/types/content';
 import { cn, formatScore, getFallbackCover } from '@/lib/utils/format';
 import { useLibrary } from '@/hooks/useLibrary';
+import { titleKey } from '@/lib/catalog/identity';
 
 interface ContentCardProps {
   title: ContentTitle;
@@ -11,8 +12,13 @@ interface ContentCardProps {
 }
 
 export function ContentCard({ title, className }: ContentCardProps) {
-  const { isInLibrary, addToLibrary, removeFromLibrary } = useLibrary();
-  const saved = isInLibrary(title.id);
+  const { library, addToLibrary, removeFromLibrary } = useLibrary();
+  // Titles saved before the slug-id migration are keyed by provider id — match
+  // them by name so the heart state stays correct.
+  const savedEntry =
+    library.find((entry) => entry.titleId === title.id) ??
+    library.find((entry) => titleKey(entry.title) === titleKey(title.title));
+  const saved = Boolean(savedEntry);
 
   return (
     <Link
@@ -51,7 +57,7 @@ export function ContentCard({ title, className }: ContentCardProps) {
         <button
           onClick={(e) => {
             e.preventDefault();
-            if (saved) removeFromLibrary(title.id);
+            if (savedEntry) removeFromLibrary(savedEntry.titleId);
             else addToLibrary(title, 'FAVOURITE');
           }}
           className="absolute bottom-2 right-2 rounded-full bg-ink-950/80 p-1.5 backdrop-blur-sm transition-all duration-200 hover:bg-ink-900"
