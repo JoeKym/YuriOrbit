@@ -1,6 +1,6 @@
 /**
  * Unified provider index for YuriOrbit.
- * Aggregates content from AniList, Jikan (MAL), MangaDex, and TMDB.
+ * Aggregates content from AniList, MangaDex, and TMDB.
  * All providers are free and require no authentication.
  *
  * Every list that leaves this module is canonicalized: duplicates coming from
@@ -19,7 +19,6 @@ import {
   getTitleById as anilistById,
   searchGLByCreator as anilistByCreator,
 } from './anilist';
-import { jikanSearchGL, jikanGetPopular, jikanGetById } from './jikan';
 import {
   mangadexSearchGL,
   mangadexGetPopular,
@@ -68,14 +67,14 @@ export async function getTrendingGL(perPage = 20): Promise<ContentTitle[]> {
   const cached = getCached<ContentTitle[]>(cacheKey);
   if (cached && cached.length > 0) return cached;
 
-  const [anilist, jikan] = await Promise.allSettled([
+  const [anilist, mangadex] = await Promise.allSettled([
     anilistTrending(perPage),
-    jikanGetPopular(perPage),
+    mangadexGetPopular(perPage),
   ]);
 
   const results: ContentTitle[] = [];
   if (anilist.status === 'fulfilled') results.push(...anilist.value);
-  if (jikan.status === 'fulfilled') results.push(...jikan.value);
+  if (mangadex.status === 'fulfilled') results.push(...mangadex.value);
 
   const final = visible(canonicalizeTitles(results.filter(isGL)).slice(0, perPage * 2));
 
@@ -88,15 +87,13 @@ export async function getPopularGL(perPage = 50): Promise<ContentTitle[]> {
   const cached = getCached<ContentTitle[]>(cacheKey);
   if (cached && cached.length > 0) return cached;
 
-  const [anilist, jikan, mangadex] = await Promise.allSettled([
+  const [anilist, mangadex] = await Promise.allSettled([
     anilistPopular(perPage),
-    jikanGetPopular(Math.min(perPage, 25)),
-    mangadexGetPopular(Math.min(perPage, 25)),
+    mangadexGetPopular(Math.min(perPage, 35)),
   ]);
 
   const results: ContentTitle[] = [];
   if (anilist.status === 'fulfilled') results.push(...anilist.value);
-  if (jikan.status === 'fulfilled') results.push(...jikan.value);
   if (mangadex.status === 'fulfilled') results.push(...mangadex.value);
 
   const final = visible(canonicalizeTitles(results.filter(isGL)).slice(0, perPage * 2));
@@ -110,9 +107,11 @@ export async function getRecentGL(perPage = 20): Promise<ContentTitle[]> {
   const cached = getCached<ContentTitle[]>(cacheKey);
   if (cached && cached.length > 0) return cached;
 
-  const results = visible(canonicalizeTitles(await anilistRecent(perPage)));
-  if (results.length > 0) setCached(cacheKey, results);
-  return results;
+  const results = await anilistRecent(perPage);
+  const final = visible(canonicalizeTitles(results.filter(isGL)));
+
+  if (final.length > 0) setCached(cacheKey, final);
+  return final;
 }
 
 export async function getCompletedGL(perPage = 20): Promise<ContentTitle[]> {
@@ -120,9 +119,11 @@ export async function getCompletedGL(perPage = 20): Promise<ContentTitle[]> {
   const cached = getCached<ContentTitle[]>(cacheKey);
   if (cached && cached.length > 0) return cached;
 
-  const results = visible(canonicalizeTitles(await anilistCompleted(perPage)));
-  if (results.length > 0) setCached(cacheKey, results);
-  return results;
+  const results = await anilistCompleted(perPage);
+  const final = visible(canonicalizeTitles(results.filter(isGL)));
+
+  if (final.length > 0) setCached(cacheKey, final);
+  return final;
 }
 
 export async function getGLByGenre(genre: string, perPage = 20): Promise<ContentTitle[]> {
@@ -130,21 +131,22 @@ export async function getGLByGenre(genre: string, perPage = 20): Promise<Content
   const cached = getCached<ContentTitle[]>(cacheKey);
   if (cached && cached.length > 0) return cached;
 
-  const results = visible(canonicalizeTitles(await anilistByGenre(genre, perPage)));
-  if (results.length > 0) setCached(cacheKey, results);
-  return results;
+  const results = await anilistByGenre(genre, perPage);
+  const final = visible(canonicalizeTitles(results.filter(isGL)));
+
+  if (final.length > 0) setCached(cacheKey, final);
+  return final;
 }
 
 export async function getGLByContentType(
   contentType: ContentTitle['contentType'],
-  perPage = 30
+  perPage = 20
 ): Promise<ContentTitle[]> {
   const cacheKey = `type_${contentType}_${perPage}_${levelKey()}`;
   const cached = getCached<ContentTitle[]>(cacheKey);
   if (cached && cached.length > 0) return cached;
 
-  // Movies/dramas come from TMDB (live action & film) with an AniList fallback.
-  let results: ContentTitle[] = [];
+  let results: ContentTitle[];
   if (contentType === 'MOVIE') {
     const tmdbResults = await tmdbGetGLMovies().catch(() => []);
     results = tmdbResults.length > 0 ? tmdbResults : await anilistByType('MOVIE', perPage);
@@ -172,7 +174,6 @@ export async function searchGLTitles(
   const promises: Promise<PaginatedResult>[] = [
     anilistSearch(filter, page, perPage),
     mangadexSearchGL(filter, page, perPage),
-    jikanSearchGL(filter, page, perPage),
   ];
 
   if (
@@ -211,7 +212,7 @@ export async function searchGLTitles(
   };
 }
 
-// ─── Creator Lookup ───────────────────────────────────────────────────────────
+// ─── Creator Lookup ──────────────────────────────────────────────────────────
 
 export interface CreatorGroup {
   name: string;
@@ -253,10 +254,12 @@ export async function getCreatorTitles(query: string, perPage = 3): Promise<Crea
   return groups;
 }
 
+export const searchGLByCreator = getCreatorTitles;
+
 /**
- * Resolve an exact id instead of searching: provider ids (`ANILIST-…`,
- * `MANGADEX-…`, `TMDB-movie-…`), Jikan ids, and YuriOrbit slugs already seen
- * this session. No network call for unknown strings — the caller can then fall
+ * Fast in-memory lookup. When the user navigates from a card or search dropdown,
+ * the title was already registered in the registry during list rendering; returning
+ * it directly avoids a redundant network round-trip. Returns null to fall
  * back to a normal text search.
  */
 export function resolveDirectTitle(raw: string): ContentTitle | null {
@@ -273,7 +276,6 @@ export function resolveDirectTitle(raw: string): ContentTitle | null {
 
 async function fetchProviderTitle(id: string): Promise<ContentTitle | null> {
   if (id.startsWith('ANILIST-')) return anilistById(id);
-  if (id.startsWith('JIKAN-')) return jikanGetById(id);
   if (id.startsWith('MANGADEX-')) return mangadexGetById(id);
   if (id.startsWith('TMDB-')) return tmdbGetById(id);
   return anilistById(id);
@@ -281,8 +283,6 @@ async function fetchProviderTitle(id: string): Promise<ContentTitle | null> {
 
 /** Re-resolve a slug id against the providers (used for direct/deep links). */
 async function resolveSlug(slug: string): Promise<ContentTitle | null> {
-  // Slugs may carry a disambiguation suffix (`-2015`, `-2`) added when two works
-  // share a title; strip it before searching.
   const withYear = /^(.*)-(\d{4})$/.exec(slug);
   const baseSlug = withYear ? withYear[1] : slug.replace(/-\d+$/, '');
   const wantedYear = withYear ? Number(withYear[2]) : undefined;
@@ -315,26 +315,24 @@ async function resolveSlug(slug: string): Promise<ContentTitle | null> {
   return null;
 }
 
+/**
+ * Resolves a title by ID. Handles YuriOrbit slugs,
+ * legacy provider IDs (`ANILIST-12345`, `MANGADEX-uuid`, `TMDB-movie-999`), and title names.
+ */
 export async function getTitleById(id: string): Promise<ContentTitle | null> {
-  if (!id) return null;
+  const trimmed = id.trim();
+  if (!trimmed) return null;
 
-  const cacheKey = `title_${id}`;
-  const cached = getCached<ContentTitle>(cacheKey);
+  const cached = getRegisteredTitle(trimmed) ?? findRegisteredBySlug(trimmed);
   if (cached) return cached;
 
-  let result: ContentTitle | null = null;
-
-  if (isLegacyProviderId(id)) {
-    // Old links and library rows still carry provider ids — keep them working.
-    const raw = await fetchProviderTitle(id);
-    if (raw) result = canonicalizeTitle(raw);
-  } else {
-    result = getRegisteredTitle(id) ?? findRegisteredBySlug(id) ?? (await resolveSlug(id));
+  if (isLegacyProviderId(trimmed)) {
+    const raw = await fetchProviderTitle(trimmed);
+    if (!raw) return null;
+    const canonical = canonicalizeTitle(raw);
+    registerTitles([canonical]);
+    return canonical;
   }
 
-  if (result) {
-    registerTitles([result]);
-    setCached(cacheKey, result);
-  }
-  return result;
+  return resolveSlug(trimmed);
 }

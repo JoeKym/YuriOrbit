@@ -115,7 +115,7 @@ export function ContentCard({ title, className }: ContentCardProps) {
               {contentFormatLabel}
             </span>
 
-            {title.country && ['TH', 'JP', 'KR', 'CN', 'TW'].includes(title.country) && (
+            {title.country && title.country.length <= 3 && (
               <span className="rounded-md border border-white/10 bg-ink-950/80 px-1.5 py-0.5 text-[10px] font-bold text-rose-300 backdrop-blur-md">
                 {title.country}
               </span>

@@ -278,22 +278,26 @@ function normalizeMangaDex(m: MDManga): ContentTitle {
 export async function mangadexSearchGL(filter: ContentFilter, page = 1, perPage = 24): Promise<PaginatedResult> {
   const offset = (page - 1) * perPage;
 
-  // MangaDex uses order[field]=direction format
-  const [orderField, orderDir] = mapMDSort(filter.sort).split(':');
+  const isTextSearch = Boolean(filter.query && filter.query.trim());
+  const [orderField, orderDir] = mapMDSort(filter.sort || (isTextSearch ? 'RELEVANCE' : undefined)).split(':');
 
   const params: Record<string, string | string[]> = {
-    includedTags: GL_TAG_IDS,
     excludedTags: EXCLUDE_TAG_IDS,
     includes: ['cover_art', 'author', 'artist'],
     limit: String(Math.min(perPage, 100)),
     offset: String(offset),
-    availableTranslatedLanguage: ['en'],
-    // Only ask MangaDex for what this visitor is allowed to see.
     contentRating: mangadexContentRatings(getMaturityLevel()),
-    [`order[${orderField}]`]: orderDir || 'desc',
+    [`order[${orderField || (isTextSearch ? 'relevance' : 'followedCount')}]`]: orderDir || 'desc',
   };
 
-  if (filter.query) params.title = filter.query;
+  if (!isTextSearch) {
+    params.includedTags = GL_TAG_IDS;
+    params.availableTranslatedLanguage = ['en'];
+  }
+
+  if (filter.query) {
+    params.title = filter.query.trim();
+  }
   if (filter.status && filter.status !== 'ALL') {
     const s = mapMDStatus2(filter.status);
     if (s) params.status = [s];
@@ -302,7 +306,6 @@ export async function mangadexSearchGL(filter: ContentFilter, page = 1, perPage 
     params.year = String(filter.year);
   }
 
-  // Map content type to MangaDex's originalLanguage filter
   if (filter.contentType && filter.contentType !== 'ALL') {
     if (filter.contentType === 'MANHWA') params.originalLanguage = ['ko'];
     else if (filter.contentType === 'MANHUA') params.originalLanguage = ['zh', 'zh-hk'];
@@ -310,10 +313,45 @@ export async function mangadexSearchGL(filter: ContentFilter, page = 1, perPage 
   }
 
   try {
-    const resp = await mdFetch<MDListResponse<MDManga>>('/manga', params);
-    const items = resp.data
+    let resp = await mdFetch<MDListResponse<MDManga>>('/manga', params);
+
+    // If query contains 'unni' and returned few matches, also query 'unnie'
+    if (isTextSearch && filter.query && /\bunni\b/i.test(filter.query) && (resp.data || []).length < 2) {
+      const altParams = { ...params, title: filter.query.replace(/\bunni\b/gi, 'unnie') };
+      const altResp = await mdFetch<MDListResponse<MDManga>>('/manga', altParams).catch(() => null);
+      if (altResp && altResp.data && altResp.data.length > 0) {
+        const existingIds = new Set((resp.data || []).map((m) => m.id));
+        const combined = [...(resp.data || [])];
+        for (const item of altResp.data) {
+          if (!existingIds.has(item.id)) {
+            existingIds.add(item.id);
+            combined.push(item);
+          }
+        }
+        resp = { ...resp, data: combined, total: Math.max(resp.total, altResp.total) };
+      }
+    }
+
+    let items = resp.data
       .map(normalizeMangaDex)
       .filter((t) => GL_ALLOWED_CLASSIFICATIONS.includes(t.glClassification));
+
+    if (isTextSearch && filter.query) {
+      const qNorm = filter.query.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const qWords = filter.query.toLowerCase().split(/\s+/).filter(Boolean);
+      items.sort((a, b) => {
+        const titleA = (a.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const titleB = (b.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const exactA = titleA.includes(qNorm) || qNorm.includes(titleA);
+        const exactB = titleB.includes(qNorm) || qNorm.includes(titleB);
+        if (exactA && !exactB) return -1;
+        if (!exactA && exactB) return 1;
+
+        const wordsA = qWords.filter((w) => (a.title || '').toLowerCase().includes(w)).length;
+        const wordsB = qWords.filter((w) => (b.title || '').toLowerCase().includes(w)).length;
+        return wordsB - wordsA;
+      });
+    }
 
     return {
       items,
@@ -327,7 +365,6 @@ export async function mangadexSearchGL(filter: ContentFilter, page = 1, perPage 
   }
 }
 
-/** Get popular GL titles from MangaDex. */
 export async function mangadexGetPopular(perPage = 24): Promise<ContentTitle[]> {
   try {
     const result = await mangadexSearchGL({}, 1, perPage);

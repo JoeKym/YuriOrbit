@@ -1,65 +1,96 @@
 import { Link } from 'react-router-dom';
-import { Heart, Compass, BookOpen, Shield, Globe, Sparkles } from 'lucide-react';
+import { Heart, Compass, BookOpen, Shield, Globe, Sparkles, Film, Eye } from 'lucide-react';
 
 export function AboutPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
       <div className="text-center mb-10">
-        <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 to-lavender-600 mb-4">
+        <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 to-lavender-600 mb-4 shadow-lg shadow-rose-500/20">
           <Heart className="h-7 w-7 text-white" fill="white" />
         </div>
         <h1 className="font-display text-4xl font-semibold text-ink-50">YuriOrbit</h1>
-        <p className="mt-2 text-lg text-ink-300">Your world of Girls' Love.</p>
+        <p className="mt-2 text-lg text-ink-300">The premier discovery platform for Girls' Love & Yuri.</p>
       </div>
 
       <div className="prose prose-invert max-w-none">
-        <p className="text-ink-300 leading-relaxed">
-          YuriOrbit is a dedicated discovery platform for Girls' Love (GL), yuri, and female-female romance content across manga, manhwa, manhua, webtoons, light novels, web novels, movies, dramas, and television series.
+        <p className="text-ink-300 leading-relaxed text-base">
+          YuriOrbit is a modern discovery hub and reading companion dedicated to Girls' Love (GL), yuri, baihe,
+          and sapphic storytelling. We bring together literature, comics, animation, and live-action cinema into one
+          seamless, unified storefront.
         </p>
-        <p className="mt-4 text-ink-300 leading-relaxed">
-          Our mission is to make it easy to discover, organize, and access GL entertainment from different countries, formats, and legitimate publishing or viewing sources through one coherent platform — without depending on manual content uploads.
+        <p className="mt-4 text-ink-300 leading-relaxed text-base">
+          Whether you are looking for classic Japanese manga, trending Korean manhwa, Chinese baihe webtoons,
+          hit Thai GL dramas (like <em>GAP</em>, <em>The Secret of Us</em>, and <em>23.5</em>), or acclaimed international
+          films, YuriOrbit indexes, categorizes, and organizes them all without manual data entry.
         </p>
       </div>
 
       <div className="mt-10 grid gap-4 sm:grid-cols-2">
         <div className="card-surface p-5">
           <Compass className="h-6 w-6 text-rose-400 mb-2" />
-          <h2 className="font-semibold text-ink-50">Discovery</h2>
-          <p className="mt-1 text-sm text-ink-400">Find GL titles across formats with intelligent classification that filters out non-GL content.</p>
+          <h2 className="font-semibold text-ink-50">Smart GL Discovery</h2>
+          <p className="mt-1 text-sm text-ink-400">
+            Intelligent keyword and taxonomy filtering that highlights genuine female-female romance while filtering
+            out non-GL false positives, sports dramas, and BL series.
+          </p>
         </div>
+
         <div className="card-surface p-5">
           <BookOpen className="h-6 w-6 text-lavender-400 mb-2" />
-          <h2 className="font-semibold text-ink-50">Personal Library</h2>
-          <p className="mt-1 text-sm text-ink-400">Track your reading and watching progress, rate titles, and organize your collection.</p>
+          <h2 className="font-semibold text-ink-50">Built-in Manga Reader</h2>
+          <p className="mt-1 text-sm text-ink-400">
+            Read manga and webtoons directly in your browser with smooth vertical-scroll and paginated reader modes,
+            backed by high-speed edge image proxying.
+          </p>
         </div>
+
         <div className="card-surface p-5">
-          <Globe className="h-6 w-6 text-rose-400 mb-2" />
-          <h2 className="font-semibold text-ink-50">Multi-Source</h2>
-          <p className="mt-1 text-sm text-ink-400">Metadata from AniList with a provider architecture designed to add more sources over time.</p>
+          <Film className="h-6 w-6 text-rose-400 mb-2" />
+          <h2 className="font-semibold text-ink-50">Live-Action & Dramas</h2>
+          <p className="mt-1 text-sm text-ink-400">
+            Comprehensive cataloging for Thai GL series, Japanese & Korean television, and worldwide sapphic cinema
+            powered by TMDB metadata integration.
+          </p>
         </div>
+
         <div className="card-surface p-5">
-          <Shield className="h-6 w-6 text-lavender-400 mb-2" />
-          <h2 className="font-semibold text-ink-50">Respectful</h2>
-          <p className="mt-1 text-sm text-ink-400">We link to official sources and never host or redistribute copyrighted content.</p>
+          <Globe className="h-6 w-6 text-lavender-400 mb-2" />
+          <h2 className="font-semibold text-ink-50">Multi-Source Engine</h2>
+          <p className="mt-1 text-sm text-ink-400">
+            Unified data architecture syncing live from AniList, MangaDex, and TMDB with automated deduplication
+            and canonical slug mapping.
+          </p>
         </div>
       </div>
 
       <div className="mt-10 card-surface p-5">
         <Sparkles className="h-5 w-5 text-rose-400 mb-2" />
-        <h2 className="font-semibold text-ink-50">Our Standards</h2>
-        <ul className="mt-2 space-y-2 text-sm text-ink-300">
-          <li>We do not include BL (Boys' Love) in the primary catalogue.</li>
-          <li>We do not infer a user's sexuality from their reading preferences.</li>
-          <li>We prioritize accurate results over inflated catalogue counts.</li>
-          <li>We do not fabricate ratings, statistics, or content availability.</li>
-          <li>We respect source attribution, removal requests, and provider terms.</li>
+        <h2 className="font-semibold text-ink-50">Our Guiding Standards</h2>
+        <ul className="mt-3 space-y-2 text-sm text-ink-300">
+          <li className="flex items-start gap-2">
+            <span className="text-rose-400 font-bold">•</span>
+            <span><strong>Strict GL/Yuri Focus:</strong> Dedicated exclusively to female-female romance and wlw stories; BL is kept out of the main catalog.</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-rose-400 font-bold">•</span>
+            <span><strong>No File Hosting:</strong> We respect creators and publishers. We do not host copyrighted video files or pirated archives.</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-rose-400 font-bold">•</span>
+            <span><strong>Privacy & Local-First:</strong> Full catalog browsing and personal tracking work completely offline with no tracking or profiling.</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-rose-400 font-bold">•</span>
+            <span><strong>Respectful Maturity Filtering:</strong> Explicit content is hidden by default and requires opt-in browser confirmation.</span>
+          </li>
         </ul>
       </div>
 
       <div className="mt-10 card-surface p-6 border border-ink-800 bg-gradient-to-br from-ink-900 to-ink-950">
         <h2 className="text-base font-semibold text-ink-50 mb-1">Crafted & Engineered by JoeKym Labs</h2>
         <p className="text-sm text-ink-400 leading-relaxed mb-4">
-          YuriOrbit is built and maintained by <strong className="text-ink-100">JoeKym Labs</strong>, a digital product studio dedicated to creating high-performance web products, sleek user experiences, and modern custom software.
+          YuriOrbit is created and maintained by <strong className="text-ink-100">JoeKym Labs</strong>, a modern digital product
+          studio building high-performance web applications and tailored software experiences.
         </p>
         <a
           href="https://joekymlabs.pages.dev"
@@ -73,7 +104,9 @@ export function AboutPage() {
       </div>
 
       <div className="mt-10 text-center">
-        <Link to="/discover" className="btn-primary">Start Exploring</Link>
+        <Link to="/discover" className="btn-primary">
+          Start Exploring YuriOrbit
+        </Link>
       </div>
     </div>
   );
