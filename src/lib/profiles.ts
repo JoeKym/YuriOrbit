@@ -145,19 +145,41 @@ export async function saveMyProfile(
   return { data: null, error: null, needsSetup: false };
 }
 
-/** Library entries visible for a profile (public policy allows anon reads). */
+/**
+ * Columns a public profile may show. `notes` is private and must never be
+ * requested here — the public-library view does not expose it either.
+ */
+const PUBLIC_LIBRARY_COLUMNS =
+  'title_id,title,cover_image,content_type,status,progress,total_progress,rating,provider,added_at,updated_at';
+
+/** Library entries visible for a profile (public profiles, plus your own). */
 export async function fetchPublicLibrary(
   userId: string,
   limit = 60
 ): Promise<ProfileResult<LibraryEntry[]>> {
   if (!supabase) return { data: null, error: 'Profiles are unavailable on this deployment.', needsSetup: true };
 
-  const { data, error } = await supabase
-    .from('library_entries')
-    .select('*')
+  // Preferred path: the column-limited view from
+  // 20261108120000_public_profile_library_view.sql.
+  let { data, error } = await supabase
+    .from('public_profile_libraries')
+    .select(PUBLIC_LIBRARY_COLUMNS)
     .eq('user_id', userId)
     .order('updated_at', { ascending: false })
     .limit(limit);
+
+  // Older deployments without the view: read the table directly, but still
+  // project only public-safe columns so private notes never leave the database.
+  if (error && isMissingSchema(error)) {
+    const fallback = await supabase
+      .from('library_entries')
+      .select(PUBLIC_LIBRARY_COLUMNS)
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(limit);
+    data = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) {
     return {
@@ -177,7 +199,8 @@ export async function fetchPublicLibrary(
     progress: Number(row.progress ?? 0),
     totalProgress: row.total_progress == null ? undefined : Number(row.total_progress),
     rating: row.rating == null ? undefined : Number(row.rating),
-    notes: (row.notes as string | null) ?? undefined,
+    // Public reads never include notes; undefined is the correct value here.
+    notes: undefined,
     addedAt: String(row.added_at),
     updatedAt: String(row.updated_at),
     provider: row.provider as LibraryEntry['provider'],

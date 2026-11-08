@@ -118,11 +118,19 @@ YuriOrbit can be deployed directly to Cloudflare Pages with zero cold starts:
 
 The profile, Editor's Picks, site-settings and audit tables live in
 `supabase/migrations/20261107120000_profiles_featured_settings_audit.sql`.
-Paste it into the Supabase SQL editor and run it — it is idempotent and also adds
-the policy that lets anyone read the library of a **public** profile.
+Paste it into the Supabase SQL editor and run it — it is idempotent.
 
-Until it is applied everything still works: `/user/*` shows a "profiles aren't
-enabled yet" notice, and the homepage simply omits the Editor's Picks rail.
+Then run `supabase/migrations/20261108120000_public_profile_library_view.sql`.
+It replaces the broad "anyone may read a public profile's library rows" policy
+with a `public_profile_libraries` view that returns only the fields a profile
+actually shows — private `notes` are excluded, and the base table goes back to
+being readable only by its owner. Public profiles keep working without it (the
+site falls back to a column-limited query), but until it runs the notes column
+stays readable through the REST API.
+
+Until the first migration is applied everything still works: `/user/*` shows a
+"profiles aren't enabled yet" notice, and the homepage simply omits the Editor's
+Picks rail.
 
 ### 2. Account pages — `/auth` and `/profile`
 
