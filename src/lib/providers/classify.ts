@@ -12,6 +12,8 @@ const GL_GENRES = new Set([
   'lesbian',
   'sapphic',
   'wlw',
+  'baihe',
+  'thai gl',
 ]);
 
 const GL_TAGS = new Set([
@@ -25,6 +27,9 @@ const GL_TAGS = new Set([
   'sapphic',
   'wlw',
   'ff romance',
+  'baihe',
+  'thai gl',
+  'gl drama',
 ]);
 
 const BL_GENRES = new Set([
@@ -59,6 +64,9 @@ const GL_KEYWORDS = [
   'sapphic',
   'wlw',
   'girl x girl',
+  'baihe',
+  'gl drama',
+  'thai gl',
 ];
 
 const BL_KEYWORDS = [
@@ -114,7 +122,7 @@ export function classifyGL(title: {
 
   const glTagsOrGenres = [...tagNames, ...genres].filter((t) => {
     const clean = normalizeStr(t);
-    return clean.includes('yuri') || clean.includes('girls love') || clean.includes('shoujo ai') || clean.includes('lesbian') || clean.includes('sapphic');
+    return clean.includes('yuri') || clean.includes('girls love') || clean.includes('shoujo ai') || clean.includes('lesbian') || clean.includes('sapphic') || clean.includes('baihe');
   });
 
   if (glTagsOrGenres.length > 0) {
@@ -130,10 +138,6 @@ export function filterGL(titles: ContentTitle[], allowed: GLClassification[] = [
 
 /**
  * How strongly a title reads as Girls' Love, 0–100.
- *
- * AniList's Yuri tag is user-voted and applied loosely (an isekai with one
- * female-female scene can carry it at a low rank), while MangaDex's Girls' Love
- * tag is curated. Used for ranking curated rails, not for filtering.
  */
 export function glConfidence(title: {
   glClassification?: GLClassification;

@@ -1,7 +1,6 @@
 /**
  * TMDB (The Movie Database) provider for GL movies, dramas, and TV series.
- * Uses the free public API — no user API key needed (uses a free read-only demo token).
- * For higher rate limits, set VITE_TMDB_KEY in your .env file.
+ * Features curated discovery for Thai, Japanese, Korean, Chinese (Baihe), and international GL.
  * Docs: https://developer.themoviedb.org/docs
  */
 import type { ContentTitle, PaginatedResult, ContentFilter } from '@/types/content';
@@ -106,58 +105,105 @@ interface TMDBCredits {
   crew?: { id: number; title?: string; name?: string; media_type?: string; adult?: boolean }[];
 }
 
-/**
- * TMDB has no Girls' Love genre, but it does have keywords. These IDs were
- * verified against themoviedb.org (e.g. /keyword/264386-lesbian). An earlier
- * revision used 10683 for "lesbian", which is actually "coming of age" — the
- * reason live-action GL discovery looked broken.
- */
-const GL_KEYWORD_IDS = [
-  '264386', // lesbian
+/** Verified TMDB keyword IDs for Girls' Love, Yuri, Sapphic, and Baihe. */
+const CORE_GL_KEYWORD_IDS = [
+  '280003', // girls' love (gl)
+  '9833',   // lesbian relationship
   '214564', // yuri
-  '286187', // sapphic
-  '333351', // wlw
-  '280003', // girls love (gl)
-  '383699', // girls love
   '379589', // baihe
+  '333351', // wlw
+  '286187', // sapphic
+  '383699', // girls love
 ];
 
-/** TMDB's `adult` flag means pornography, so it is only on at the top level. */
+const ASIAN_GL_COUNTRIES = 'TH|JP|KR|CN|TW';
+
+/** Mainstream western shows or BL series that have minor tags but are NOT GL focused. */
+const EXCLUDED_TITLES = new Set([
+  'ulice',
+  'all american',
+  'the affair',
+  'bad buddy', // BL
+  'grey\'s anatomy',
+  'station 19',
+  'chicago fire',
+  'riverdale',
+  'glee',
+  'coronation street',
+  'eastenders',
+  'emmerdale',
+  'hollyoaks',
+]);
+
+/** Low-budget softcore / pink-film keywords that pollute Asian film tags on TMDB. */
+const EROTIC_TITLE_SIGNALS = [
+  '불륜',
+  '부부',
+  'sister-in-law',
+  'sensual',
+  'erotic story',
+  'erotic video',
+  'sex and',
+  'hot body',
+  'secret sex',
+  'lustful',
+];
+
 function includeAdult(): string {
   return maturityRank(getMaturityLevel()) >= maturityRank('PORNOGRAPHIC') ? 'true' : 'false';
 }
 
-/** Free-text queries per format, including native-language terms. */
-const MOVIE_SEARCHES = [
-  'lesbian romance',
-  'lesbian film',
-  'sapphic film',
-  'yuri',
-  'girls love',
-  '百合 恋',
-  '레즈비언',
+/** Curated Asian GL dramas (Thai, Japanese, Korean, Chinese Baihe) to ensure fans see the hits. */
+const CURATED_ASIAN_GL_QUERIES = [
+  'GAP The Series',
+  'The Secret of Us',
+  'The Loyal Pin',
+  'Blank',
+  '23.5',
+  'Chaser Game W',
+  'AYAKA is in LOVE with HIROKO',
+  'Couple of Mirrors',
+  'She Makes My Heart Flutter',
+  'Fragrance of the First Flower',
+  'Affair',
+  'Love Senior',
+  'Show Me Love',
+  'Apple My Love',
+  'Pluto',
+  'Thai GL',
+  'Baihe drama',
 ];
 
-const TV_SEARCHES = [
-  'lesbian series',
-  'girls love drama',
-  'sapphic series',
-  'wlw series',
-  'yuri anime',
-  '百合 ドラマ',
-  '레즈비언 드라마',
-  'thai gl',
+const MOVIE_SEARCHES = [
+  'The Handmaiden',
+  'Portrait of a Lady on Fire',
+  'Carol',
+  'Kase-san and Morning Glories',
+  'Liz and the Blue Bird',
+  'Ride or Die',
+  'Saving Face',
+  'Imagine Me & You',
+  'The World to Come',
+  'D.E.B.S.',
+  'Bottoms',
+  'yuri movie',
+  'girls love film',
+  'sapphic romance',
 ];
 
 // ─── Normalizer ───────────────────────────────────────────────────────────────
 
-function normalizeTMDB(m: TMDBMovie, isTV = false): ContentTitle {
+function normalizeTMDB(m: TMDBMovie, isTV = false, isConfirmedGL = false): ContentTitle {
   const title = (isTV ? (m.name || m.original_name) : (m.title || m.original_title)) || 'Unknown Title';
-  const altTitles = [];
+  const altTitles: string[] = [];
   if (isTV && m.original_name && m.original_name !== title) altTitles.push(m.original_name);
   if (!isTV && m.original_title && m.original_title !== title) altTitles.push(m.original_title);
 
   const genres = (m.genres || []).map((g) => g.name);
+  if (isConfirmedGL && !genres.includes("Girls' Love")) {
+    genres.unshift("Girls' Love");
+  }
+
   const description = m.overview;
   const contentType = isTV ? 'TV' : 'MOVIE';
   const country = (m.origin_country?.[0] || m.original_language || '').toUpperCase();
@@ -165,7 +211,17 @@ function normalizeTMDB(m: TMDBMovie, isTV = false): ContentTitle {
   const releaseDate = m.release_date || m.first_air_date;
   const releaseYear = releaseDate ? new Date(releaseDate).getFullYear() : undefined;
 
-  const glClassification = classifyGL({ genres, description, title, altTitles });
+  let glClassification = isConfirmedGL ? 'CONFIRMED_GL' : classifyGL({ genres, description, title, altTitles });
+
+  const normTitle = title.toLowerCase().trim();
+  if (EXCLUDED_TITLES.has(normTitle)) {
+    glClassification = 'EXCLUDED';
+  }
+
+  // Detect low-budget adult/erotic exploitation
+  const isEroticSignal = EROTIC_TITLE_SIGNALS.some(
+    (signal) => normTitle.includes(signal) || (description || '').toLowerCase().includes(signal)
+  );
 
   const cover = m.poster_path
     ? `${TMDB_IMAGE_BASE}/w500${m.poster_path}`
@@ -198,8 +254,8 @@ function normalizeTMDB(m: TMDBMovie, isTV = false): ContentTitle {
       { url: `https://www.themoviedb.org/${mediaType}/${m.id}`, site: 'TMDB', type: 'METADATA' },
     ],
     relations: [],
-    isAdult: m.adult,
-    maturityRating: m.adult ? 'PORNOGRAPHIC' : inferMaturity({ genres, description }),
+    isAdult: m.adult || isEroticSignal,
+    maturityRating: (m.adult || isEroticSignal) ? 'PORNOGRAPHIC' : inferMaturity({ genres, description }),
     glClassification,
     sourceUrl: `https://www.themoviedb.org/${mediaType}/${m.id}`,
     updatedAt: new Date().toISOString(),
@@ -236,21 +292,65 @@ function collectGL(items: ContentTitle[]): ContentTitle[] {
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Keyword-based discovery. This is the reliable path for live-action GL:
- * it finds films and series tagged lesbian/yuri/sapphic regardless of whether
- * their overview happens to contain our search words.
+ * Asian Live-Action GL Dramas (Thai, Japanese, Korean, Chinese, Taiwanese).
+ * Specifically requests live action by excluding anime genre (16) so real dramas are surfaced.
  */
-async function tmdbDiscover(mediaType: 'movie' | 'tv', page = 1): Promise<ContentTitle[]> {
+async function tmdbDiscoverAsianDramas(page = 1): Promise<ContentTitle[]> {
   const params: Record<string, string> = {
-    with_keywords: GL_KEYWORD_IDS.join('|'),
+    with_keywords: CORE_GL_KEYWORD_IDS.join('|'),
+    with_origin_country: ASIAN_GL_COUNTRIES,
+    without_genres: '16', // exclude anime genre so live-action dramas appear
     sort_by: 'popularity.desc',
     page: String(page),
     language: 'en-US',
     include_adult: includeAdult(),
-    'vote_count.gte': '3',
   };
-  const resp = await tmdbFetch<TMDBPageResponse>(`/discover/${mediaType}`, params);
-  return (resp.results || []).map((m) => normalizeTMDB(m, mediaType === 'tv'));
+  try {
+    const resp = await tmdbFetch<TMDBPageResponse>('/discover/tv', params);
+    return (resp.results || []).map((m) => normalizeTMDB(m, true, true));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Asian GL Movies (Handmaiden, Kase-san, Liz and the Blue Bird, Ride or Die, etc.)
+ */
+async function tmdbDiscoverAsianMovies(page = 1): Promise<ContentTitle[]> {
+  const params: Record<string, string> = {
+    with_keywords: CORE_GL_KEYWORD_IDS.join('|'),
+    with_origin_country: ASIAN_GL_COUNTRIES,
+    sort_by: 'popularity.desc',
+    page: String(page),
+    language: 'en-US',
+    include_adult: includeAdult(),
+  };
+  try {
+    const resp = await tmdbFetch<TMDBPageResponse>('/discover/movie', params);
+    return (resp.results || []).map((m) => normalizeTMDB(m, false, true));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * General GL keyword discovery across movies and TV.
+ */
+async function tmdbDiscover(mediaType: 'movie' | 'tv', page = 1): Promise<ContentTitle[]> {
+  const params: Record<string, string> = {
+    with_keywords: CORE_GL_KEYWORD_IDS.join('|'),
+    sort_by: 'popularity.desc',
+    page: String(page),
+    language: 'en-US',
+    include_adult: includeAdult(),
+    'vote_count.gte': '5',
+  };
+  try {
+    const resp = await tmdbFetch<TMDBPageResponse>(`/discover/${mediaType}`, params);
+    return (resp.results || []).map((m) => normalizeTMDB(m, mediaType === 'tv', true));
+  } catch {
+    return [];
+  }
 }
 
 async function tmdbTextSearch(mediaType: 'movie' | 'tv', queries: string[], page = 1): Promise<ContentTitle[]> {
@@ -268,14 +368,15 @@ async function tmdbTextSearch(mediaType: 'movie' | 'tv', queries: string[], page
   const items: ContentTitle[] = [];
   for (const r of results) {
     if (r.status !== 'fulfilled') continue;
-    for (const m of r.value.results || []) items.push(normalizeTMDB(m, mediaType === 'tv'));
+    for (const m of r.value.results || []) {
+      items.push(normalizeTMDB(m, mediaType === 'tv', true));
+    }
   }
   return items;
 }
 
 /**
  * Search TMDB for GL movies and dramas.
- * Uses keyword discovery plus text search, depending on the requested format.
  */
 export async function tmdbSearchGL(filter: ContentFilter, page = 1): Promise<PaginatedResult> {
   const query = filter.query?.trim();
@@ -290,7 +391,6 @@ export async function tmdbSearchGL(filter: ContentFilter, page = 1): Promise<Pag
     const batches: ContentTitle[] = [];
 
     if (query) {
-      // A specific query is a text search; discover has no free-text input.
       const mediaTypes: ('movie' | 'tv')[] = [];
       if (wantsMovie) mediaTypes.push('movie');
       if (wantsTV) mediaTypes.push('tv');
@@ -311,10 +411,16 @@ export async function tmdbSearchGL(filter: ContentFilter, page = 1): Promise<Pag
         for (const m of r.value.results || []) batches.push(normalizeTMDB(m, isTV));
       });
     } else {
-      const settled = await Promise.allSettled([
-        wantsMovie ? tmdbDiscover('movie', page) : Promise.resolve([]),
-        wantsTV ? tmdbDiscover('tv', page) : Promise.resolve([]),
-      ]);
+      const promises: Promise<ContentTitle[]>[] = [];
+      if (wantsTV) {
+        promises.push(tmdbDiscoverAsianDramas(page));
+        promises.push(tmdbDiscover('tv', page));
+      }
+      if (wantsMovie) {
+        promises.push(tmdbDiscoverAsianMovies(page));
+        promises.push(tmdbDiscover('movie', page));
+      }
+      const settled = await Promise.allSettled(promises);
       for (const r of settled) {
         if (r.status === 'fulfilled') batches.push(...r.value);
       }
@@ -337,13 +443,15 @@ export async function tmdbSearchGL(filter: ContentFilter, page = 1): Promise<Pag
 /** Discover GL movies (live action and animated) from TMDB. */
 export async function tmdbGetGLMovies(page = 1): Promise<ContentTitle[]> {
   try {
-    const [discovered, searched] = await Promise.allSettled([
+    const [asianMovies, globalMovies, searched] = await Promise.allSettled([
+      tmdbDiscoverAsianMovies(page),
       tmdbDiscover('movie', page),
-      tmdbTextSearch('movie', MOVIE_SEARCHES, page),
+      tmdbTextSearch('movie', MOVIE_SEARCHES.slice(0, 5), page),
     ]);
 
     const items: ContentTitle[] = [];
-    if (discovered.status === 'fulfilled') items.push(...discovered.value);
+    if (asianMovies.status === 'fulfilled') items.push(...asianMovies.value);
+    if (globalMovies.status === 'fulfilled') items.push(...globalMovies.value);
     if (searched.status === 'fulfilled') items.push(...searched.value);
 
     return collectGL(items);
@@ -352,17 +460,20 @@ export async function tmdbGetGLMovies(page = 1): Promise<ContentTitle[]> {
   }
 }
 
-/** Discover GL TV series and dramas from TMDB (live action plus animation). */
+/** Discover GL TV series and dramas (Thai, Japanese, Korean, Chinese Baihe, and international). */
 export async function tmdbGetGLDramas(page = 1): Promise<ContentTitle[]> {
   try {
-    const [discovered, searched] = await Promise.allSettled([
+    const [asianDramas, curatedHits, globalTv] = await Promise.allSettled([
+      tmdbDiscoverAsianDramas(page),
+      tmdbTextSearch('tv', CURATED_ASIAN_GL_QUERIES.slice(0, 8), page),
       tmdbDiscover('tv', page),
-      tmdbTextSearch('tv', TV_SEARCHES, page),
     ]);
 
     const items: ContentTitle[] = [];
-    if (discovered.status === 'fulfilled') items.push(...discovered.value);
-    if (searched.status === 'fulfilled') items.push(...searched.value);
+    // Prioritize Asian GL dramas at the top
+    if (curatedHits.status === 'fulfilled') items.push(...curatedHits.value);
+    if (asianDramas.status === 'fulfilled') items.push(...asianDramas.value);
+    if (globalTv.status === 'fulfilled') items.push(...globalTv.value);
 
     return collectGL(items);
   } catch {
@@ -372,7 +483,6 @@ export async function tmdbGetGLDramas(page = 1): Promise<ContentTitle[]> {
 
 /**
  * Find GL titles via a person (director, writer, actor) on TMDB.
- * Mirrors AniList's staff search for live-action works.
  */
 export async function tmdbSearchGLByCreator(query: string): Promise<{ name: string; titles: ContentTitle[] }[]> {
   const trimmed = query.trim();
@@ -416,7 +526,6 @@ export async function tmdbSearchGLByCreator(query: string): Promise<{ name: stri
 
 /** Get a TMDB title by its composite ID (e.g. "TMDB-movie-12345"). */
 export async function tmdbGetById(id: string): Promise<ContentTitle | null> {
-  // id format: TMDB-movie-12345 or TMDB-tv-12345
   const parts = id.split('-');
   if (parts.length < 3) return null;
   const mediaType = parts[1]; // "movie" or "tv"
@@ -425,7 +534,7 @@ export async function tmdbGetById(id: string): Promise<ContentTitle | null> {
 
   try {
     const data = await tmdbFetch<TMDBMovie>(`/${mediaType}/${tmdbId}`, { language: 'en-US' });
-    return normalizeTMDB(data, isTV);
+    return normalizeTMDB(data, isTV, true);
   } catch {
     return null;
   }
