@@ -129,8 +129,8 @@ site falls back to a column-limited query), but until it runs the notes column
 stays readable through the REST API.
 
 Until the first migration is applied everything still works: `/user/*` shows a
-"profiles aren't enabled yet" notice, and the homepage simply omits the Editor's
-Picks rail.
+"profiles aren't enabled yet" notice, and the homepage hero simply skips the
+pinned picks and falls back to live catalogue data.
 
 ### 2. Account pages — `/auth` and `/profile`
 
@@ -201,3 +201,72 @@ MangaDex artwork is served through `/api/mangadex/covers/*` (see
 otherwise blocks them — and drops the `Referer` header, because MangaDex answers
 cross-origin cover requests with a "you can read this at mangadex.org" placeholder
 image.
+
+---
+
+## Homepage hero
+
+`src/components/home/Hero.tsx` is one rotating hero for the whole catalogue: it
+cross-fades real picks across manga, manhwa, manhua, webtoons, novels, anime,
+films and live-action dramas, with a spotlight tab per format. There is no
+hard-coded pick list — `HomePage` builds the deck from the live rails (plus
+admin-pinned titles when they exist, enriched from the live entries), and the
+order rotates after each full pass so a returning visitor sees different picks.
+It pauses on hover/focus, respects reduced motion, and is the only place the
+homepage advertises what the site has.
+
+---
+
+## Content filter (maturity)
+
+Every title is rated on MangaDex's four-step scale: **Safe**, **Suggestive**,
+**Erotica**, **Pornographic**. Providers are mapped onto it in
+`src/lib/content/maturity.ts` — MangaDex content ratings verbatim, AniList
+`isAdult` plus strongly applied tags, TMDB's `adult` flag, MAL's explicit genres.
+
+- The visitor's level lives in `src/lib/content/maturity-preference.ts`
+  (localStorage) and defaults to **Suggestive**, so explicit titles are hidden
+  for new visitors. Erotica and Pornographic require a one-time 18+ confirmation
+  on `/settings`.
+- The filter is applied inside `src/lib/providers/index.ts`, so every rail, page
+  and search result is covered, and the upstream queries are tightened too:
+  MangaDex receives only the allowed `contentRating`s, AniList flips its
+  `isAdult` filter, TMDB's `include_adult` follows the level. Cache keys carry
+  the level, and changing it clears the provider cache.
+- Direct links to a title above the chosen level open an age-gate panel instead
+  of the page content; cards carry a `PG` / `18+` badge.
+
+This is a browsing preference based on third-party ratings — not age
+verification. The Terms and Privacy pages say so.
+
+---
+
+## Live search
+
+`src/lib/search.ts` is the single search entry point for the navbar typeahead
+(`src/components/search/SearchCommand.tsx`) and `/search`:
+
+- **Title and aliases** — provider text search, merged and de-duplicated.
+- **Exact ids** — YuriOrbit slugs and `ANILIST-…` / `MANGADEX-…` / `JIKAN-…` /
+  `TMDB-movie-…` ids resolve straight to the title.
+- **Creators** — AniList `Staff` + `staffMedia` and TMDB person credits, so an
+  author, artist, director or cast name finds their GL works.
+- **Format** — `/search` filters hits by format (manga, manhwa, manhua, webtoons,
+  novels, screen) and keeps the choice in `?format=`.
+
+Typing is debounced (~350 ms); the navbar panel groups by format and supports
+↑/↓/Enter/Esc. Results respect the content filter.
+
+---
+
+## TMDB (live-action films and dramas)
+
+TMDB provides the live-action side of the catalogue. `src/lib/providers/tmdb.ts`
+uses `/discover` with verified GL keyword ids (lesbian, yuri, sapphic, wlw, girls
+love, baihe) plus native-language text searches, so Korean, Japanese, Chinese and
+Thai dramas are reachable rather than only English-titled films.
+
+All requests go through `/api/tmdb/*`, which injects the server-side secret. That
+function must be deployed: if `https://<site>/api/tmdb/configuration` returns a
+404 (rather than JSON), the route is missing and TMDB results will silently fall
+back to AniList — films and dramas will look like anime only.

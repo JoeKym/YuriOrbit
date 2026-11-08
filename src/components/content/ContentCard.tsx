@@ -5,6 +5,7 @@ import { CONTENT_TYPE_LABELS } from '@/types/content';
 import { cn, formatScore, getFallbackCover } from '@/lib/utils/format';
 import { useLibrary } from '@/hooks/useLibrary';
 import { titleKey } from '@/lib/catalog/identity';
+import { maturityOf } from '@/lib/content/maturity';
 
 interface ContentCardProps {
   title: ContentTitle;
@@ -19,6 +20,13 @@ export function ContentCard({ title, className }: ContentCardProps) {
     library.find((entry) => entry.titleId === title.id) ??
     library.find((entry) => titleKey(entry.title) === titleKey(title.title));
   const saved = Boolean(savedEntry);
+  const maturity = maturityOf(title);
+  const maturityBadge =
+    maturity === 'SUGGESTIVE'
+      ? { label: 'PG', className: 'border-amber-500/40 bg-amber-500/15 text-amber-200' }
+      : maturity === 'SAFE'
+        ? null
+        : { label: '18+', className: 'border-rose-500/50 bg-rose-600/20 text-rose-100' };
 
   return (
     <Link
@@ -41,10 +49,15 @@ export function ContentCard({ title, className }: ContentCardProps) {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-ink-950/90 via-transparent to-transparent opacity-80" />
 
-        <div className="absolute top-2 left-2">
+        <div className="absolute top-2 left-2 flex flex-col items-start gap-1">
           <span className="rounded-md bg-ink-950/80 px-2 py-0.5 text-[10px] font-medium text-ink-200 backdrop-blur-sm">
             {CONTENT_TYPE_LABELS[title.contentType]}
           </span>
+          {maturityBadge && (
+            <span className={cn('rounded-md border px-1.5 py-0.5 text-[10px] font-semibold backdrop-blur-sm', maturityBadge.className)}>
+              {maturityBadge.label}
+            </span>
+          )}
         </div>
 
         {title.averageScore && (

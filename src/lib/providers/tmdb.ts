@@ -6,6 +6,8 @@
  */
 import type { ContentTitle, PaginatedResult, ContentFilter } from '@/types/content';
 import { classifyGL, GL_ALLOWED_CLASSIFICATIONS } from './classify';
+import { getMaturityLevel } from '@/lib/content/maturity-preference';
+import { filterByMaturity, inferMaturity, maturityRank } from '@/lib/content/maturity';
 
 const env = (import.meta as { env?: Record<string, string> }).env || {};
 const isBrowser = typeof window !== 'undefined';
@@ -83,6 +85,7 @@ interface TMDBMovie {
   number_of_episodes?: number;
   number_of_seasons?: number;
   media_type?: 'movie' | 'tv';
+  adult?: boolean;
 }
 
 interface TMDBPageResponse {
@@ -92,16 +95,59 @@ interface TMDBPageResponse {
   total_results: number;
 }
 
-// TMDB genre IDs for romance-adjacent content likely to include GL
-// We use keyword search for GL-specific content since TMDB doesn't have a GL genre
-const GL_TMDB_KEYWORDS = [
-  '6735',   // independent film
-  '10683',  // coming of age
-  '9717',   // based on novel
+interface TMDBPerson {
+  id: number;
+  name: string;
+  known_for_department?: string;
+}
+
+interface TMDBCredits {
+  cast?: { id: number; title?: string; name?: string; media_type?: string; adult?: boolean }[];
+  crew?: { id: number; title?: string; name?: string; media_type?: string; adult?: boolean }[];
+}
+
+/**
+ * TMDB has no Girls' Love genre, but it does have keywords. These IDs were
+ * verified against themoviedb.org (e.g. /keyword/264386-lesbian). An earlier
+ * revision used 10683 for "lesbian", which is actually "coming of age" — the
+ * reason live-action GL discovery looked broken.
+ */
+const GL_KEYWORD_IDS = [
+  '264386', // lesbian
+  '214564', // yuri
+  '286187', // sapphic
+  '333351', // wlw
+  '280003', // girls love (gl)
+  '383699', // girls love
+  '379589', // baihe
 ];
 
-// TMDB keyword ID for "lesbian" content
-const LESBIAN_KEYWORD_ID = '10683';
+/** TMDB's `adult` flag means pornography, so it is only on at the top level. */
+function includeAdult(): string {
+  return maturityRank(getMaturityLevel()) >= maturityRank('PORNOGRAPHIC') ? 'true' : 'false';
+}
+
+/** Free-text queries per format, including native-language terms. */
+const MOVIE_SEARCHES = [
+  'lesbian romance',
+  'lesbian film',
+  'sapphic film',
+  'yuri',
+  'girls love',
+  '百合 恋',
+  '레즈비언',
+];
+
+const TV_SEARCHES = [
+  'lesbian series',
+  'girls love drama',
+  'sapphic series',
+  'wlw series',
+  'yuri anime',
+  '百合 ドラマ',
+  '레즈비언 드라마',
+  'thai gl',
+];
 
 // ─── Normalizer ───────────────────────────────────────────────────────────────
 
@@ -152,6 +198,8 @@ function normalizeTMDB(m: TMDBMovie, isTV = false): ContentTitle {
       { url: `https://www.themoviedb.org/${mediaType}/${m.id}`, site: 'TMDB', type: 'METADATA' },
     ],
     relations: [],
+    isAdult: m.adult,
+    maturityRating: m.adult ? 'PORNOGRAPHIC' : inferMaturity({ genres, description }),
     glClassification,
     sourceUrl: `https://www.themoviedb.org/${mediaType}/${m.id}`,
     updatedAt: new Date().toISOString(),
@@ -170,121 +218,197 @@ function mapTMDBStatus(status?: string): ContentTitle['status'] {
   }
 }
 
+function isGL(title: ContentTitle): boolean {
+  return GL_ALLOWED_CLASSIFICATIONS.includes(title.glClassification);
+}
+
+function collectGL(items: ContentTitle[]): ContentTitle[] {
+  const seen = new Set<string>();
+  const out: ContentTitle[] = [];
+  for (const item of items) {
+    if (seen.has(item.id) || !isGL(item)) continue;
+    seen.add(item.id);
+    out.push(item);
+  }
+  return filterByMaturity(out, getMaturityLevel());
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
+ * Keyword-based discovery. This is the reliable path for live-action GL:
+ * it finds films and series tagged lesbian/yuri/sapphic regardless of whether
+ * their overview happens to contain our search words.
+ */
+async function tmdbDiscover(mediaType: 'movie' | 'tv', page = 1): Promise<ContentTitle[]> {
+  const params: Record<string, string> = {
+    with_keywords: GL_KEYWORD_IDS.join('|'),
+    sort_by: 'popularity.desc',
+    page: String(page),
+    language: 'en-US',
+    include_adult: includeAdult(),
+    'vote_count.gte': '3',
+  };
+  const resp = await tmdbFetch<TMDBPageResponse>(`/discover/${mediaType}`, params);
+  return (resp.results || []).map((m) => normalizeTMDB(m, mediaType === 'tv'));
+}
+
+async function tmdbTextSearch(mediaType: 'movie' | 'tv', queries: string[], page = 1): Promise<ContentTitle[]> {
+  const results = await Promise.allSettled(
+    queries.map((query) =>
+      tmdbFetch<TMDBPageResponse>(`/search/${mediaType}`, {
+        query,
+        page: String(page),
+        language: 'en-US',
+        include_adult: includeAdult(),
+      })
+    )
+  );
+
+  const items: ContentTitle[] = [];
+  for (const r of results) {
+    if (r.status !== 'fulfilled') continue;
+    for (const m of r.value.results || []) items.push(normalizeTMDB(m, mediaType === 'tv'));
+  }
+  return items;
+}
+
+/**
  * Search TMDB for GL movies and dramas.
- * Uses keyword search for "lesbian", "girls love", "yuri" content.
+ * Uses keyword discovery plus text search, depending on the requested format.
  */
 export async function tmdbSearchGL(filter: ContentFilter, page = 1): Promise<PaginatedResult> {
-  const query = filter.query || 'lesbian romance';
-  const isTV = filter.contentType === 'TV' || filter.contentType === 'DRAMA';
-  const mediaType = isTV ? 'tv' : 'movie';
+  const query = filter.query?.trim();
+  const wantsMovie = !filter.contentType || filter.contentType === 'ALL' || filter.contentType === 'MOVIE';
+  const wantsTV =
+    !filter.contentType ||
+    filter.contentType === 'ALL' ||
+    filter.contentType === 'TV' ||
+    filter.contentType === 'DRAMA';
 
   try {
-    const params: Record<string, string> = {
-      query,
-      page: String(page),
-      language: 'en-US',
-      include_adult: 'false',
-    };
+    const batches: ContentTitle[] = [];
 
-    const resp = await tmdbFetch<TMDBPageResponse>(`/search/${mediaType}`, params);
-    const items = resp.results
-      .map((m) => normalizeTMDB(m, isTV))
-      .filter((t) => GL_ALLOWED_CLASSIFICATIONS.includes(t.glClassification));
+    if (query) {
+      // A specific query is a text search; discover has no free-text input.
+      const mediaTypes: ('movie' | 'tv')[] = [];
+      if (wantsMovie) mediaTypes.push('movie');
+      if (wantsTV) mediaTypes.push('tv');
+
+      const settled = await Promise.allSettled(
+        mediaTypes.map((mediaType) =>
+          tmdbFetch<TMDBPageResponse>(`/search/${mediaType}`, {
+            query,
+            page: String(page),
+            language: 'en-US',
+            include_adult: includeAdult(),
+          })
+        )
+      );
+      settled.forEach((r, index) => {
+        if (r.status !== 'fulfilled') return;
+        const isTV = mediaTypes[index] === 'tv';
+        for (const m of r.value.results || []) batches.push(normalizeTMDB(m, isTV));
+      });
+    } else {
+      const settled = await Promise.allSettled([
+        wantsMovie ? tmdbDiscover('movie', page) : Promise.resolve([]),
+        wantsTV ? tmdbDiscover('tv', page) : Promise.resolve([]),
+      ]);
+      for (const r of settled) {
+        if (r.status === 'fulfilled') batches.push(...r.value);
+      }
+    }
+
+    const items = collectGL(batches);
 
     return {
       items,
-      page: resp.page,
+      page,
       perPage: 20,
-      total: resp.total_results,
-      hasNextPage: resp.page < resp.total_pages,
+      total: items.length,
+      hasNextPage: items.length >= 20,
     };
   } catch {
     return { items: [], page, perPage: 20, total: 0, hasNextPage: false };
   }
 }
 
-/** Discover GL movies from TMDB using keyword filters. */
+/** Discover GL movies (live action and animated) from TMDB. */
 export async function tmdbGetGLMovies(page = 1): Promise<ContentTitle[]> {
   try {
-    // Search for lesbian/GL films (live action and animated).
-    const searches = [
-      'lesbian romance',
-      'lesbian film',
-      'girls love movie',
-      'sapphic film',
-      'yuri anime film',
-    ];
-    const results = await Promise.allSettled(
-      searches.map((q) =>
-        tmdbFetch<TMDBPageResponse>('/search/movie', {
-          query: q,
-          page: String(page),
-          language: 'en-US',
-          include_adult: 'false',
-        })
-      )
-    );
+    const [discovered, searched] = await Promise.allSettled([
+      tmdbDiscover('movie', page),
+      tmdbTextSearch('movie', MOVIE_SEARCHES, page),
+    ]);
 
-    const seen = new Set<number>();
     const items: ContentTitle[] = [];
-    for (const r of results) {
-      if (r.status !== 'fulfilled') continue;
-      for (const m of r.value.results) {
-        if (seen.has(m.id)) continue;
-        seen.add(m.id);
-        const normalized = normalizeTMDB(m, false);
-        if (GL_ALLOWED_CLASSIFICATIONS.includes(normalized.glClassification)) {
-          items.push(normalized);
-        }
-      }
-    }
-    return items;
+    if (discovered.status === 'fulfilled') items.push(...discovered.value);
+    if (searched.status === 'fulfilled') items.push(...searched.value);
+
+    return collectGL(items);
   } catch {
     return [];
   }
 }
 
-/** Discover GL TV series and dramas from TMDB. */
+/** Discover GL TV series and dramas from TMDB (live action plus animation). */
 export async function tmdbGetGLDramas(page = 1): Promise<ContentTitle[]> {
   try {
-    // Live-action GL series: Korean, Japanese, Chinese, Thai and Western drama
-    // all surface through these queries, then get classified below.
-    const searches = [
-      'lesbian drama series',
-      'girls love drama',
-      'yuri drama',
-      'sapphic series',
-      'wlw series',
-      'yuri anime series',
-    ];
-    const results = await Promise.allSettled(
-      searches.map((q) =>
-        tmdbFetch<TMDBPageResponse>('/search/tv', {
-          query: q,
-          page: String(page),
-          language: 'en-US',
-          include_adult: 'false',
-        })
-      )
-    );
+    const [discovered, searched] = await Promise.allSettled([
+      tmdbDiscover('tv', page),
+      tmdbTextSearch('tv', TV_SEARCHES, page),
+    ]);
 
-    const seen = new Set<number>();
     const items: ContentTitle[] = [];
-    for (const r of results) {
-      if (r.status !== 'fulfilled') continue;
-      for (const m of r.value.results) {
-        if (seen.has(m.id)) continue;
-        seen.add(m.id);
-        const normalized = normalizeTMDB(m, true);
-        if (GL_ALLOWED_CLASSIFICATIONS.includes(normalized.glClassification)) {
-          items.push(normalized);
-        }
+    if (discovered.status === 'fulfilled') items.push(...discovered.value);
+    if (searched.status === 'fulfilled') items.push(...searched.value);
+
+    return collectGL(items);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Find GL titles via a person (director, writer, actor) on TMDB.
+ * Mirrors AniList's staff search for live-action works.
+ */
+export async function tmdbSearchGLByCreator(query: string): Promise<{ name: string; titles: ContentTitle[] }[]> {
+  const trimmed = query.trim();
+  if (trimmed.length < 3) return [];
+
+  try {
+    const people = await tmdbFetch<{ results: TMDBPerson[] }>('/search/person', {
+      query: trimmed,
+      include_adult: includeAdult(),
+      language: 'en-US',
+    });
+
+    const matches: { name: string; titles: ContentTitle[] }[] = [];
+    for (const person of (people.results || []).slice(0, 2)) {
+      const credits = await tmdbFetch<TMDBCredits>(`/person/${person.id}/combined_credits`, { language: 'en-US' });
+      const titles = collectGL(
+        [...(credits.cast || []), ...(credits.crew || [])]
+          .filter((credit) => credit.media_type === 'movie' || credit.media_type === 'tv')
+          .map((credit) =>
+            normalizeTMDB(
+              {
+                id: credit.id,
+                title: credit.title,
+                name: credit.name,
+                adult: credit.adult,
+                media_type: credit.media_type as 'movie' | 'tv',
+              },
+              credit.media_type === 'tv'
+            )
+          )
+      );
+      if (titles.length > 0) {
+        matches.push({ name: person.name, titles: titles.slice(0, 12) });
       }
     }
-    return items;
+    return matches;
   } catch {
     return [];
   }

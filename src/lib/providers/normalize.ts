@@ -8,6 +8,7 @@ import type {
   Tag,
 } from '@/types/content';
 import { classifyGL } from './classify';
+import { inferMaturity } from '@/lib/content/maturity';
 
 export interface AniListMedia {
   id: number;
@@ -168,6 +169,12 @@ export function normalizeAniList(media: AniListMedia): ContentTitle {
     trailerId: media.trailer?.id,
     trailerSite: media.trailer?.site,
     isAdult: media.isAdult,
+    maturityRating: inferMaturity({
+      isAdult: media.isAdult,
+      tags,
+      genres,
+      description: stripHtml(media.description),
+    }),
     glClassification,
     sourceUrl: media.siteUrl,
     updatedAt: new Date().toISOString(),
