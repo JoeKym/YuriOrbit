@@ -62,7 +62,7 @@ export function AboutPage() {
           YuriOrbit is built and maintained by <strong className="text-ink-100">JoeKym Labs</strong>, a digital product studio dedicated to creating high-performance web products, sleek user experiences, and modern custom software.
         </p>
         <a
-          href="https://joekymlabs.onrender.com"
+          href="https://joekymlabs.pages.dev"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 rounded-lg bg-ink-800 px-4 py-2 text-xs font-semibold text-rose-300 hover:bg-ink-750 border border-ink-700 transition-colors"

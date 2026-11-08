@@ -7,18 +7,20 @@
 import type { ContentTitle, PaginatedResult, ContentFilter } from '@/types/content';
 import { classifyGL, GL_ALLOWED_CLASSIFICATIONS } from './classify';
 
-const TMDB_BASE = 'https://api.themoviedb.org/3';
+const env = (import.meta as { env?: Record<string, string> }).env || {};
+const isBrowser = typeof window !== 'undefined';
+const clean = (val?: string) => (!val || val.trim() === '' || val.trim().toLowerCase() === 'value' ? undefined : val.trim());
+
+// Route via same-origin Cloudflare Pages Functions / Vite proxy in the browser,
+// or fallback to the direct TMDB endpoint in Node/test environments.
+const rawTmdbBase = clean(env.VITE_TMDB_API_URL) || (isBrowser ? '/api/tmdb' : 'https://api.themoviedb.org/3');
+const TMDB_BASE = rawTmdbBase.replace(/\/+$/, '');
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
 const TIMEOUT = 15000;
 const REQUEST_DELAY = 250;
 
-// Free public read-only token (limited rate limits, use VITE_TMDB_KEY for production)
-// Users can get a free key at https://www.themoviedb.org/settings/api
-const env = (import.meta as { env?: Record<string, string> }).env || {};
-const clean = (val?: string) => (!val || val.trim() === '' || val.trim().toLowerCase() === 'value' ? undefined : val.trim());
-
-const TMDB_RAW_KEY = clean(env.VITE_TMDB_API_KEY) || clean(env.VITE_TMDB_KEY) || clean(env.VITE_TMDB_READ_ACCESS_TOKEN) || '1b6a1d5c7d35d07b8b50f2f7a00c0a37';
-const isBearerToken = TMDB_RAW_KEY.startsWith('ey') || TMDB_RAW_KEY.length > 50;
+const TMDB_RAW_KEY = clean(env.VITE_TMDB_API_KEY) || clean(env.VITE_TMDB_KEY) || clean(env.VITE_TMDB_READ_ACCESS_TOKEN);
+const isBearerToken = TMDB_RAW_KEY ? (TMDB_RAW_KEY.startsWith('ey') || TMDB_RAW_KEY.length > 50) : false;
 
 let lastTMDBRequest = 0;
 
@@ -33,12 +35,13 @@ async function tmdbFetch<T>(path: string, params?: Record<string, string>): Prom
   const headers: Record<string, string> = { Accept: 'application/json' };
   let queryParams = { ...params };
 
-  if (isBearerToken) {
-    headers['Authorization'] = `Bearer ${TMDB_RAW_KEY}`;
-  } else {
-    queryParams = { api_key: TMDB_RAW_KEY, ...queryParams };
+  if (TMDB_RAW_KEY) {
+    if (isBearerToken) {
+      headers['Authorization'] = `Bearer ${TMDB_RAW_KEY}`;
+    } else {
+      queryParams = { api_key: TMDB_RAW_KEY, ...queryParams };
+    }
   }
-
   const urlParams = new URLSearchParams(queryParams);
   const url = `${TMDB_BASE}${path}${urlParams.toString() ? `?${urlParams}` : ''}`;
 

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, BookOpen, CheckCircle, Clock, XCircle, Pause, Trash2, Download, Star } from 'lucide-react';
+import { Heart, BookOpen, CheckCircle, Clock, XCircle, Pause, Trash2, Download, Star, LogIn, Cloud, HardDrive } from 'lucide-react';
 import { useLibrary } from '@/hooks/useLibrary';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { CONTENT_TYPE_LABELS, LIBRARY_STATUS_LABELS, type LibraryStatus } from '@/types/content';
 import { cn } from '@/lib/utils/format';
 
@@ -17,7 +18,8 @@ const STATUS_ICONS: Record<LibraryStatus, typeof Heart> = {
 };
 
 export function LibraryPage() {
-  const { library, removeFromLibrary, clearLibrary } = useLibrary();
+  const { library, removeFromLibrary, clearLibrary, isAuthenticated } = useLibrary();
+  const { isLoading } = useAuth();
   const [filter, setFilter] = useState<LibraryStatus | 'ALL'>('ALL');
   const [sort, setSort] = useState<'recent' | 'title' | 'rating'>('recent');
 
@@ -44,6 +46,16 @@ export function LibraryPage() {
     return (
       <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
         <h1 className="mb-1 font-display text-3xl font-semibold text-ink-50">My Library</h1>
+        {!isAuthenticated && !isLoading && (
+          <div className="mb-6 flex items-center gap-3 rounded-xl border border-rose-500/20 bg-rose-500/5 p-4">
+            <LogIn className="h-5 w-5 flex-shrink-0 text-rose-400" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-ink-100">Sign in to sync your library</p>
+              <p className="text-xs text-ink-400">Your titles will be available across all your devices.</p>
+            </div>
+            <Link to="/auth" className="btn-primary text-xs">Sign in</Link>
+          </div>
+        )}
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <BookOpen className="mb-4 h-12 w-12 text-ink-600" />
           <p className="text-lg font-medium text-ink-200">Your library is empty</p>
@@ -148,10 +160,22 @@ export function LibraryPage() {
         </div>
       )}
 
-      <div className="mt-6 rounded-lg border border-ink-800 bg-ink-900/50 p-4">
-        <p className="text-xs text-ink-400">
-          Your library is stored locally in your browser. Clearing your browser data will remove your saved titles. Export your library to keep a backup.
-        </p>
+      <div className="mt-6 flex items-center gap-2 rounded-lg border border-ink-800 bg-ink-900/50 p-4">
+        {isAuthenticated ? (
+          <>
+            <Cloud className="h-4 w-4 flex-shrink-0 text-rose-400" />
+            <p className="text-xs text-ink-400">
+              Your library is synced to your account and available across all devices.
+            </p>
+          </>
+        ) : (
+          <>
+            <HardDrive className="h-4 w-4 flex-shrink-0 text-ink-400" />
+            <p className="text-xs text-ink-400">
+              Your library is stored locally in this browser. <Link to="/auth" className="text-rose-400 hover:text-rose-300">Sign in</Link> to sync across devices. Export your library to keep a backup.
+            </p>
+          </>
+        )}
       </div>
     </div>
   );

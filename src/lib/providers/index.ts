@@ -18,9 +18,11 @@ import { jikanSearchGL, jikanGetPopular, jikanGetById } from './jikan';
 import { mangadexSearchGL, mangadexGetPopular, mangadexGetById, mangadexGetChapters, mangadexGetChapterPages, mangadexFindMangaId } from './mangadex';
 import { tmdbGetGLMovies, tmdbGetGLDramas, tmdbGetById, tmdbSearchGL } from './tmdb';
 import { GL_ALLOWED_CLASSIFICATIONS } from './classify';
+import { getCached, setCached, clearProviderCache } from './cache';
 
 export { classifyGL, filterGL, GL_ALLOWED_CLASSIFICATIONS } from './classify';
 export { normalizeAniList } from './normalize';
+export { getCached, setCached, clearProviderCache } from './cache';
 
 // Re-export chapter helpers from MangaDex
 export { mangadexGetChapters, mangadexGetChapterPages, mangadexFindMangaId };
@@ -38,6 +40,10 @@ function dedupe(titles: ContentTitle[]): ContentTitle[] {
 // ─── Trending / Popular ────────────────────────────────────────────────────────
 
 export async function getTrendingGL(perPage = 20): Promise<ContentTitle[]> {
+  const cacheKey = `trending_${perPage}`;
+  const cached = getCached<ContentTitle[]>(cacheKey);
+  if (cached && cached.length > 0) return cached;
+
   const [anilist, jikan] = await Promise.allSettled([
     anilistTrending(perPage),
     jikanGetPopular(perPage),
@@ -47,12 +53,19 @@ export async function getTrendingGL(perPage = 20): Promise<ContentTitle[]> {
   if (anilist.status === 'fulfilled') results.push(...anilist.value);
   if (jikan.status === 'fulfilled') results.push(...jikan.value);
 
-  return dedupe(results)
+  const final = dedupe(results)
     .filter((t) => GL_ALLOWED_CLASSIFICATIONS.includes(t.glClassification))
     .slice(0, perPage * 2);
+
+  if (final.length > 0) setCached(cacheKey, final);
+  return final;
 }
 
 export async function getPopularGL(perPage = 50): Promise<ContentTitle[]> {
+  const cacheKey = `popular_${perPage}`;
+  const cached = getCached<ContentTitle[]>(cacheKey);
+  if (cached && cached.length > 0) return cached;
+
   const [anilist, jikan, mangadex] = await Promise.allSettled([
     anilistPopular(perPage),
     jikanGetPopular(Math.min(perPage, 25)),
@@ -64,36 +77,71 @@ export async function getPopularGL(perPage = 50): Promise<ContentTitle[]> {
   if (jikan.status === 'fulfilled') results.push(...jikan.value);
   if (mangadex.status === 'fulfilled') results.push(...mangadex.value);
 
-  return dedupe(results)
+  const final = dedupe(results)
     .filter((t) => GL_ALLOWED_CLASSIFICATIONS.includes(t.glClassification))
     .slice(0, perPage * 2);
+
+  if (final.length > 0) setCached(cacheKey, final);
+  return final;
 }
 
 export async function getRecentGL(perPage = 20): Promise<ContentTitle[]> {
-  return anilistRecent(perPage);
+  const cacheKey = `recent_${perPage}`;
+  const cached = getCached<ContentTitle[]>(cacheKey);
+  if (cached && cached.length > 0) return cached;
+
+  const results = await anilistRecent(perPage);
+  if (results.length > 0) setCached(cacheKey, results);
+  return results;
 }
 
 export async function getCompletedGL(perPage = 20): Promise<ContentTitle[]> {
-  return anilistCompleted(perPage);
+  const cacheKey = `completed_${perPage}`;
+  const cached = getCached<ContentTitle[]>(cacheKey);
+  if (cached && cached.length > 0) return cached;
+
+  const results = await anilistCompleted(perPage);
+  if (results.length > 0) setCached(cacheKey, results);
+  return results;
 }
 
 export async function getGLByGenre(genre: string, perPage = 20): Promise<ContentTitle[]> {
-  return anilistByGenre(genre, perPage);
+  const cacheKey = `genre_${genre}_${perPage}`;
+  const cached = getCached<ContentTitle[]>(cacheKey);
+  if (cached && cached.length > 0) return cached;
+
+  const results = await anilistByGenre(genre, perPage);
+  if (results.length > 0) setCached(cacheKey, results);
+  return results;
 }
 
 export async function getGLByContentType(contentType: ContentTitle['contentType'], perPage = 30): Promise<ContentTitle[]> {
+  const cacheKey = `type_${contentType}_${perPage}`;
+  const cached = getCached<ContentTitle[]>(cacheKey);
+  if (cached && cached.length > 0) return cached;
+
   // For movies/dramas pull from TMDB with AniList fallback; for manga/manhwa/manhua use AniList
+  let results: ContentTitle[] = [];
   if (contentType === 'MOVIE') {
     const tmdbResults = await tmdbGetGLMovies().catch(() => []);
-    if (tmdbResults.length > 0) return tmdbResults;
-    return anilistByType('MOVIE', perPage);
-  }
-  if (contentType === 'TV' || contentType === 'DRAMA') {
+    if (tmdbResults.length > 0) {
+      results = tmdbResults;
+    } else {
+      results = await anilistByType('MOVIE', perPage);
+    }
+  } else if (contentType === 'TV' || contentType === 'DRAMA') {
     const tmdbResults = await tmdbGetGLDramas().catch(() => []);
-    if (tmdbResults.length > 0) return tmdbResults;
-    return anilistByType('TV', perPage);
+    if (tmdbResults.length > 0) {
+      results = tmdbResults;
+    } else {
+      results = await anilistByType('TV', perPage);
+    }
+  } else {
+    results = await anilistByType(contentType, perPage);
   }
-  return anilistByType(contentType, perPage);
+
+  if (results.length > 0) setCached(cacheKey, results);
+  return results;
 }
 
 // ─── Search (unified across providers) ────────────────────────────────────────
@@ -139,11 +187,17 @@ export async function searchGLTitles(filter: ContentFilter, page = 1, perPage = 
 // ─── Single Title Lookup ───────────────────────────────────────────────────────
 
 export async function getTitleById(id: string): Promise<ContentTitle | null> {
-  if (id.startsWith('ANILIST-')) return anilistById(id);
-  if (id.startsWith('JIKAN-')) return jikanGetById(id);
-  if (id.startsWith('MANGADEX-')) return mangadexGetById(id);
-  if (id.startsWith('TMDB-')) return tmdbGetById(id);
+  const cacheKey = `title_${id}`;
+  const cached = getCached<ContentTitle>(cacheKey);
+  if (cached) return cached;
 
-  // Unknown prefix — try AniList as fallback
-  return anilistById(id);
+  let result: ContentTitle | null = null;
+  if (id.startsWith('ANILIST-')) result = await anilistById(id);
+  else if (id.startsWith('JIKAN-')) result = await jikanGetById(id);
+  else if (id.startsWith('MANGADEX-')) result = await mangadexGetById(id);
+  else if (id.startsWith('TMDB-')) result = await tmdbGetById(id);
+  else result = await anilistById(id);
+
+  if (result) setCached(cacheKey, result);
+  return result;
 }

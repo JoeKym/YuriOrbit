@@ -18,24 +18,12 @@ import { PrivacyPage } from '@/pages/PrivacyPage';
 import { TermsPage } from '@/pages/TermsPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { AdminPage } from '@/pages/AdminPage';
-
-import { KindeProvider } from '@kinde-oss/kinde-auth-react';
-
-const clean = (val?: string) => (!val || val.trim() === '' || val.trim().toLowerCase() === 'value' ? undefined : val.trim());
-
-const KINDE_CLIENT_ID = clean(import.meta.env.VITE_KINDE_CLIENT_ID) || '488dc9038b0d4282977f5e6e7b3b3d0b';
-const KINDE_DOMAIN = clean(import.meta.env.VITE_KINDE_DOMAIN) || 'https://yuriverse.kinde.com';
-const REDIRECT_URI = clean(import.meta.env.VITE_KINDE_REDIRECT_URI) || (typeof window !== 'undefined' ? window.location.origin : '');
-const LOGOUT_URI = clean(import.meta.env.VITE_KINDE_LOGOUT_URI) || (typeof window !== 'undefined' ? window.location.origin : '');
+import { AuthPage } from '@/pages/AuthPage';
+import { AuthProvider } from '@/lib/auth/AuthContext';
 
 export default function App() {
   return (
-    <KindeProvider
-      clientId={KINDE_CLIENT_ID}
-      domain={KINDE_DOMAIN}
-      redirectUri={REDIRECT_URI}
-      logoutUri={LOGOUT_URI}
-    >
+    <AuthProvider>
       <BrowserRouter>
         <ScrollToTop />
         <div className="flex min-h-screen flex-col bg-ink-950">
@@ -59,6 +47,7 @@ export default function App() {
             <Route path="/watch/:id" element={<WatchPage />} />
             <Route path="/library" element={<LibraryPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/auth" element={<AuthPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/terms" element={<TermsPage />} />
@@ -69,6 +58,6 @@ export default function App() {
         <Footer />
       </div>
     </BrowserRouter>
-  </KindeProvider>
+    </AuthProvider>
   );
 }

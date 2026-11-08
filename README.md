@@ -85,3 +85,26 @@ YuriOrbit is configured as a multi-service Render Blueprint in `render.yaml`:
    - Health check available at `/health`.
 
 In Render, connect the repo with your Blueprint or create the static site and proxy web service as defined in `render.yaml`.
+
+---
+
+## Deployment to Cloudflare Pages (Recommended)
+
+YuriOrbit can be deployed directly to Cloudflare Pages with zero cold starts:
+
+1. In the **Cloudflare Dashboard**, navigate to **Workers & Pages** > **Create application** > **Pages** > **Connect to Git**.
+2. Select your `JoeKym/YuriOrbit` repository.
+3. Configure build settings:
+   - **Framework preset**: `Vite`
+   - **Build command**: `npm run build`
+   - **Build output directory**: `dist`
+4. Set Environment Variables:
+   - `NODE_VERSION`: `20`
+   - `VITE_APP_NAME`: `YuriOrbit`
+   - `VITE_KINDE_CLIENT_ID`: Your Kinde Client ID
+   - `VITE_KINDE_DOMAIN`: Your Kinde Domain
+   - `VITE_KINDE_REDIRECT_URI`: `https://<your-project>.pages.dev`
+   - `VITE_KINDE_LOGOUT_REDIRECT_URI`: `https://<your-project>.pages.dev`
+   - `TMDB_READ_ACCESS_TOKEN` *(preferred; server-side secret for Pages Functions)*: Your TMDB API Read Access Token (v4). Store it as a Cloudflare secret, not a `VITE_` variable.
+   - `TMDB_API_KEY` *(fallback; optional server-side secret for Pages Functions)*: Your TMDB API Key (v3), used only when the Read Access Token is not configured. Store it as a Cloudflare secret, not a `VITE_` variable.
+5. Deploy. Cloudflare automatically hosts the static assets on its edge CDN and mounts the serverless functions in `functions/api/` on `/api/*` on the same domain.

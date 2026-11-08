@@ -8,7 +8,7 @@ import { normalizeAniList } from './normalize';
 
 const JIKAN_BASE = 'https://api.jikan.moe/v4';
 const REQUEST_DELAY = 500; // Jikan rate limit: 3 req/s burst, 60/min
-const TIMEOUT = 15000;
+const TIMEOUT = 6000;
 
 let lastJikanRequest = 0;
 

@@ -1,15 +1,19 @@
 /**
- * useLibrary — local-first library management hook.
- * Stores data in IndexedDB (primary) with localStorage as fallback.
- * No authentication or Supabase required.
+ * useLibrary — hybrid library management hook.
+ * When authenticated, reads/writes to Supabase (cloud-synced).
+ * When not authenticated, falls back to local IndexedDB/localStorage.
+ * On first sign-in, offers to migrate local data to the cloud.
  */
 import { useCallback, useEffect, useState, useRef } from 'react';
 import type { LibraryEntry, LibraryStatus, ContentTitle } from '@/types/content';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth/AuthContext';
 
 const DB_NAME = 'yuriorbit';
 const DB_VERSION = 1;
 const STORE_NAME = 'library';
 const LS_KEY = 'yuriorbit:library';
+const MIGRATION_FLAG_KEY = 'yuriorbit:library_migrated';
 
 // ─── IndexedDB helpers ────────────────────────────────────────────────────────
 
@@ -68,7 +72,7 @@ async function idbClear(): Promise<void> {
   });
 }
 
-// ─── localStorage helpers (fallback) ─────────────────────────────────────────
+// ─── localStorage helpers ─────────────────────────────────────────────────────
 
 function lsLoad(): Record<string, LibraryEntry> {
   try {
@@ -83,12 +87,8 @@ function lsLoad(): Record<string, LibraryEntry> {
 function lsSave(lib: Record<string, LibraryEntry>): void {
   try {
     localStorage.setItem(LS_KEY, JSON.stringify(lib));
-  } catch {
-    // quota error — ignore
-  }
+  } catch {}
 }
-
-// ─── IDB availability check ───────────────────────────────────────────────────
 
 function isIDBAvailable(): boolean {
   try {
@@ -98,92 +98,167 @@ function isIDBAvailable(): boolean {
   }
 }
 
-// ─── Migrate localStorage → IndexedDB on first load ──────────────────────────
+// ─── Supabase row ↔ LibraryEntry mapping ──────────────────────────────────────
 
-async function migrateFromLS(): Promise<void> {
-  try {
-    const lsData = lsLoad();
-    const entries = Object.values(lsData);
-    if (entries.length === 0) return;
+interface DbRow {
+  id: string;
+  user_id: string;
+  title_id: string;
+  title: string;
+  cover_image: string | null;
+  content_type: string;
+  status: string;
+  progress: number;
+  total_progress: number | null;
+  rating: number | null;
+  notes: string | null;
+  provider: string;
+  added_at: string;
+  updated_at: string;
+}
 
-    const db = await openDB();
-    const existing: LibraryEntry[] = await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, 'readonly');
-      const req = tx.objectStore(STORE_NAME).getAll();
-      req.onsuccess = () => resolve(req.result as LibraryEntry[]);
-      req.onerror = () => reject(req.error);
-      tx.oncomplete = () => db.close();
-    });
+function rowToEntry(row: DbRow): LibraryEntry {
+  return {
+    id: row.title_id,
+    titleId: row.title_id,
+    title: row.title,
+    coverImage: row.cover_image ?? undefined,
+    contentType: row.content_type as LibraryEntry['contentType'],
+    status: row.status as LibraryStatus,
+    progress: row.progress,
+    totalProgress: row.total_progress ?? undefined,
+    rating: row.rating ?? undefined,
+    notes: row.notes ?? undefined,
+    addedAt: row.added_at,
+    updatedAt: row.updated_at,
+    provider: row.provider as LibraryEntry['provider'],
+  };
+}
 
-    if (existing.length > 0) return; // Already migrated
+function entryToRow(entry: LibraryEntry) {
+  return {
+    title_id: entry.titleId,
+    title: entry.title,
+    cover_image: entry.coverImage ?? null,
+    content_type: entry.contentType,
+    status: entry.status,
+    progress: entry.progress,
+    total_progress: entry.totalProgress ?? null,
+    rating: entry.rating ?? null,
+    notes: entry.notes ?? null,
+    provider: entry.provider,
+  };
+}
 
-    for (const entry of entries) {
-      await idbPut(entry);
-    }
-    // Keep LS as backup, don't remove it
-  } catch {
-    // Migration not critical
+// ─── Local load (IDB first, LS fallback) ──────────────────────────────────────
+
+async function loadLocal(): Promise<Record<string, LibraryEntry>> {
+  if (isIDBAvailable()) {
+    try {
+      const entries = await idbGetAll();
+      const map: Record<string, LibraryEntry> = {};
+      entries.forEach((e) => { map[e.id] = e; });
+      return map;
+    } catch {}
   }
+  return lsLoad();
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useLibrary() {
+  const { isAuthenticated } = useAuth();
   const [library, setLibrary] = useState<Record<string, LibraryEntry>>({});
   const [loaded, setLoaded] = useState(false);
+  const [cloudError, setCloudError] = useState<string | null>(null);
   const useIDB = useRef(isIDBAvailable());
 
-  // Initial load: try IDB first, fall back to localStorage
+  // Load library data — Supabase when authenticated, local when not
   useEffect(() => {
+    let cancelled = false;
+
     async function init() {
-      if (useIDB.current) {
+      setLoaded(false);
+      setCloudError(null);
+
+      if (isAuthenticated) {
         try {
-          await migrateFromLS();
-          const entries = await idbGetAll();
+          const { data, error } = await supabase
+            .from('library_entries')
+            .select('*')
+            .order('updated_at', { ascending: false });
+
+          if (error) throw error;
+
+          if (cancelled) return;
           const map: Record<string, LibraryEntry> = {};
-          entries.forEach((e) => { map[e.id] = e; });
+          (data as DbRow[]).forEach((row) => {
+            const entry = rowToEntry(row);
+            map[entry.id] = entry;
+          });
           setLibrary(map);
           setLoaded(true);
           return;
-        } catch {
-          useIDB.current = false;
+        } catch (err) {
+          if (cancelled) return;
+          setCloudError(err instanceof Error ? err.message : 'Failed to load library');
+          // Fall back to local data on error
+          const local = await loadLocal();
+          if (cancelled) return;
+          setLibrary(local);
+          setLoaded(true);
+          return;
         }
       }
-      // Fallback to localStorage
-      setLibrary(lsLoad());
+
+      // Not authenticated — local only
+      const local = await loadLocal();
+      if (cancelled) return;
+      setLibrary(local);
       setLoaded(true);
     }
-    init();
-  }, []);
 
-  // Persist changes: IDB primary, LS mirror
-  const persist = useCallback(async (entry: LibraryEntry) => {
+    init();
+    return () => { cancelled = true; };
+  }, [isAuthenticated]);
+
+  // ─── Local persistence helpers ──────────────────────────────────────────────
+
+  const persistLocal = useCallback(async (entry: LibraryEntry) => {
     if (useIDB.current) {
-      try {
-        await idbPut(entry);
-      } catch {
-        // fallthrough to LS
-      }
+      try { await idbPut(entry); } catch {}
     }
-    // Always mirror to LS as backup
     const current = lsLoad();
     lsSave({ ...current, [entry.id]: entry });
   }, []);
 
-  const persistDelete = useCallback(async (id: string) => {
+  const persistDeleteLocal = useCallback(async (id: string) => {
     if (useIDB.current) {
-      try {
-        await idbDelete(id);
-      } catch {
-        // fallthrough
-      }
+      try { await idbDelete(id); } catch {}
     }
     const current = lsLoad();
     delete current[id];
     lsSave(current);
   }, []);
 
-  // ─── Public methods ──────────────────────────────────────────────────────────
+  // ─── Cloud persistence helpers ──────────────────────────────────────────────
+
+  const upsertCloud = useCallback(async (entry: LibraryEntry) => {
+    const { error } = await supabase
+      .from('library_entries')
+      .upsert(entryToRow(entry), { onConflict: 'user_id,title_id' });
+    if (error) throw error;
+  }, []);
+
+  const deleteCloud = useCallback(async (titleId: string) => {
+    const { error } = await supabase
+      .from('library_entries')
+      .delete()
+      .eq('title_id', titleId);
+    if (error) throw error;
+  }, []);
+
+  // ─── Public methods ─────────────────────────────────────────────────────────
 
   const addToLibrary = useCallback((title: ContentTitle, status: LibraryStatus = 'CURRENT') => {
     setLibrary((prev) => {
@@ -203,67 +278,94 @@ export function useLibrary() {
             updatedAt: new Date().toISOString(),
             provider: title.provider,
           };
-      persist(entry);
+      if (isAuthenticated) {
+        upsertCloud(entry).catch((e) => setCloudError(e instanceof Error ? e.message : 'Sync failed'));
+      } else {
+        persistLocal(entry);
+      }
       return { ...prev, [title.id]: entry };
     });
-  }, [persist]);
+  }, [isAuthenticated, upsertCloud, persistLocal]);
 
   const removeFromLibrary = useCallback((titleId: string) => {
     setLibrary((prev) => {
       const next = { ...prev };
       delete next[titleId];
-      persistDelete(titleId);
+      if (isAuthenticated) {
+        deleteCloud(titleId).catch((e) => setCloudError(e instanceof Error ? e.message : 'Sync failed'));
+      } else {
+        persistDeleteLocal(titleId);
+      }
       return next;
     });
-  }, [persistDelete]);
+  }, [isAuthenticated, deleteCloud, persistDeleteLocal]);
 
   const updateStatus = useCallback((titleId: string, status: LibraryStatus) => {
     setLibrary((prev) => {
       const entry = prev[titleId];
       if (!entry) return prev;
       const updated = { ...entry, status, updatedAt: new Date().toISOString() };
-      persist(updated);
+      if (isAuthenticated) {
+        upsertCloud(updated).catch((e) => setCloudError(e instanceof Error ? e.message : 'Sync failed'));
+      } else {
+        persistLocal(updated);
+      }
       return { ...prev, [titleId]: updated };
     });
-  }, [persist]);
+  }, [isAuthenticated, upsertCloud, persistLocal]);
 
   const updateProgress = useCallback((titleId: string, progress: number) => {
     setLibrary((prev) => {
       const entry = prev[titleId];
       if (!entry) return prev;
       const updated = { ...entry, progress, updatedAt: new Date().toISOString() };
-      persist(updated);
+      if (isAuthenticated) {
+        upsertCloud(updated).catch((e) => setCloudError(e instanceof Error ? e.message : 'Sync failed'));
+      } else {
+        persistLocal(updated);
+      }
       return { ...prev, [titleId]: updated };
     });
-  }, [persist]);
+  }, [isAuthenticated, upsertCloud, persistLocal]);
 
   const updateRating = useCallback((titleId: string, rating: number) => {
     setLibrary((prev) => {
       const entry = prev[titleId];
       if (!entry) return prev;
       const updated = { ...entry, rating, updatedAt: new Date().toISOString() };
-      persist(updated);
+      if (isAuthenticated) {
+        upsertCloud(updated).catch((e) => setCloudError(e instanceof Error ? e.message : 'Sync failed'));
+      } else {
+        persistLocal(updated);
+      }
       return { ...prev, [titleId]: updated };
     });
-  }, [persist]);
+  }, [isAuthenticated, upsertCloud, persistLocal]);
 
   const updateNotes = useCallback((titleId: string, notes: string) => {
     setLibrary((prev) => {
       const entry = prev[titleId];
       if (!entry) return prev;
       const updated = { ...entry, notes, updatedAt: new Date().toISOString() };
-      persist(updated);
+      if (isAuthenticated) {
+        upsertCloud(updated).catch((e) => setCloudError(e instanceof Error ? e.message : 'Sync failed'));
+      } else {
+        persistLocal(updated);
+      }
       return { ...prev, [titleId]: updated };
     });
-  }, [persist]);
+  }, [isAuthenticated, upsertCloud, persistLocal]);
 
   const clearLibrary = useCallback(async () => {
     setLibrary({});
-    if (useIDB.current) {
-      try { await idbClear(); } catch { /* ignore */ }
+    if (isAuthenticated) {
+      const { error } = await supabase.from('library_entries').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) setCloudError(error.message);
+    } else {
+      if (useIDB.current) { try { await idbClear(); } catch {} }
+      lsSave({});
     }
-    lsSave({});
-  }, []);
+  }, [isAuthenticated]);
 
   const isInLibrary = useCallback((titleId: string) => !!library[titleId], [library]);
   const getEntry = useCallback((titleId: string) => library[titleId], [library]);
@@ -276,6 +378,8 @@ export function useLibrary() {
     library: entries,
     libraryMap: library,
     loaded,
+    cloudError,
+    isAuthenticated,
     addToLibrary,
     removeFromLibrary,
     updateStatus,
@@ -286,4 +390,36 @@ export function useLibrary() {
     getEntry,
     clearLibrary,
   };
+}
+
+// ─── Migration helper: import local library to cloud on first sign-in ────────
+
+export async function migrateLocalToCloud(): Promise<{ imported: number; error: string | null }> {
+  const local = await loadLocal();
+  const localEntries = Object.values(local);
+  if (localEntries.length === 0) return { imported: 0, error: null };
+
+  const rows = localEntries.map(entryToRow);
+  const { error } = await supabase
+    .from('library_entries')
+    .upsert(rows, { onConflict: 'user_id,title_id' });
+
+  if (error) return { imported: 0, error: error.message };
+
+  try { localStorage.setItem(MIGRATION_FLAG_KEY, 'true'); } catch {}
+  return { imported: localEntries.length, error: null };
+}
+
+export function hasLocalLibraryData(): boolean {
+  if (isIDBAvailable()) {
+    try {
+      const ls = lsLoad();
+      return Object.keys(ls).length > 0;
+    } catch {}
+  }
+  return Object.keys(lsLoad()).length > 0;
+}
+
+export function hasMigratedLocal(): boolean {
+  try { return localStorage.getItem(MIGRATION_FLAG_KEY) === 'true'; } catch { return false; }
 }

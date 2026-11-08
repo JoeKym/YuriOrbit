@@ -18,7 +18,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/format';
-import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { useIsAdmin } from '@/lib/auth/admin';
 
 const FORMAT_ITEMS = [
@@ -32,7 +32,7 @@ const FORMAT_ITEMS = [
 ];
 
 export function Navbar() {
-  const { login, register, logout, user, isAuthenticated, isLoading } = useKindeAuth();
+  const { logout, user, isAuthenticated, isLoading } = useAuth();
   const { isAdmin } = useIsAdmin();
 
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -226,7 +226,18 @@ export function Navbar() {
           {/* User / Auth Section */}
           {!isLoading && (
             isAuthenticated ? (
-              <div className="relative" ref={userMenuRef}>
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className="hidden sm:flex items-center gap-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 px-2.5 py-1 text-xs font-medium text-rose-300 hover:bg-rose-500/20 hover:text-rose-200 transition-colors"
+                    title="Admin Console"
+                  >
+                    <Shield className="h-3.5 w-3.5 text-rose-400" />
+                    <span>Admin</span>
+                  </Link>
+                )}
+                <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center gap-2 rounded-full border border-ink-700/80 bg-ink-900/90 py-1 pl-1 pr-2.5 transition-all hover:border-ink-600 hover:bg-ink-850"
@@ -297,20 +308,21 @@ export function Navbar() {
                   </div>
                 )}
               </div>
+              </div>
             ) : (
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => login()}
+                <Link
+                  to="/auth"
                   className="rounded-lg px-3 py-1.5 text-xs font-semibold text-ink-200 hover:bg-ink-850 hover:text-ink-50 transition-colors"
                 >
                   Sign in
-                </button>
-                <button
-                  onClick={() => register()}
+                </Link>
+                <Link
+                  to="/auth?mode=signup"
                   className="rounded-lg bg-gradient-to-r from-rose-500 to-lavender-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:from-rose-600 hover:to-lavender-700 transition-all shadow-rose-500/20"
                 >
                   Sign up
-                </button>
+                </Link>
               </div>
             )
           )}
@@ -466,24 +478,20 @@ export function Navbar() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      login();
-                      setMobileOpen(false);
-                    }}
+                  <Link
+                    to="/auth"
+                    onClick={() => setMobileOpen(false)}
                     className="flex-1 rounded-xl border border-ink-700 bg-ink-900 py-2.5 text-center text-xs font-semibold text-ink-100 hover:bg-ink-850 transition-colors"
                   >
                     Sign in
-                  </button>
-                  <button
-                    onClick={() => {
-                      register();
-                      setMobileOpen(false);
-                    }}
+                  </Link>
+                  <Link
+                    to="/auth?mode=signup"
+                    onClick={() => setMobileOpen(false)}
                     className="flex-1 rounded-xl bg-gradient-to-r from-rose-500 to-lavender-600 py-2.5 text-center text-xs font-semibold text-white shadow-sm hover:from-rose-600 hover:to-lavender-700 transition-all"
                   >
                     Sign up
-                  </button>
+                  </Link>
                 </div>
               )}
             </div>

@@ -43,8 +43,20 @@ export function ReaderPage() {
 
   // Reader display controls
   const [showTOC, setShowTOC] = useState(false);
-  const [readerWidth, setReaderWidth] = useState<'narrow' | 'normal' | 'wide' | 'full'>('normal');
-  const [bgColor, setBgColor] = useState<'dark' | 'light' | 'sepia'>('dark');
+  const [readerWidth, setReaderWidth] = useState<'narrow' | 'normal' | 'wide' | 'full'>(() => {
+    try {
+      return (localStorage.getItem('yuriorbit_reader_width') as 'narrow' | 'normal' | 'wide' | 'full') || 'normal';
+    } catch {
+      return 'normal';
+    }
+  });
+  const [bgColor, setBgColor] = useState<'dark' | 'light' | 'sepia'>(() => {
+    try {
+      return (localStorage.getItem('yuriorbit_reader_bg') as 'dark' | 'light' | 'sepia') || 'dark';
+    } catch {
+      return 'dark';
+    }
+  });
   const [fullscreen, setFullscreen] = useState(false);
 
   const { updateProgress, getEntry } = useLibrary();
@@ -310,7 +322,11 @@ export function ReaderPage() {
             {/* Reader Width */}
             <select
               value={readerWidth}
-              onChange={(e) => setReaderWidth(e.target.value as 'narrow' | 'normal' | 'wide' | 'full')}
+              onChange={(e) => {
+                const val = e.target.value as 'narrow' | 'normal' | 'wide' | 'full';
+                setReaderWidth(val);
+                try { localStorage.setItem('yuriorbit_reader_width', val); } catch {}
+              }}
               className="hidden sm:inline-block rounded-lg border border-ink-700 bg-ink-850 px-2 py-1 text-xs text-ink-100 focus:outline-none"
               title="Reader Width"
             >
@@ -323,7 +339,11 @@ export function ReaderPage() {
             {/* Background Theme */}
             <select
               value={bgColor}
-              onChange={(e) => setBgColor(e.target.value as 'dark' | 'light' | 'sepia')}
+              onChange={(e) => {
+                const val = e.target.value as 'dark' | 'light' | 'sepia';
+                setBgColor(val);
+                try { localStorage.setItem('yuriorbit_reader_bg', val); } catch {}
+              }}
               className="rounded-lg border border-ink-700 bg-ink-850 px-2 py-1 text-xs text-ink-100 focus:outline-none"
               title="Color Theme"
             >
