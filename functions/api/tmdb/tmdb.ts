@@ -37,6 +37,10 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     const upstreamResponse = await fetch(targetUrl.toString(), {
       method: request.method,
       headers,
+      cf: {
+        cacheTtl: 3600,
+        cacheEverything: true,
+      },
     });
 
     const responseHeaders = new Headers(upstreamResponse.headers);
