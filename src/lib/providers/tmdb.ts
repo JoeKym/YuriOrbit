@@ -209,8 +209,14 @@ export async function tmdbSearchGL(filter: ContentFilter, page = 1): Promise<Pag
 /** Discover GL movies from TMDB using keyword filters. */
 export async function tmdbGetGLMovies(page = 1): Promise<ContentTitle[]> {
   try {
-    // Search for lesbian/GL movies
-    const searches = ['lesbian romance movie', 'yuri film', 'girls love movie'];
+    // Search for lesbian/GL films (live action and animated).
+    const searches = [
+      'lesbian romance',
+      'lesbian film',
+      'girls love movie',
+      'sapphic film',
+      'yuri anime film',
+    ];
     const results = await Promise.allSettled(
       searches.map((q) =>
         tmdbFetch<TMDBPageResponse>('/search/movie', {
@@ -244,7 +250,16 @@ export async function tmdbGetGLMovies(page = 1): Promise<ContentTitle[]> {
 /** Discover GL TV series and dramas from TMDB. */
 export async function tmdbGetGLDramas(page = 1): Promise<ContentTitle[]> {
   try {
-    const searches = ['lesbian drama series', 'girls love drama', 'yuri anime series'];
+    // Live-action GL series: Korean, Japanese, Chinese, Thai and Western drama
+    // all surface through these queries, then get classified below.
+    const searches = [
+      'lesbian drama series',
+      'girls love drama',
+      'yuri drama',
+      'sapphic series',
+      'wlw series',
+      'yuri anime series',
+    ];
     const results = await Promise.allSettled(
       searches.map((q) =>
         tmdbFetch<TMDBPageResponse>('/search/tv', {

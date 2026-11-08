@@ -102,7 +102,7 @@ YuriOrbit can be deployed directly to Cloudflare Pages with zero cold starts:
    - `NODE_VERSION`: `20`
    - `VITE_APP_NAME`: `YuriOrbit`
    - `VITE_SUPABASE_URL`: Your Supabase project URL (`https://<project-ref>.supabase.co`)
-   - `VITE_SUPABASE_ANON_KEY`: Your Supabase anon/public key
+   - `VITE_SUPABASE_ANON_KEY` *(or `VITE_SUPABASE_PUBLISHABLE_KEY`)*: Your Supabase anon/publishable client key — either name works
    - `VITE_ADMIN_EMAILS` *(optional)*: Comma-separated list of admin account emails
    - `TMDB_READ_ACCESS_TOKEN` *(preferred; server-side secret for Pages Functions)*: Your TMDB API Read Access Token (v4). Store it as a Cloudflare secret, not a `VITE_` variable.
    - `TMDB_API_KEY` *(fallback; optional server-side secret for Pages Functions)*: Your TMDB API Key (v3), used only when the Read Access Token is not configured. Store it as a Cloudflare secret, not a `VITE_` variable.
@@ -124,13 +124,22 @@ the policy that lets anyone read the library of a **public** profile.
 Until it is applied everything still works: `/user/*` shows a "profiles aren't
 enabled yet" notice, and the homepage simply omits the Editor's Picks rail.
 
-### 2. Public profiles — `/user/{username}`
+### 2. Account pages — `/auth` and `/profile`
 
-Users claim a username under **Settings → Public profile**. Profiles are public by
-default; switching the public toggle off hides both the profile and its library
-from everyone except the owner.
+- **`/auth`** is the full auth page: sign in, sign up (email + username +
+  password + confirmation), forgot password, and password reset (`/auth?mode=reset`).
+  `?next=` is honoured after a successful sign-in.
+- **`/profile`** is the signed-in account page: header card with avatar, stats,
+  recent library grid, and an inline editor (avatar upload, username, display
+  name, bio, public toggle). Signed-out visitors are redirected to
+  `/auth?next=/profile`. `/settings` links here.
 
-### 3. Admin console — `/admin`
+### 3. Public profiles — `/user/{username}`
+
+Profiles are public by default; switching the public toggle off in `/profile`
+hides both the profile and its library from everyone except the owner.
+
+### 4. Admin console — `/admin`
 
 Admin access is enforced **server-side** by `functions/api/admin/[[path]].ts`:
 the caller's Supabase access token is verified against Supabase Auth, their email
@@ -148,6 +157,9 @@ Add these to the Cloudflare Pages project (Settings → Environment variables):
 `SUPABASE_SECRET_KEY` is accepted as an alternative to `SUPABASE_SERVICE_ROLE_KEY`
 when using Supabase's new-style keys.
 
+Tabs are addressable by slug, e.g. `/admin?tab=users` or `/admin?tab=featured`:
+`overview`, `users`, `library`, `featured`, `settings`, `audit`.
+
 What the console does:
 
 - **Overview** — accounts, new signups, library entries by status, most-tracked titles
@@ -156,3 +168,28 @@ What the console does:
 - **Editor's Picks** — pin catalog titles to the homepage
 - **Site settings** — the site-wide announcement banner
 - **Audit log** — every privileged action, with actor and timestamp
+
+---
+
+## Title identity, ids and search results
+
+Titles no longer use upstream ids in URLs. Every catalog entry gets a YuriOrbit
+slug derived from its title (for example `/title/bloom-into-you-2015`), which is
+what `ContentCard`, the library, and history all link to.
+
+- `src/lib/catalog/identity.ts` — slug building, title normalisation, provider-id
+  detection.
+- `src/lib/catalog/registry.ts` — a small localStorage registry that remembers
+  which slug belongs to which provider id, so a slug link can be resolved later
+  even though the catalog is fetched live from AniList/MangaDex/TMDB.
+- `src/lib/catalog/canonical.ts` — merges the same work returned by both APIs
+  (title + alt titles, family-gated) before results are rendered, so searching
+  "Bloom Into You" no longer shows it twice.
+- Legacy links (`ANILIST-…`, `MANGADEX-…`, `TMDB-movie-…`) still resolve, and old
+  library rows keep working.
+
+MangaDex artwork is served through `/api/mangadex/covers/*` (see
+`functions/api/mangadex/[[path]].ts`). This keeps covers same-origin — the browser
+otherwise blocks them — and drops the `Referer` header, because MangaDex answers
+cross-origin cover requests with a "you can read this at mangadex.org" placeholder
+image.

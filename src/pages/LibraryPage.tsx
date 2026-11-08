@@ -4,7 +4,7 @@ import { Heart, BookOpen, CheckCircle, Clock, XCircle, Pause, Trash2, Download, 
 import { useLibrary } from '@/hooks/useLibrary';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { CONTENT_TYPE_LABELS, LIBRARY_STATUS_LABELS, type LibraryStatus } from '@/types/content';
-import { cn } from '@/lib/utils/format';
+import { cn, getFallbackCover } from '@/lib/utils/format';
 
 const STATUS_FILTERS: (LibraryStatus | 'ALL')[] = ['ALL', 'CURRENT', 'PLANNED', 'COMPLETED', 'FAVOURITE', 'ON_HOLD', 'DROPPED'];
 
@@ -119,10 +119,13 @@ export function LibraryPage() {
               <div key={entry.id} className="flex gap-3 rounded-xl border border-ink-800 bg-ink-900 p-3 transition-all duration-200 hover:border-ink-700">
                 <Link to={`/title/${entry.titleId}`} className="flex-shrink-0">
                   <img
-                    src={entry.coverImage}
+                    src={entry.coverImage || getFallbackCover(entry.title)}
                     alt={entry.title}
                     loading="lazy"
-                    className="h-24 w-16 rounded-lg object-cover"
+                    className="h-24 w-16 rounded-lg bg-ink-850 object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = getFallbackCover(entry.title);
+                    }}
                   />
                 </Link>
                 <div className="min-w-0 flex-1">

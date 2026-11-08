@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { adminApi, type AdminEntry } from '@/lib/admin/api';
 import { useDebounce } from '@/hooks/useDebounce';
 import { LIBRARY_STATUS_LABELS, type LibraryStatus } from '@/types/content';
+import { getFallbackCover } from '@/lib/utils/format';
 
 const STATUS_FILTERS: (LibraryStatus | '')[] = [
   '',
@@ -122,7 +123,14 @@ export function LibraryTab() {
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2">
                         {entry.cover_image && (
-                          <img src={entry.cover_image} alt="" className="h-9 w-6 rounded object-cover" />
+                          <img
+                            src={entry.cover_image || getFallbackCover(entry.title)}
+                            alt=""
+                            className="h-9 w-6 rounded bg-ink-850 object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = getFallbackCover(entry.title);
+                            }}
+                          />
                         )}
                         <div className="min-w-0">
                           <p className="truncate font-medium text-ink-100">{entry.title}</p>

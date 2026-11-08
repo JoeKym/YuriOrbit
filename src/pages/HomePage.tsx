@@ -1,10 +1,10 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, BookOpen, ArrowRight } from 'lucide-react';
 import { Carousel } from '@/components/content/Carousel';
 import type { ContentTitle, ContentType } from '@/types/content';
 import { GL_ALLOWED_CLASSIFICATIONS } from '@/lib/providers/classify';
-import { getTrendingGL, getPopularGL, getRecentGL, getCompletedGL } from '@/lib/providers';
+import { getTrendingGL, getPopularGL, getRecentGL, getCompletedGL, glConfidence } from '@/lib/providers';
 import { supabase } from '@/lib/supabase';
 
 interface FeaturedRow {
@@ -16,6 +16,16 @@ interface FeaturedRow {
 
 function filterGLTitles(titles: ContentTitle[]): ContentTitle[] {
   return titles.filter((t) => GL_ALLOWED_CLASSIFICATIONS.includes(t.glClassification));
+}
+
+const YURI_TAG_RE = /^(yuri|girls love|girls' love|shoujo ai|shoujo-ai|lesbian|sapphic|wlw|female-female romance)$/i;
+
+/** Highest AniList rank of the yuri tags on a title — -1 when it carries none. */
+function yuriTagRank(title: ContentTitle): number {
+  const ranks = title.tags
+    .filter((tag) => YURI_TAG_RE.test(tag.name.trim()))
+    .map((tag) => tag.rank ?? 0);
+  return ranks.length > 0 ? Math.max(...ranks) : -1;
 }
 
 export function HomePage() {
@@ -47,7 +57,20 @@ export function HomePage() {
         const recent = recentRes.status === 'fulfilled' ? filterGLTitles(recentRes.value) : [];
         const completed = completedRes.status === 'fulfilled' ? filterGLTitles(completedRes.value) : [];
 
-        data['trending'] = trending.length > 0 ? trending : popular.slice(0, 20);
+        // AniList's user-voted Yuri tag is applied loosely (Slime carries it at
+        // rank 30), so the top rail keeps only titles where the tag is strongly
+        // applied — unless that would leave the rail nearly empty.
+        const strongTrending = trending.filter((title) => {
+          if (title.glClassification !== 'CONFIRMED_GL') return false;
+          const rank = yuriTagRank(title);
+          return rank === -1 ? title.provider !== 'ANILIST' : rank >= 50;
+        });
+        data['trending'] =
+          strongTrending.length >= 6
+            ? strongTrending
+            : trending.length > 0
+              ? trending
+              : popular.slice(0, 20);
 
         const pool = popular.length > 0 ? popular : trending;
 
@@ -120,6 +143,63 @@ export function HomePage() {
 
   const get = (key: string) => sections[key] || [];
 
+  // Admin-curated picks win. Until an editor pins something (or if the table is
+  // not migrated yet) fall back to the highest-rated GL titles so the rail is
+  // never empty on the home page.
+  const editorPicks = useMemo(() => {
+    if (featured.length > 0) return featured;
+
+    const seen = new Set<string>();
+    const pool = [
+      ...(sections['trending'] || []),
+      ...(sections['popularManga'] || []),
+      ...(sections['anime'] || []),
+      ...(sections['manhwa'] || []),
+      ...(sections['manhua'] || []),
+      ...(sections['novels'] || []),
+    ];
+
+    const unique = pool.filter((title) => {
+      if (seen.has(title.id)) return false;
+      seen.add(title.id);
+      return true;
+    });
+
+    const ranked = unique
+      .filter((title) => title.glClassification === 'CONFIRMED_GL')
+      .sort((a, b) => {
+        const byConfidence = glConfidence(b) - glConfidence(a);
+        if (byConfidence !== 0) return byConfidence;
+        const byScore = (b.averageScore ?? 0) - (a.averageScore ?? 0);
+        if (byScore !== 0) return byScore;
+        return (b.popularity ?? 0) - (a.popularity ?? 0);
+      });
+
+    // Round-robin across formats so the rail reads as a hand-picked mix instead
+    // of repeating the head of the "Popular GL Manga" rail below it.
+    const buckets = new Map<ContentType, ContentTitle[]>();
+    for (const title of ranked) {
+      const bucket = buckets.get(title.contentType);
+      if (bucket) bucket.push(title);
+      else buckets.set(title.contentType, [title]);
+    }
+
+    const mixed: ContentTitle[] = [];
+    let added = true;
+    while (mixed.length < 14 && added) {
+      added = false;
+      for (const bucket of buckets.values()) {
+        const next = bucket.shift();
+        if (!next) continue;
+        mixed.push(next);
+        added = true;
+        if (mixed.length >= 14) break;
+      }
+    }
+
+    return mixed;
+  }, [featured, sections]);
+
   return (
     <div>
       <section className="relative overflow-hidden">
@@ -169,7 +249,11 @@ export function HomePage() {
         )}
 
         <Carousel title="Trending Now" titles={get('trending')} loading={loading} viewAllLink="/trending" />
-        {featured.length > 0 && <Carousel title="Editor's Picks" titles={featured} />}
+        <Carousel
+          title="Editor's Picks"
+          titles={editorPicks}
+          loading={loading && editorPicks.length === 0}
+        />
         <Carousel title="Popular GL Manga" titles={get('popularManga')} loading={loading} viewAllLink="/manga" />
         <Carousel title="Anime & Adaptations" titles={get('anime')} loading={loading} viewAllLink="/anime" />
         <Carousel title="Manhwa" titles={get('manhwa')} loading={loading} viewAllLink="/manhwa" />

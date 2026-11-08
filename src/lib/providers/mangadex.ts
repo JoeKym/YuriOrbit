@@ -14,6 +14,17 @@ const configuredUrl = env.VITE_MANGADEX_API_URL || '';
 const isValidCustomUrl = configuredUrl && !configuredUrl.includes('onrender.com');
 const rawBase = isValidCustomUrl ? configuredUrl : (isBrowser ? '/api/mangadex' : 'https://api.mangadex.org');
 const MANGADEX_BASE = rawBase.replace(/\/+$/, '');
+
+/**
+ * Covers must be served from our own origin: Chrome's Opaque Response Blocking
+ * drops direct <img> requests to uploads.mangadex.org (the response is treated
+ * as opaque), which left MangaDex cards blank. `functions/api/mangadex`
+ * forwards `/covers/*` to uploads.mangadex.org. In Node/test runs we still hit
+ * the upstream host directly.
+ */
+const MANGADEX_COVERS_BASE = isBrowser
+  ? `${MANGADEX_BASE}/covers`
+  : 'https://uploads.mangadex.org/covers';
 const TIMEOUT = 15000;
 const REQUEST_DELAY = 300; // Be polite to MangaDex
 
@@ -77,6 +88,7 @@ interface MDRelationship {
     description?: MDLocalizedString;
     volume?: string;
     chapter?: string;
+    locale?: string;
     translatedLanguage?: string;
     publishAt?: string;
     readableAt?: string;
@@ -144,9 +156,19 @@ const EXCLUDE_TAG_IDS = [
   '5920b825-4181-4a17-beeb-9baec0c9d5cc', // Boys' Love
 ];
 
+const LATIN_LANGS = ['en', 'ja-ro', 'ko-ro', 'zh-ro', 'es-la', 'es', 'pt-br', 'fr', 'id'];
+
 function getBestText(loc: MDLocalizedString | undefined): string {
   if (!loc) return '';
-  return loc.en || loc['ja-ro'] || loc['ko-ro'] || Object.values(loc).find(Boolean) || '';
+  for (const lang of LATIN_LANGS) {
+    const value = loc[lang];
+    if (value && value.trim()) return value.trim();
+  }
+  // Fall back to any latin-script value before jumping to CJK-only text.
+  for (const value of Object.values(loc)) {
+    if (value && /[a-zA-Z]/.test(value)) return value.trim();
+  }
+  return Object.values(loc).find(Boolean)?.trim() || '';
 }
 
 function mapMDStatusInternal(status?: string): ContentTitle['status'] {
@@ -169,9 +191,20 @@ function mapMDContentType(lang?: string): ContentTitle['contentType'] {
 }
 
 function getCoverUrl(relationships: MDRelationship[], mangaId: string): string | undefined {
-  const cover = relationships.find((r) => r.type === 'cover_art');
-  if (!cover?.attributes?.fileName) return undefined;
-  return `https://uploads.mangadex.org/covers/${mangaId}/${cover.attributes.fileName}.512.jpg`;
+  const covers = relationships.filter((r) => r.type === 'cover_art' && r.attributes?.fileName);
+  if (covers.length === 0) return undefined;
+
+  // Prefer the English/localised cover, then the first one MangaDex returns.
+  const cover = covers.find((c) => c.attributes?.locale === 'en') ?? covers[0];
+  const fileName = cover.attributes?.fileName;
+  if (!fileName) return undefined;
+
+  // MangaDex cover filenames already include the extension; sizes are appended
+  // (e.g. `abc.jpg.512.jpg`). Only produce URLs for actual image files so we
+  // never render a non-image string in an <img> tag.
+  if (!/\.(jpe?g|png|webp|gif)$/i.test(fileName)) return undefined;
+
+  return `${MANGADEX_COVERS_BASE}/${mangaId}/${fileName}.512.jpg`;
 }
 
 function normalizeMangaDex(m: MDManga): ContentTitle {

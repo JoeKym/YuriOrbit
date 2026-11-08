@@ -1,299 +1,247 @@
-import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { X, Loader2, UserRound, Mail, Lock, UserPlus, Settings, Image, Check, Clock } from 'lucide-react';
-import { cn } from '@/lib/utils/format';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, Navigate } from 'react-router-dom';
+import {
+  BookOpen,
+  Calendar,
+  ExternalLink,
+  Heart,
+  Loader2,
+  LogOut,
+  Pencil,
+  ShieldCheck,
+  Star,
+  UserRound,
+} from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useLibrary } from '@/hooks/useLibrary';
+import { fetchMyProfile, type Profile } from '@/lib/profiles';
+import { ProfileEditor } from '@/components/profile/ProfileEditor';
+import { LIBRARY_STATUS_LABELS } from '@/types/content';
+import { getFallbackCover } from '@/lib/utils/format';
+
+function ProfileSkeleton() {
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-10 md:px-6">
+      <div className="skeleton h-40 w-full rounded-2xl" />
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div key={index} className="skeleton h-20 rounded-xl" />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function ProfilePage() {
-  const { user, isAuthenticated, isLoading } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [mode, setMode] = useState<'signin' | 'signup' | 'edit'>('signin');
-  const [form, setForm] = useState<{ email: string; password: string; confirmPassword?: string; username?: string; displayName?: string; bio?: string }>({ email: '', password: '', confirmPassword: '', username: '', displayName: '', bio: '' });
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { library } = useLibrary();
 
-  // Compute avatar source: file preview or user avatar URL
-  const avatarSrc = avatarFile ? URL.createObjectURL(avatarFile) : (user?.picture || user?.givenName || user?.email || '');
+  const userId = user?.id;
 
-  // Clean up object URL when component unmounts
-  useEffect(() => {
-    return () => URL.revokeObjectURL(avatarSrc as string);
-  }, [avatarSrc]);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [needsSetup, setNeedsSetup] = useState(false);
+  const [editing, setEditing] = useState(false);
 
-  // Switch between modes
-  const switchMode = (newMode: 'signin' | 'signup' | 'edit') => {
-    setMode(newMode);
-    setError(null);
-    if (newMode !== 'edit') {
-      setForm({ email: '', password: '', confirmPassword: '', username: '', displayName: '', bio: '' });
-      setAvatarFile(null);
-    }
-  };
-
-  // Handle avatar file change
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setAvatarFile(file);
-    }
-  };
-
-  // Handle input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
-  };
-
-  // Sign in
-  const handleSignIn = () => {
-    setSubmitting(true);
-    setError(null);
-    setTimeout(() => {
-      setSubmitting(false);
-      setMode('edit');
-    }, 1000);
-  };
-
-  // Sign up
-  const handleSignUp = () => {
-    setSubmitting(true);
-    setError(null);
-    if (form.password !== form.confirmPassword) {
-      setError('Passwords do not match');
-      setSubmitting(false);
+  const loadProfile = useCallback(async () => {
+    if (!userId) {
+      setProfile(null);
+      setLoadingProfile(false);
       return;
     }
-    setTimeout(() => {
-      setSubmitting(false);
-      setMode('edit');
-    }, 1000);
+
+    setLoadingProfile(true);
+    const result = await fetchMyProfile(userId);
+    setNeedsSetup(Boolean(result.needsSetup));
+    setProfile(result.data);
+    setLoadingProfile(false);
+  }, [userId]);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+
+  // Signed-out visitors belong on /auth, not on a broken-looking profile page.
+  if (isLoading) return <ProfileSkeleton />;
+  if (!isAuthenticated) return <Navigate to="/auth?next=/profile" replace />;
+
+  const displayName = profile?.displayName || profile?.username || user?.givenName || user?.email?.split('@')[0] || 'YuriOrbit member';
+  const initial = displayName.charAt(0).toUpperCase();
+  const joinedYear = profile?.createdAt ? new Date(profile.createdAt).getFullYear() : null;
+  const favourites = library.filter((entry) => entry.status === 'FAVOURITE');
+  const completed = library.filter((entry) => entry.status === 'COMPLETED');
+  const recent = library.slice(0, 12);
+
+  const handleSaved = (next: Profile) => {
+    setProfile(next);
+    setEditing(false);
+    window.dispatchEvent(new Event('yot:profile-updated'));
   };
 
-  // Save profile
-  const handleSaveProfile = () => {
-    setSaving(true);
-    setSaved(false);
-    setTimeout(() => {
-      setSaving(false);
-      setSaved(true);
-      window.setTimeout(() => setSaved(false), 3000);
-    }, 500);
+  const handleSignOut = async () => {
+    await logout();
   };
 
-  // Form inputs
-  const emailInput = (
-    <input
-      type="email"
-      name="email"
-      value={form.email}
-      onChange={handleInputChange}
-      placeholder="you@email.com"
-      required
-      className="input-field w-full"
-    />
-  );
-
-  const passwordInput = (
-    <input
-      type="password"
-      name="password"
-      value={form.password}
-      onChange={handleInputChange}
-      placeholder="••••••••"
-      required
-      className="input-field w-full"
-    />
-  );
-
-  const confirmPasswordInput = (
-    <input
-      type="password"
-      name="confirmPassword"
-      value={form.confirmPassword}
-      onChange={handleInputChange}
-      placeholder="••••••••"
-      required
-      className="input-field w-full"
-    />
-  );
-
-  const usernameInput = (
-    <input
-      type="text"
-      name="username"
-      value={form.username}
-      onChange={handleInputChange}
-      placeholder="yourname"
-      maxLength={20}
-      className="input-field w-full"
-    />
-  );
-
-  const displayNameInput = (
-    <input
-      type="text"
-      name="displayName"
-      value={form.displayName}
-      onChange={handleInputChange}
-      placeholder="Shown on your profile"
-      maxLength={40}
-      className="input-field w-full"
-    />
-  );
-
-  const bioTextarea = (
-    <textarea
-      name="bio"
-      value={form.bio}
-      onChange={handleInputChange}
-      rows={2}
-      maxLength={280}
-      placeholder="A few words about your taste in GL."
-      className="input-field w-full"
-    />
-  );
-
-  if (!isAuthenticated) {
-    return (
-      <section className="min-h-screen flex flex-col items-center justify-center py-12 px-4 bg-ink-950">
-        <div className="w-full max-w-md space-y-6">
-          {/* Mode tabs */}
-          <div className="flex gap-1">
-            <button
-              onClick={() => setMode('signin')}
-              className={cn('flex-1 rounded-lg border-2 border-ink-800 text-xs font-medium transition-colors', mode === 'signin' ? 'border-rose-500 text-rose-300 bg-rose-500/10' : 'text-ink-300 hover:bg-ink-850')}
-            >
-              Sign in
-            </button>
-            <button
-              onClick={() => setMode('signup')}
-              className={cn('flex-1 rounded-lg border-2 border-ink-800 text-xs font-medium transition-colors', mode === 'signup' ? 'border-rose-500 text-rose-300 bg-rose-500/10' : 'text-ink-300 hover:bg-ink-850')}
-            >
-              Sign up
-            </button>
-          </div>
-
-          {error && <p className="text-red-400 text-sm mb-2">{error}</p>}
-          {loading && <p className="text-sm text-ink-400">Loading…</p>}
-
-          <div className="rounded-lg border border-ink-800 p-6 bg-ink-900">
-            <form className="space-y-4">
-              <div>
-                {emailInput}
-              </div>
-
-              {mode === 'signup' && (
-                <div>
-                  {passwordInput}
-                  {confirmPasswordInput}
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={mode === 'signin' ? handleSignIn : handleSignUp}
-                disabled={submitting}
-                className="w-full btn-primary text-xs flex items-center gap-2 justify-center"
-              >
-                {submitting ? 'Loading…' : mode === 'signin' ? 'Sign in' : 'Create account'}
-              </button>
-            </form>
-          </div>
-
-          {/* Switch to edit mode link */}
-          {mode !== 'edit' && (
-            <p className="mt-4 text-xs text-ink-400 text-center">
-              Have an account? <a href="javascript:void(0)" onClick={() => setMode('signin')} className="text-rose-400 hover:text-rose-300">Sign in</a>
-            </p>
-          )}
-
-          {/* Edit profile mode */}
-          {mode === 'edit' && (
-            <div className="mt-6 p-6 bg-ink-900 rounded-lg border border-ink-800">
-              <h2 className="mb-4 text-lg font-semibold text-ink-50">Edit profile</h2>
-
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div>{usernameInput}</div>
-                <div>{displayNameInput}</div>
-              </div>
-
-              <div>{bioTextarea}</div>
-
-              {/* Avatar upload - simplified */}
-              <div className="mb-4">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  className="hidden"
-                />
-                <div className="flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-ink-900 bg-gradient-to-tr from-rose-500 to-lavender-500 text-2xl font-bold text-white">
-                  {form.username?.charAt(0)?.toUpperCase() || 'U'}
-                </div>
-                <p className="text-xs text-ink-400">Add avatar (optional)</p>
-              </div>
-
-              <div className="flex gap-3">
-                <button onClick={handleSaveProfile} disabled={saving} className="flex-1 btn-primary text-xs flex items-center gap-2 justify-center">
-                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null} Save profile
-                </button>
-                {saved && (
-                  <span className="flex items-center gap-1 text-success-400">
-                    <Check className="h-3.5 w-3.5" /> Saved
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-    );
-  }
-
-  // Authenticated user view
   return (
-    <section className="min-h-screen flex flex-col items-center justify-center py-12 px-4">
-      <div className="w-full max-w-md space-y-4">
-        <h2 className="text-2xl font-semibold text-ink-50">
-          {user?.givenName || user?.email ? 'Profile' : 'Profile'}
-        </h2>
-
-        {isLoading && <p className="text-sm text-ink-400">Loading profile…</p>}
-
-        {/* Profile summary */}
-        {user?.id && (
-          <div className="rounded-lg border border-ink-800 p-6 bg-ink-900 mb-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-16 w-16 rounded-2xl object-cover">
-                {/* Avatar would be rendered here via CSS or background-image */}
-              </div>
-              <div>
-                <p className="text-lg font-medium text-ink-50">{user?.givenName || user?.email}</p>
-                <p className="text-xs text-ink-400">Member since</p>
-              </div>
-            </div>
-
-            {/* Edit button */}
-            <button
-              onClick={() => setMode('edit')}
-              className="w-full btn-primary text-xs flex items-center gap-2 justify-center mt-2"
-            >
-              Edit profile
-            </button>
-          </div>
-        )}
-
-        {/* Action buttons */}
-        <div className="flex flex-col sm:flex-row gap-2">
-          <button className="flex-1 btn-primary text-sm">View public profile</button>
-          <button className="flex-1 btn-ghost text-sm">Manage preferences</button>
+    <div className="mx-auto max-w-5xl px-4 py-8 md:px-6 md:py-10">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-2xl font-semibold text-ink-50">Your profile</h1>
+        <div className="flex items-center gap-2">
+          {profile?.username && (
+            <Link to={`/user/${profile.username}`} className="btn-ghost text-xs">
+              <ExternalLink className="h-3.5 w-3.5" /> View public page
+            </Link>
+          )}
+          <button onClick={handleSignOut} className="btn-ghost text-xs text-ink-400 hover:text-rose-300">
+            <LogOut className="h-3.5 w-3.5" /> Sign out
+          </button>
         </div>
       </div>
-    </section>
+
+      {loadingProfile ? (
+        <div className="skeleton h-44 w-full rounded-2xl" />
+      ) : (
+        <div className="card-surface overflow-hidden">
+          <div className="h-24 bg-gradient-to-r from-rose-500/25 via-lavender-500/20 to-transparent" />
+          <div className="px-5 pb-6 md:px-8">
+            <div className="-mt-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div className="flex items-end gap-4">
+                {profile?.avatarUrl ? (
+                  <img
+                    src={profile.avatarUrl}
+                    alt={displayName}
+                    className="h-20 w-20 rounded-2xl border-4 border-ink-900 object-cover"
+                  />
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl border-4 border-ink-900 bg-gradient-to-tr from-rose-500 to-lavender-500 text-2xl font-bold text-white">
+                    {initial}
+                  </div>
+                )}
+                <div className="pb-1">
+                  <h2 className="font-display text-2xl font-semibold text-ink-50">{displayName}</h2>
+                  <p className="text-sm text-ink-400">
+                    {profile?.username ? `@${profile.username}` : user?.email}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 pb-1">
+                {profile ? (
+                  <span className="chip">
+                    <ShieldCheck className="h-3 w-3" /> {profile.isPublic ? 'Public' : 'Private'}
+                  </span>
+                ) : (
+                  <span className="chip">
+                    <UserRound className="h-3 w-3" /> Username not claimed
+                  </span>
+                )}
+                {joinedYear && (
+                  <span className="chip">
+                    <Calendar className="h-3 w-3" /> Joined {joinedYear}
+                  </span>
+                )}
+                <button onClick={() => setEditing((prev) => !prev)} className="btn-secondary text-xs">
+                  <Pencil className="h-3.5 w-3.5" /> {editing ? 'Close editor' : 'Edit profile'}
+                </button>
+              </div>
+            </div>
+
+            {profile?.bio && (
+              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-ink-300">{profile.bio}</p>
+            )}
+
+            {!profile && !editing && (
+              <p className="mt-4 max-w-2xl text-sm text-ink-300">
+                Claim a username to get a shareable page at{' '}
+                <code className="rounded bg-ink-850 px-1.5 py-0.5 text-ink-200">/user/yourname</code> and show off
+                your library.
+              </p>
+            )}
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-xl border border-ink-800 bg-ink-850 p-3">
+                <div className="flex items-center gap-1.5 text-xs text-ink-400">
+                  <BookOpen className="h-3.5 w-3.5" /> Tracked
+                </div>
+                <p className="mt-1 font-display text-2xl font-semibold text-ink-50">{library.length}</p>
+              </div>
+              <div className="rounded-xl border border-ink-800 bg-ink-850 p-3">
+                <div className="flex items-center gap-1.5 text-xs text-ink-400">
+                  <Heart className="h-3.5 w-3.5" /> Favourites
+                </div>
+                <p className="mt-1 font-display text-2xl font-semibold text-ink-50">{favourites.length}</p>
+              </div>
+              <div className="rounded-xl border border-ink-800 bg-ink-850 p-3">
+                <div className="flex items-center gap-1.5 text-xs text-ink-400">
+                  <Star className="h-3.5 w-3.5" /> Completed
+                </div>
+                <p className="mt-1 font-display text-2xl font-semibold text-ink-50">{completed.length}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(editing || (!loadingProfile && !profile)) && (
+        <div className="mt-6">
+          <ProfileEditor
+            userId={userId as string}
+            profile={profile}
+            initialNeedsSetup={needsSetup}
+            onSaved={handleSaved}
+            onCancel={profile ? () => setEditing(false) : undefined}
+          />
+        </div>
+      )}
+
+      {needsSetup && !editing && profile && (
+        <p className="mt-4 text-xs text-warning-400">
+          The profiles table is not migrated on this deployment yet — changes cannot be saved.
+        </p>
+      )}
+
+      {loadingProfile ? (
+        <div className="mt-6 flex items-center gap-2 text-xs text-ink-400">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading your library…
+        </div>
+      ) : recent.length > 0 ? (
+        <section className="mt-8">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="section-title">Recently updated</h2>
+            <Link to="/library" className="btn-ghost text-xs">
+              Open library
+            </Link>
+          </div>
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+            {recent.map((entry) => (
+              <Link key={entry.id} to={`/title/${entry.titleId}`} className="group">
+                <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-ink-850 transition-all duration-300 group-hover:ring-1 group-hover:ring-rose-500/20">
+                  <img
+                    src={entry.coverImage || getFallbackCover(entry.title)}
+                    alt={entry.title}
+                    loading="lazy"
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    onError={(event) => {
+                      (event.target as HTMLImageElement).src = getFallbackCover(entry.title);
+                    }}
+                  />
+                  <span className="absolute bottom-1.5 left-1.5 rounded-md bg-ink-950/85 px-1.5 py-0.5 text-[10px] font-medium text-ink-200 backdrop-blur-sm">
+                    {LIBRARY_STATUS_LABELS[entry.status]}
+                  </span>
+                </div>
+                <p className="mt-1.5 line-clamp-2 text-xs text-ink-200 group-hover:text-rose-300">{entry.title}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <div className="mt-8 rounded-2xl border border-dashed border-ink-800 p-8 text-center">
+          <p className="text-sm text-ink-300">Your library is empty.</p>
+          <Link to="/discover" className="btn-primary mt-4 text-xs">
+            Discover titles
+          </Link>
+        </div>
+      )}
+    </div>
   );
 }

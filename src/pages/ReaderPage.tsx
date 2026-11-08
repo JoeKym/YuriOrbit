@@ -92,7 +92,10 @@ export function ReaderPage() {
       setLoadingChapters(true);
       try {
         let mdId: string | null = null;
-        if (id.startsWith('MANGADEX-')) {
+        if (title.provider === 'MANGADEX' && title.providerId) {
+          // Catalog ids are YuriOrbit slugs; the MangaDex uuid lives on providerId.
+          mdId = title.providerId;
+        } else if (id.startsWith('MANGADEX-')) {
           mdId = id.replace('MANGADEX-', '');
         } else {
           mdId = await mangadexFindMangaId(title.title, title.altTitles);

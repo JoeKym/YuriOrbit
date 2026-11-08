@@ -1,7 +1,11 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Supabase has renamed the publishable key over time; accept either name so a
+// deployment configured with VITE_SUPABASE_PUBLISHABLE_KEY still signs in.
+const supabaseAnonKey =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 /**
  * Supabase is optional. Without it the app still works: sign-in is disabled and
@@ -17,7 +21,7 @@ export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 function createSupabaseClient(): SupabaseClient | null {
   if (!supabaseUrl || !supabaseAnonKey) {
     console.warn(
-      '[YuriOrbit] VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are not set. ' +
+      '[YuriOrbit] VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY (or VITE_SUPABASE_PUBLISHABLE_KEY) are not set. ' +
         'Sign-in is disabled and the library stays local to this browser.'
     );
     return null;

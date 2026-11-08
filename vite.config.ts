@@ -13,6 +13,26 @@ export default defineConfig({
   },
   server: {
     proxy: {
+      // Covers are served from a different MangaDex host; keep the proxy order
+      // specific-first so /api/mangadex/covers is not swallowed by the API rule.
+      '/api/mangadex/covers': {
+        target: 'https://uploads.mangadex.org',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/mangadex\/covers/, '/covers'),
+        headers: {
+          'User-Agent': 'YuriOrbit/1.0 (https://github.com/JoeKym/YuriOrbit)',
+          'Accept': 'image/avif,image/webp,image/jpeg,image/png,image/*',
+        },
+        // MangaDex answers cross-origin image requests (see `Vary: Origin,
+        // Referer`) with a "you can read this at mangadex.org" placeholder.
+        // Strip the browser's referer/origin so the real artwork comes back.
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => {
+            proxyReq.removeHeader('referer');
+            proxyReq.removeHeader('origin');
+          });
+        },
+      },
       '/api/mangadex': {
         target: 'https://api.mangadex.org',
         changeOrigin: true,

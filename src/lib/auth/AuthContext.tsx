@@ -10,13 +10,23 @@ interface AuthUser {
   picture?: string;
 }
 
+export interface AuthResult {
+  error: string | null;
+  /** Present after a successful sign-up; lets the caller claim a username. */
+  userId?: string;
+  /** True when Supabase requires the user to confirm their email first. */
+  needsConfirmation?: boolean;
+}
+
 interface AuthContextValue {
   user: AuthUser | null;
   session: Session | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ error: string | null }>;
-  register: (email: string, password: string) => Promise<{ error: string | null }>;
+  login: (email: string, password: string) => Promise<AuthResult>;
+  register: (email: string, password: string, username?: string) => Promise<AuthResult>;
+  resetPassword: (email: string) => Promise<AuthResult>;
+  updatePassword: (password: string) => Promise<AuthResult>;
   logout: () => Promise<void>;
 }
 
@@ -65,9 +75,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   }, []);
 
-  const register = useCallback(async (email: string, password: string) => {
+  const register = useCallback(async (email: string, password: string, username?: string) => {
     if (!supabase) return { error: AUTH_UNAVAILABLE };
-    const { error } = await supabase.auth.signUp({ email, password });
+
+    const cleanUsername = username?.trim().toLowerCase();
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {
+        data: cleanUsername ? { username: cleanUsername, display_name: cleanUsername } : undefined,
+        emailRedirectTo:
+          typeof window !== 'undefined' ? `${window.location.origin}/auth?next=/profile` : undefined,
+      },
+    });
+
+    if (error) return { error: error.message };
+    return {
+      error: null,
+      userId: data.user?.id,
+      needsConfirmation: !data.session,
+    };
+  }, []);
+
+  const resetPassword = useCallback(async (email: string) => {
+    if (!supabase) return { error: AUTH_UNAVAILABLE };
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo:
+        typeof window !== 'undefined'
+          ? `${window.location.origin}/auth?mode=reset`
+          : undefined,
+    });
+    return { error: error?.message ?? null };
+  }, []);
+
+  const updatePassword = useCallback(async (password: string) => {
+    if (!supabase) return { error: AUTH_UNAVAILABLE };
+    const { error } = await supabase.auth.updateUser({ password });
     return { error: error?.message ?? null };
   }, []);
 
@@ -83,6 +126,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     login,
     register,
+    resetPassword,
+    updatePassword,
     logout,
   };
 

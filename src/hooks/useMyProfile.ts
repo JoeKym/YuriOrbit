@@ -18,12 +18,22 @@ export function useMyProfile(): Profile | null {
     }
 
     let cancelled = false;
-    fetchMyProfile(userId).then((result) => {
-      if (!cancelled) setProfile(result.data);
-    });
+
+    const load = () => {
+      fetchMyProfile(userId).then((result) => {
+        if (!cancelled) setProfile(result.data);
+      });
+    };
+
+    load();
+
+    // Keep the navbar in sync when the profile is edited on /profile.
+    const handleUpdate = () => load();
+    window.addEventListener('yot:profile-updated', handleUpdate);
 
     return () => {
       cancelled = true;
+      window.removeEventListener('yot:profile-updated', handleUpdate);
     };
   }, [isAuthenticated, userId]);
 
