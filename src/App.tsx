@@ -3,6 +3,9 @@ import { ScrollToTop } from '@/components/layout/ScrollToTop';
 import { Navbar } from '@/components/navigation/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { HomePage } from '@/pages/HomePage';
+import { AnimePage } from '@/pages/AnimePage';
+import { UserProfilePage } from '@/pages/UserProfilePage';
+import { AnnouncementBanner } from '@/components/site/AnnouncementBanner';
 import { DiscoverPage } from '@/pages/DiscoverPage';
 import { CategoryPage } from '@/pages/CategoryPage';
 import { TrendingPage } from '@/pages/TrendingPage';
@@ -19,6 +22,7 @@ import { TermsPage } from '@/pages/TermsPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { AdminPage } from '@/pages/AdminPage';
 import { AuthPage } from '@/pages/AuthPage';
+import { ProfilePage } from '@/pages/ProfilePage';
 import { AuthProvider } from '@/lib/auth/AuthContext';
 
 export default function App() {
@@ -27,11 +31,13 @@ export default function App() {
       <BrowserRouter>
         <ScrollToTop />
         <div className="flex min-h-screen flex-col bg-ink-950">
+        <AnnouncementBanner />
         <Navbar />
         <main className="flex-1">
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/discover" element={<DiscoverPage />} />
+            <Route path="/anime" element={<AnimePage />} />
             <Route path="/manga" element={<CategoryPage contentType="MANGA" title="GL Manga" />} />
             <Route path="/manhwa" element={<CategoryPage contentType="MANHWA" title="GL Manhwa" />} />
             <Route path="/manhua" element={<CategoryPage contentType="MANHUA" title="GL Manhua" />} />
@@ -48,10 +54,12 @@ export default function App() {
             <Route path="/library" element={<LibraryPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/user/:username" element={<UserProfilePage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </main>

@@ -102,12 +102,17 @@ export default {
           '0%': { opacity: '0', transform: 'translateY(24px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        'hero-zoom': {
+          '0%': { transform: 'scale(1.02)' },
+          '100%': { transform: 'scale(1.12)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.5s ease-smooth forwards',
         'fade-in-fast': 'fade-in-fast 0.3s ease-smooth forwards',
         'shimmer': 'shimmer 1.5s infinite linear',
         'slide-up': 'slide-up 0.6s ease-smooth forwards',
+        'hero-zoom': 'hero-zoom 16s ease-out forwards',
       },
     },
   },

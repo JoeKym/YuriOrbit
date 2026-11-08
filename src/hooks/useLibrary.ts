@@ -135,8 +135,9 @@ function rowToEntry(row: DbRow): LibraryEntry {
   };
 }
 
-function entryToRow(entry: LibraryEntry) {
+function entryToRow(entry: LibraryEntry, userId?: string) {
   return {
+    ...(userId ? { user_id: userId } : {}),
     title_id: entry.titleId,
     title: entry.title,
     cover_image: entry.coverImage ?? null,
@@ -167,7 +168,8 @@ async function loadLocal(): Promise<Record<string, LibraryEntry>> {
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useLibrary() {
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const userId = user?.id ?? null;
   const [library, setLibrary] = useState<Record<string, LibraryEntry>>({});
   const [loaded, setLoaded] = useState(false);
   const [cloudError, setCloudError] = useState<string | null>(null);
@@ -181,21 +183,29 @@ export function useLibrary() {
       setLoaded(false);
       setCloudError(null);
 
-      if (isAuthenticated) {
+      if (isAuthenticated && userId && supabase) {
         try {
+          // Scoped to this account on purpose: the public-profile policy lets
+          // anyone read the library of a public profile, so an unfiltered select
+          // would hand every signed-in user everyone else's entries.
           const { data, error } = await supabase
             .from('library_entries')
             .select('*')
+            .eq('user_id', userId)
             .order('updated_at', { ascending: false });
 
           if (error) throw error;
 
           if (cancelled) return;
           const map: Record<string, LibraryEntry> = {};
-          (data as DbRow[]).forEach((row) => {
-            const entry = rowToEntry(row);
-            map[entry.id] = entry;
-          });
+          // Defensive: never render a row that belongs to another account, even
+          // if a future policy or query change exposes one again.
+          (data as DbRow[])
+            .filter((row) => row.user_id === userId)
+            .forEach((row) => {
+              const entry = rowToEntry(row);
+              map[entry.id] = entry;
+            });
           setLibrary(map);
           setLoaded(true);
           return;
@@ -220,7 +230,7 @@ export function useLibrary() {
 
     init();
     return () => { cancelled = true; };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, userId]);
 
   // ─── Local persistence helpers ──────────────────────────────────────────────
 
@@ -244,19 +254,24 @@ export function useLibrary() {
   // ─── Cloud persistence helpers ──────────────────────────────────────────────
 
   const upsertCloud = useCallback(async (entry: LibraryEntry) => {
+    if (!supabase) throw new Error('Cloud sync is not configured.');
+    if (!userId) throw new Error('Not signed in.');
     const { error } = await supabase
       .from('library_entries')
-      .upsert(entryToRow(entry), { onConflict: 'user_id,title_id' });
+      .upsert(entryToRow(entry, userId), { onConflict: 'user_id,title_id' });
     if (error) throw error;
-  }, []);
+  }, [userId]);
 
   const deleteCloud = useCallback(async (titleId: string) => {
+    if (!supabase) throw new Error('Cloud sync is not configured.');
+    if (!userId) throw new Error('Not signed in.');
     const { error } = await supabase
       .from('library_entries')
       .delete()
-      .eq('title_id', titleId);
+      .eq('title_id', titleId)
+      .eq('user_id', userId);
     if (error) throw error;
-  }, []);
+  }, [userId]);
 
   // ─── Public methods ─────────────────────────────────────────────────────────
 
@@ -358,14 +373,14 @@ export function useLibrary() {
 
   const clearLibrary = useCallback(async () => {
     setLibrary({});
-    if (isAuthenticated) {
-      const { error } = await supabase.from('library_entries').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (isAuthenticated && userId && supabase) {
+      const { error } = await supabase.from('library_entries').delete().eq('user_id', userId);
       if (error) setCloudError(error.message);
     } else {
       if (useIDB.current) { try { await idbClear(); } catch {} }
       lsSave({});
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, userId]);
 
   const isInLibrary = useCallback((titleId: string) => !!library[titleId], [library]);
   const getEntry = useCallback((titleId: string) => library[titleId], [library]);
@@ -395,11 +410,12 @@ export function useLibrary() {
 // ─── Migration helper: import local library to cloud on first sign-in ────────
 
 export async function migrateLocalToCloud(): Promise<{ imported: number; error: string | null }> {
+  if (!supabase) return { imported: 0, error: 'Cloud sync is not configured.' };
   const local = await loadLocal();
   const localEntries = Object.values(local);
   if (localEntries.length === 0) return { imported: 0, error: null };
 
-  const rows = localEntries.map(entryToRow);
+  const rows = localEntries.map((entry) => entryToRow(entry));
   const { error } = await supabase
     .from('library_entries')
     .upsert(rows, { onConflict: 'user_id,title_id' });

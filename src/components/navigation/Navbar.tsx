@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import {
-  Search,
   Menu,
   X,
   BookOpen,
@@ -16,10 +15,14 @@ import {
   BookMarked,
   Settings,
   Layers,
+  UserRound,
+  ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/format';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useIsAdmin } from '@/lib/auth/admin';
+import { useMyProfile } from '@/hooks/useMyProfile';
+import { SearchCommand } from '@/components/search/SearchCommand';
 
 const FORMAT_ITEMS = [
   { to: '/manga', label: 'Manga', desc: 'Japanese Girls\' Love comics' },
@@ -27,6 +30,7 @@ const FORMAT_ITEMS = [
   { to: '/manhua', label: 'Manhua', desc: 'Chinese baihe comics' },
   { to: '/webtoons', label: 'Webtoons', desc: 'Vertical-scroll GL webtoons' },
   { to: '/novels', label: 'Novels', desc: 'Light novels & web fiction' },
+  { to: '/anime', label: 'Anime', desc: 'TV series, OVAs & films' },
   { to: '/movies', label: 'Movies', desc: 'Animated & live-action films' },
   { to: '/dramas', label: 'Dramas', desc: 'Live-action series & GL shows' },
 ];
@@ -34,13 +38,12 @@ const FORMAT_ITEMS = [
 export function Navbar() {
   const { logout, user, isAuthenticated, isLoading } = useAuth();
   const { isAdmin } = useIsAdmin();
+  const myProfile = useMyProfile();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [formatsOpen, setFormatsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
 
-  const navigate = useNavigate();
   const location = useLocation();
 
   const formatsRef = useRef<HTMLDivElement>(null);
@@ -66,15 +69,6 @@ export function Navbar() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery('');
-      setMobileOpen(false);
-    }
-  };
 
   const isFormatActive = FORMAT_ITEMS.some((f) => location.pathname === f.to);
 
@@ -196,19 +190,10 @@ export function Navbar() {
 
         {/* Right Controls: Search, Library & Auth */}
         <div className="flex items-center gap-2.5">
-          {/* Search Box */}
-          <form onSubmit={handleSearch} className="hidden sm:block">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search GL titles..."
-                className="w-44 md:w-56 lg:w-64 rounded-full border border-ink-800 bg-ink-900/80 py-1.5 pl-8 pr-3 text-xs text-ink-50 placeholder:text-ink-400 transition-all duration-200 focus:border-rose-500/50 focus:bg-ink-850 focus:outline-none focus:ring-1 focus:ring-rose-500/30"
-              />
-            </div>
-          </form>
+          {/* Live search */}
+          <div className="hidden sm:block">
+            <SearchCommand />
+          </div>
 
           {/* Library Link */}
           <Link
@@ -271,6 +256,24 @@ export function Navbar() {
                     </div>
 
                     <div className="space-y-0.5">
+                      <Link
+                        to="/profile"
+                        className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-ink-200 hover:bg-ink-800 hover:text-ink-50 transition-colors"
+                      >
+                        <UserRound className="h-3.5 w-3.5 text-rose-400" />
+                        <span>Your profile</span>
+                      </Link>
+
+                      {myProfile?.username && (
+                        <Link
+                          to={`/user/${myProfile.username}`}
+                          className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-ink-200 hover:bg-ink-800 hover:text-ink-50 transition-colors"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5 text-lavender-400" />
+                          <span>Public profile</span>
+                        </Link>
+                      )}
+
                       <Link
                         to="/library"
                         className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-ink-200 hover:bg-ink-800 hover:text-ink-50 transition-colors"
@@ -342,18 +345,9 @@ export function Navbar() {
       {mobileOpen && (
         <div className="lg:hidden border-t border-ink-800 bg-ink-950/98 px-4 py-4 backdrop-blur-xl animate-fade-in-fast">
           {/* Mobile Search */}
-          <form onSubmit={handleSearch} className="mb-4 sm:hidden">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search GL titles..."
-                className="w-full rounded-xl border border-ink-800 bg-ink-900 py-2 pl-9 pr-3 text-sm text-ink-50 placeholder:text-ink-400 focus:border-rose-500/50 focus:outline-none"
-              />
-            </div>
-          </form>
+          <div className="mb-4 sm:hidden">
+            <SearchCommand variant="mobile" onNavigate={() => setMobileOpen(false)} />
+          </div>
 
           {/* Primary Mobile Links */}
           <div className="grid grid-cols-2 gap-1.5 mb-3">

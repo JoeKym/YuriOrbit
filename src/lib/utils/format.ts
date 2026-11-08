@@ -17,10 +17,18 @@ export function truncate(text: string, max: number): string {
   return text.slice(0, max).trimEnd() + '…';
 }
 
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 export function getFallbackCover(title: string): string {
-  const encoded = encodeURIComponent(title.slice(0, 40));
-  return `data:image/svg+xml,${encodeURIComponent(
-    `<svg width="300" height="450" xmlns="http://www.w3.org/2000/svg">
+  const label = escapeXml(title.trim().slice(0, 40) || 'Untitled');
+  const svg = `<svg width="300" height="450" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" style="stop-color:#1e1a2c"/>
@@ -28,14 +36,14 @@ export function getFallbackCover(title: string): string {
         </linearGradient>
       </defs>
       <rect width="100%" height="100%" fill="url(#g)"/>
-      <text x="50%" y="50%" font-family="serif" font-size="20" fill="#9089a8" text-anchor="middle" dominant-baseline="middle">${encoded}</text>
-    </svg>`
-  )}`;
+      <text x="50%" y="50%" font-family="serif" font-size="20" fill="#9089a8" text-anchor="middle" dominant-baseline="middle">${label}</text>
+    </svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
 export function getFallbackBanner(title: string): string {
-  return `data:image/svg+xml,${encodeURIComponent(
-    `<svg width="1280" height="720" xmlns="http://www.w3.org/2000/svg">
+  const label = escapeXml(title.trim().slice(0, 40) || 'Untitled');
+  const svg = `<svg width="1280" height="720" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" style="stop-color:#12101a"/>
@@ -44,9 +52,9 @@ export function getFallbackBanner(title: string): string {
         </linearGradient>
       </defs>
       <rect width="100%" height="100%" fill="url(#g)"/>
-      <text x="50%" y="50%" font-family="serif" font-size="36" fill="#4a4360" text-anchor="middle" dominant-baseline="middle">${encodeURIComponent(title.slice(0, 40))}</text>
-    </svg>`
-  )}`;
+      <text x="50%" y="50%" font-family="serif" font-size="36" fill="#4a4360" text-anchor="middle" dominant-baseline="middle">${label}</text>
+    </svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
 export function getStatusLabel(status: string): string {

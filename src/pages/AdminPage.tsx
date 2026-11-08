@@ -1,163 +1,143 @@
-import { Link } from 'react-router-dom';
-import { Shield, Lock, UserCheck, ShieldAlert, KeyRound, CheckCircle2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import {
+  Activity,
+  Compass,
+  LayoutDashboard,
+  ListChecks,
+  Megaphone,
+  Shield,
+  Sparkles,
+  Star,
+  Users,
+} from 'lucide-react';
+import { NotFoundPage } from '@/pages/NotFoundPage';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { useIsAdmin } from '@/lib/auth/admin';
+import { adminApi } from '@/lib/admin/api';
+import { cn } from '@/lib/utils/format';
+import { OverviewTab } from '@/components/admin/OverviewTab';
+import { UsersTab } from '@/components/admin/UsersTab';
+import { LibraryTab } from '@/components/admin/LibraryTab';
+import { FeaturedTab } from '@/components/admin/FeaturedTab';
+import { SiteSettingsTab } from '@/components/admin/SiteSettingsTab';
+import { AuditTab } from '@/components/admin/AuditTab';
+
+type TabKey = 'overview' | 'users' | 'library' | 'featured' | 'settings' | 'audit';
+
+const TABS: { key: TabKey; label: string; icon: typeof Shield }[] = [
+  { key: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { key: 'users', label: 'Users', icon: Users },
+  { key: 'library', label: 'Library entries', icon: ListChecks },
+  { key: 'featured', label: "Editor's Picks", icon: Sparkles },
+  { key: 'settings', label: 'Site settings', icon: Megaphone },
+  { key: 'audit', label: 'Audit log', icon: Activity },
+];
+
+const TAB_KEYS = TABS.map((item) => item.key);
+
+function isTabKey(value: string | null): value is TabKey {
+  return !!value && (TAB_KEYS as string[]).includes(value);
+}
 
 export function AdminPage() {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
-  const { isAdmin, isCheckingAdmin, adminReason } = useIsAdmin();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [checking, setChecking] = useState(true);
+  const [authorised, setAuthorised] = useState(false);
+
+  // Tabs live in the URL: /admin?tab=users, /admin?tab=featured, …
+  const requested = searchParams.get('tab');
+  const tab: TabKey = isTabKey(requested) ? requested : 'overview';
+
+  const setTab = (key: TabKey) => {
+    const next = new URLSearchParams(searchParams);
+    if (key === 'overview') next.delete('tab');
+    else next.set('tab', key);
+    setSearchParams(next, { replace: true });
+  };
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    if (!isAuthenticated) {
+      setChecking(false);
+      setAuthorised(false);
+      return;
+    }
+
+    let cancelled = false;
+    setChecking(true);
+
+    adminApi.me().then((result) => {
+      if (cancelled) return;
+      setAuthorised(Boolean(result.ok && result.data));
+      setChecking(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, isLoading]);
+
+  if (isLoading || checking) {
+    return <div className="mx-auto max-w-3xl px-4 py-16 md:px-6">Checking admin access…</div>;
+  }
+
+  // Unauthorized — whether not logged in or not an admin — show 404
+  if (!isAuthenticated || !authorised) {
+    return <NotFoundPage />;
+  }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500 to-lavender-600">
-          <Shield className="h-5 w-5 text-white" />
+    <div className="mx-auto max-w-[1400px] px-4 py-8 md:px-6">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500 to-lavender-600">
+            <Shield className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="font-display text-2xl font-semibold text-ink-50">Admin console</h1>
+            <p className="text-xs text-ink-400">
+              Signed in as <span className="text-rose-300">{user?.email}</span>
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="font-display text-3xl font-semibold text-ink-50">Administration & Management</h1>
-          <p className="text-sm text-ink-400">Access Control & Site Management</p>
-        </div>
+        <Link to="/" className="btn-ghost text-xs">
+          <Compass className="h-3.5 w-3.5" /> View site
+        </Link>
       </div>
 
-      {(isLoading || (isAuthenticated && isCheckingAdmin)) ? (
-        <div className="card-surface p-8 text-center text-ink-300">
-          Loading authentication status...
-        </div>
-      ) : !isAuthenticated ? (
-        <div className="card-surface p-8">
-          <div className="flex gap-4 mb-6">
-            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-ink-800 text-warning-400">
-              <Lock className="h-6 w-6" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-ink-50">Authentication Required</h2>
-              <p className="mt-1 text-sm text-ink-400 leading-relaxed">
-                Sign in to your YuriOrbit account to access the administration console.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <Link to="/auth" className="btn-primary flex items-center gap-2">
-              <KeyRound className="h-4 w-4" />
-              <span>Sign in</span>
+      <div className="mb-6 flex flex-wrap gap-1.5 border-b border-ink-800 pb-3">
+        {TABS.map((item) => {
+          const Icon = item.icon;
+          const isActive = tab === item.key;
+          return (
+            <Link
+              key={item.key}
+              to={item.key === 'overview' ? '/admin' : `/admin?tab=${item.key}`}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+                isActive ? 'bg-rose-500/15 text-rose-300' : 'text-ink-300 hover:bg-ink-850 hover:text-ink-100'
+              )}
+              aria-current={isActive ? 'page' : undefined}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {item.label}
             </Link>
-            <Link to="/" className="btn-secondary">
-              Back to Home
-            </Link>
-          </div>
-        </div>
-      ) : !isAdmin ? (
-        <div className="card-surface p-8">
-          <div className="flex gap-4 mb-6">
-            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
-              <ShieldAlert className="h-6 w-6" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-ink-50">Admin Access Restricted</h2>
-              <p className="mt-1 text-sm text-ink-300 leading-relaxed">
-                You are signed in as <span className="font-semibold text-rose-300">{user?.email}</span>, but this account does not have administrator privileges.
-              </p>
-            </div>
-          </div>
+          );
+        })}
+        <span className="ml-auto hidden items-center gap-1.5 text-[11px] text-ink-500 sm:flex">
+          <Star className="h-3 w-3" /> Changes are recorded in the audit log
+        </span>
+      </div>
 
-          <div className="rounded-lg border border-ink-800 bg-ink-850 p-4 mb-6 text-xs text-ink-400 space-y-2">
-            <p className="font-medium text-ink-200">How to authorize an Administrator:</p>
-            <ol className="list-decimal ml-4 space-y-1">
-              <li>Set <code className="bg-ink-900 px-1.5 py-0.5 rounded text-ink-200">VITE_ADMIN_EMAILS={user?.email}</code> in your environment variables.</li>
-              <li>Redeploy the application for the change to take effect.</li>
-            </ol>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Link to="/" className="btn-primary">
-              Return to Homepage
-            </Link>
-            <button onClick={() => logout()} className="btn-secondary">
-              Sign out
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {/* User Profile Card */}
-          <div className="card-surface p-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                {user?.picture ? (
-                  <img
-                    src={user.picture}
-                    alt={user.givenName || 'Admin'}
-                    className="h-12 w-12 rounded-full object-cover border border-rose-500/30"
-                  />
-                ) : (
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-tr from-rose-500 to-lavender-500 text-lg font-bold text-white">
-                    {(user?.givenName?.[0] || user?.email?.[0] || 'A').toUpperCase()}
-                  </div>
-                )}
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-semibold text-ink-50">
-                      {user?.givenName ? `${user.givenName} ${user?.familyName || ''}`.trim() : user?.email}
-                    </h2>
-                    <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-400 border border-emerald-500/20">
-                      <UserCheck className="h-3 w-3" />
-                      Administrator
-                    </span>
-                  </div>
-                  <p className="text-xs text-ink-400">{user?.email}</p>
-                  {adminReason && (
-                    <p className="text-[11px] text-ink-400 mt-0.5">Authorization: <span className="text-rose-300">{adminReason}</span></p>
-                  )}
-                </div>
-              </div>
-
-              <button onClick={() => logout()} className="btn-secondary text-xs">
-                Sign out
-              </button>
-            </div>
-          </div>
-
-          {/* Management Console */}
-          <div className="card-surface p-6">
-            <h3 className="text-base font-semibold text-ink-50 mb-2">Website Management</h3>
-            <p className="text-sm text-ink-400 mb-4 leading-relaxed">
-              As an administrator, you have access to the full management console. User accounts, authentication, and library data are managed through Supabase.
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-ink-300">
-              <div className="rounded-lg border border-ink-800 bg-ink-850 p-3.5 flex items-start gap-2.5">
-                <CheckCircle2 className="h-4 w-4 text-rose-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-semibold text-ink-100 block mb-0.5">User Accounts</span>
-                  Managed through Supabase Auth — email/password sign-in with session management.
-                </div>
-              </div>
-              <div className="rounded-lg border border-ink-800 bg-ink-850 p-3.5 flex items-start gap-2.5">
-                <CheckCircle2 className="h-4 w-4 text-rose-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-semibold text-ink-100 block mb-0.5">Synced Libraries</span>
-                  Each user's library is stored in the database, protected by row-level security.
-                </div>
-              </div>
-              <div className="rounded-lg border border-ink-800 bg-ink-850 p-3.5 flex items-start gap-2.5">
-                <CheckCircle2 className="h-4 w-4 text-rose-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-semibold text-ink-100 block mb-0.5">Admin Access</span>
-                  Controlled by an allowlist of authorized emails in the environment configuration.
-                </div>
-              </div>
-              <div className="rounded-lg border border-ink-800 bg-ink-850 p-3.5 flex items-start gap-2.5">
-                <CheckCircle2 className="h-4 w-4 text-rose-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-semibold text-ink-100 block mb-0.5">Data Security</span>
-                  Row-level security ensures users can only access their own library entries.
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {tab === 'overview' && <OverviewTab onNavigate={setTab} />}
+      {tab === 'users' && <UsersTab />}
+      {tab === 'library' && <LibraryTab />}
+      {tab === 'featured' && <FeaturedTab />}
+      {tab === 'settings' && <SiteSettingsTab />}
+      {tab === 'audit' && <AuditTab />}
     </div>
   );
 }

@@ -14,6 +14,28 @@ export type ContentFormat = ContentType;
 
 export type GLClassification = 'CONFIRMED_GL' | 'GL_RELATED' | 'NEEDS_REVIEW' | 'EXCLUDED';
 
+/**
+ * Content maturity, mirroring MangaDex's content rating scale so every source
+ * can be mapped onto the same four steps.
+ */
+export type MaturityLevel = 'SAFE' | 'SUGGESTIVE' | 'EROTICA' | 'PORNOGRAPHIC';
+
+export const MATURITY_LEVELS: MaturityLevel[] = ['SAFE', 'SUGGESTIVE', 'EROTICA', 'PORNOGRAPHIC'];
+
+export const MATURITY_LABELS: Record<MaturityLevel, string> = {
+  SAFE: 'Safe',
+  SUGGESTIVE: 'Suggestive',
+  EROTICA: 'Erotica',
+  PORNOGRAPHIC: 'Pornographic',
+};
+
+export const MATURITY_DESCRIPTIONS: Record<MaturityLevel, string> = {
+  SAFE: 'No sexual content. Romance, drama and slice of life only.',
+  SUGGESTIVE: 'Mild fanservice, innuendo or suggestive themes. No explicit content.',
+  EROTICA: 'Sexually explicit storylines and imagery. Signed-in readers only, 18+.',
+  PORNOGRAPHIC: 'Explicit sexual content with no narrative restraint. 18+ only.',
+};
+
 export type ReleaseStatus = 'RELEASING' | 'FINISHED' | 'NOT_YET_RELEASED' | 'CANCELLED' | 'HIATUS' | 'UNKNOWN';
 
 export type SourceProvider = 'ANILIST' | 'JIKAN' | 'MANGADEX' | 'TMDB' | 'CURATED';
@@ -62,10 +84,19 @@ export interface SeasonInfo {
   airDate?: string;
 }
 
+export interface TitleSource {
+  provider: SourceProvider;
+  providerId: string;
+  url?: string;
+}
+
 export interface ContentTitle {
+  /** YuriOrbit id — a stable slug, e.g. `yuri-on-ice`. Never a provider id. */
   id: string;
   providerId: string;
   provider: SourceProvider;
+  /** Every upstream record this entry was merged from. */
+  sources?: TitleSource[];
   title: string;
   altTitles: string[];
   description?: string;
@@ -93,6 +124,10 @@ export interface ContentTitle {
   trailerSite?: string;
   cast?: string[];
   isAdult?: boolean;
+  /** Normalised maturity rating; defaults to `SAFE` when a source gives no signal. */
+  maturityRating?: MaturityLevel;
+  /** Creator names (author, artist, director, cast) when the source provides them. */
+  creators?: string[];
   glClassification: GLClassification;
   sourceUrl?: string;
   updatedAt?: string;

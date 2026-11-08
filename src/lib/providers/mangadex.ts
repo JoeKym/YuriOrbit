@@ -3,8 +3,10 @@
  * Used for manga/manhwa/manhua chapter lists and GL content discovery.
  * Docs: https://api.mangadex.org/docs/
  */
-import type { ContentTitle, PaginatedResult, ContentFilter, ChapterInfo, Tag } from '@/types/content';
+import type { ContentTitle, PaginatedResult, ContentFilter, ChapterInfo, Tag, MaturityLevel } from '@/types/content';
 import { classifyGL, GL_ALLOWED_CLASSIFICATIONS } from './classify';
+import { getMaturityLevel } from '@/lib/content/maturity-preference';
+import { mangadexContentRatings } from '@/lib/content/maturity';
 
 const env = (import.meta as { env?: Record<string, string> }).env || {};
 const isBrowser = typeof window !== 'undefined';
@@ -14,6 +16,17 @@ const configuredUrl = env.VITE_MANGADEX_API_URL || '';
 const isValidCustomUrl = configuredUrl && !configuredUrl.includes('onrender.com');
 const rawBase = isValidCustomUrl ? configuredUrl : (isBrowser ? '/api/mangadex' : 'https://api.mangadex.org');
 const MANGADEX_BASE = rawBase.replace(/\/+$/, '');
+
+/**
+ * Covers must be served from our own origin: Chrome's Opaque Response Blocking
+ * drops direct <img> requests to uploads.mangadex.org (the response is treated
+ * as opaque), which left MangaDex cards blank. `functions/api/mangadex`
+ * forwards `/covers/*` to uploads.mangadex.org. In Node/test runs we still hit
+ * the upstream host directly.
+ */
+const MANGADEX_COVERS_BASE = isBrowser
+  ? `${MANGADEX_BASE}/covers`
+  : 'https://uploads.mangadex.org/covers';
 const TIMEOUT = 15000;
 const REQUEST_DELAY = 300; // Be polite to MangaDex
 
@@ -77,6 +90,7 @@ interface MDRelationship {
     description?: MDLocalizedString;
     volume?: string;
     chapter?: string;
+    locale?: string;
     translatedLanguage?: string;
     publishAt?: string;
     readableAt?: string;
@@ -139,14 +153,34 @@ const GL_TAG_IDS = [
   'a3c67850-4684-404e-9b7f-c69850ee5da6', // Girls' Love
 ];
 
+/** MangaDex publishes its own four-step content rating; keep it verbatim. */
+function mapMDMaturity(contentRating?: string): MaturityLevel {
+  switch (contentRating) {
+    case 'suggestive': return 'SUGGESTIVE';
+    case 'erotica': return 'EROTICA';
+    case 'pornographic': return 'PORNOGRAPHIC';
+    default: return 'SAFE';
+  }
+}
+
 // MangaDex tag IDs to exclude (BL)
 const EXCLUDE_TAG_IDS = [
   '5920b825-4181-4a17-beeb-9baec0c9d5cc', // Boys' Love
 ];
 
+const LATIN_LANGS = ['en', 'ja-ro', 'ko-ro', 'zh-ro', 'es-la', 'es', 'pt-br', 'fr', 'id'];
+
 function getBestText(loc: MDLocalizedString | undefined): string {
   if (!loc) return '';
-  return loc.en || loc['ja-ro'] || loc['ko-ro'] || Object.values(loc).find(Boolean) || '';
+  for (const lang of LATIN_LANGS) {
+    const value = loc[lang];
+    if (value && value.trim()) return value.trim();
+  }
+  // Fall back to any latin-script value before jumping to CJK-only text.
+  for (const value of Object.values(loc)) {
+    if (value && /[a-zA-Z]/.test(value)) return value.trim();
+  }
+  return Object.values(loc).find(Boolean)?.trim() || '';
 }
 
 function mapMDStatusInternal(status?: string): ContentTitle['status'] {
@@ -169,9 +203,20 @@ function mapMDContentType(lang?: string): ContentTitle['contentType'] {
 }
 
 function getCoverUrl(relationships: MDRelationship[], mangaId: string): string | undefined {
-  const cover = relationships.find((r) => r.type === 'cover_art');
-  if (!cover?.attributes?.fileName) return undefined;
-  return `https://uploads.mangadex.org/covers/${mangaId}/${cover.attributes.fileName}.512.jpg`;
+  const covers = relationships.filter((r) => r.type === 'cover_art' && r.attributes?.fileName);
+  if (covers.length === 0) return undefined;
+
+  // Prefer the English/localised cover, then the first one MangaDex returns.
+  const cover = covers.find((c) => c.attributes?.locale === 'en') ?? covers[0];
+  const fileName = cover.attributes?.fileName;
+  if (!fileName) return undefined;
+
+  // MangaDex cover filenames already include the extension; sizes are appended
+  // (e.g. `abc.jpg.512.jpg`). Only produce URLs for actual image files so we
+  // never render a non-image string in an <img> tag.
+  if (!/\.(jpe?g|png|webp|gif)$/i.test(fileName)) return undefined;
+
+  return `${MANGADEX_COVERS_BASE}/${mangaId}/${fileName}.512.jpg`;
 }
 
 function normalizeMangaDex(m: MDManga): ContentTitle {
@@ -196,6 +241,12 @@ function normalizeMangaDex(m: MDManga): ContentTitle {
 
   const glClassification = classifyGL({ genres, tags, description, title, altTitles });
 
+  // Author/artist names are only present when the request asked for them.
+  const creators = m.relationships
+    .filter((r) => (r.type === 'author' || r.type === 'artist') && r.attributes?.name)
+    .map((r) => r.attributes!.name!)
+    .filter((name, index, all) => all.indexOf(name) === index);
+
   return {
     id: `MANGADEX-${m.id}`,
     providerId: m.id,
@@ -207,6 +258,8 @@ function normalizeMangaDex(m: MDManga): ContentTitle {
     coverImage,
     genres,
     tags,
+    creators: creators.length > 0 ? creators : undefined,
+    maturityRating: mapMDMaturity(attrs.contentRating),
     status: mapMDStatusInternal(attrs.status),
     releaseYear: attrs.year,
     externalLinks: [
@@ -231,11 +284,12 @@ export async function mangadexSearchGL(filter: ContentFilter, page = 1, perPage 
   const params: Record<string, string | string[]> = {
     includedTags: GL_TAG_IDS,
     excludedTags: EXCLUDE_TAG_IDS,
-    includes: ['cover_art'],
+    includes: ['cover_art', 'author', 'artist'],
     limit: String(Math.min(perPage, 100)),
     offset: String(offset),
     availableTranslatedLanguage: ['en'],
-    contentRating: ['safe', 'suggestive'],
+    // Only ask MangaDex for what this visitor is allowed to see.
+    contentRating: mangadexContentRatings(getMaturityLevel()),
     [`order[${orderField}]`]: orderDir || 'desc',
   };
 
@@ -288,7 +342,7 @@ export async function mangadexGetById(id: string): Promise<ContentTitle | null> 
   const mdId = id.replace('MANGADEX-', '');
   try {
     const resp = await mdFetch<{ result: string; data: MDManga }>(`/manga/${mdId}`, {
-      includes: ['cover_art'],
+      includes: ['cover_art', 'author', 'artist'],
     });
     return normalizeMangaDex(resp.data);
   } catch {
@@ -318,7 +372,8 @@ export async function mangadexFindMangaId(title: string, altTitles?: string[]): 
       const resp = await mdFetch<MDListResponse<MDManga>>('/manga', {
         title: cand,
         limit: '10',
-        contentRating: ['safe', 'suggestive', 'erotica'],
+        contentRating: mangadexContentRatings(getMaturityLevel()),
+        includes: ['cover_art', 'author', 'artist'],
       });
 
       const items = resp.data || [];
@@ -359,7 +414,7 @@ export async function mangadexGetChapters(mangaId: string, page = 1, perPage = 1
       'order[chapter]': 'asc',
       limit: String(Math.min(perPage, 500)),
       offset: String((page - 1) * perPage),
-      contentRating: ['safe', 'suggestive', 'erotica'],
+      contentRating: mangadexContentRatings(getMaturityLevel()),
     });
 
     let data = resp.data || [];
@@ -367,7 +422,7 @@ export async function mangadexGetChapters(mangaId: string, page = 1, perPage = 1
       const fallbackResp = await mdFetch<MDListResponse<MDChapter>>(`/manga/${mdId}/feed`, {
         'order[chapter]': 'asc',
         limit: String(Math.min(perPage, 500)),
-        contentRating: ['safe', 'suggestive', 'erotica'],
+        contentRating: mangadexContentRatings(getMaturityLevel()),
       });
       data = fallbackResp.data || [];
     }

@@ -13,7 +13,7 @@ YuriOrbit is a community-first media catalog and discovery platform dedicated to
 - **Built-in Manga Reader:** Direct MangaDex chapter reading with automatic chapter sorting and official source attribution.
 - **Smart GL Classification:** Curated filtering for Confirmed GL, GL-Related, and Subtext titles.
 - **Personal Library:** Track reading & watching progress (Currently Reading, Plan to Read, Completed, Favourites).
-- **Authentication & Profiles:** Secure authentication powered by Kinde Auth.
+- **Authentication & Profiles:** Secure authentication powered by Supabase Auth.
 
 ---
 
@@ -22,7 +22,7 @@ YuriOrbit is a community-first media catalog and discovery platform dedicated to
 - **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons, React Router v7
 - **MangaDex Proxy:** Lightweight Node proxy (`proxy/server.mjs`) with CORS headers and health check
 - **API Aggregation:** AniList GraphQL, MangaDex REST, Jikan REST, TMDB API
-- **Auth:** Kinde Auth (`@kinde-oss/kinde-auth-react`)
+- **Auth:** Supabase Auth (`@supabase/supabase-js`)
 - **Hosting:** Render (Static Site for frontend, Web Service for proxy)
 
 ---
@@ -101,10 +101,172 @@ YuriOrbit can be deployed directly to Cloudflare Pages with zero cold starts:
 4. Set Environment Variables:
    - `NODE_VERSION`: `20`
    - `VITE_APP_NAME`: `YuriOrbit`
-   - `VITE_KINDE_CLIENT_ID`: Your Kinde Client ID
-   - `VITE_KINDE_DOMAIN`: Your Kinde Domain
-   - `VITE_KINDE_REDIRECT_URI`: `https://<your-project>.pages.dev`
-   - `VITE_KINDE_LOGOUT_REDIRECT_URI`: `https://<your-project>.pages.dev`
+   - `VITE_SUPABASE_URL`: Your Supabase project URL (`https://<project-ref>.supabase.co`)
+   - `VITE_SUPABASE_ANON_KEY` *(or `VITE_SUPABASE_PUBLISHABLE_KEY`)*: Your Supabase anon/publishable client key — either name works
+   - `VITE_ADMIN_EMAILS` *(optional)*: Comma-separated list of admin account emails
    - `TMDB_READ_ACCESS_TOKEN` *(preferred; server-side secret for Pages Functions)*: Your TMDB API Read Access Token (v4). Store it as a Cloudflare secret, not a `VITE_` variable.
    - `TMDB_API_KEY` *(fallback; optional server-side secret for Pages Functions)*: Your TMDB API Key (v3), used only when the Read Access Token is not configured. Store it as a Cloudflare secret, not a `VITE_` variable.
+
+   > **Important:** `VITE_*` variables are inlined into the JS bundle at **build time**. Adding or changing them in the Cloudflare dashboard does nothing until you trigger a new deployment. If `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` are missing the site still loads — sign-in is simply disabled and libraries stay local to the browser.
 5. Deploy. Cloudflare automatically hosts the static assets on its edge CDN and mounts the serverless functions in `functions/api/` on `/api/*` on the same domain.
+
+---
+
+## Public profiles, Anime hub & Admin console
+
+### 1. Apply the database migration
+
+The profile, Editor's Picks, site-settings and audit tables live in
+`supabase/migrations/20261107120000_profiles_featured_settings_audit.sql`.
+Paste it into the Supabase SQL editor and run it — it is idempotent.
+
+Then run `supabase/migrations/20261108120000_public_profile_library_view.sql`.
+It replaces the broad "anyone may read a public profile's library rows" policy
+with a `public_profile_libraries` view that returns only the fields a profile
+actually shows — private `notes` are excluded, and the base table goes back to
+being readable only by its owner. Public profiles keep working without it (the
+site falls back to a column-limited query), but until it runs the notes column
+stays readable through the REST API.
+
+Until the first migration is applied everything still works: `/user/*` shows a
+"profiles aren't enabled yet" notice, and the homepage hero simply skips the
+pinned picks and falls back to live catalogue data.
+
+### 2. Account pages — `/auth` and `/profile`
+
+- **`/auth`** is the full auth page: sign in, sign up (email + username +
+  password + confirmation), forgot password, and password reset (`/auth?mode=reset`).
+  `?next=` is honoured after a successful sign-in.
+- **`/profile`** is the signed-in account page: header card with avatar, stats,
+  recent library grid, and an inline editor (avatar upload, username, display
+  name, bio, public toggle). Signed-out visitors are redirected to
+  `/auth?next=/profile`. `/settings` links here.
+
+### 3. Public profiles — `/user/{username}`
+
+Profiles are public by default; switching the public toggle off in `/profile`
+hides both the profile and its library from everyone except the owner.
+
+### 4. Admin console — `/admin`
+
+Admin access is enforced **server-side** by `functions/api/admin/[[path]].ts`:
+the caller's Supabase access token is verified against Supabase Auth, their email
+is checked against an allowlist, and only then are privileged queries performed
+with the service role key. The old client-side email check is now just UI.
+
+Add these to the Cloudflare Pages project (Settings → Environment variables):
+
+| Variable | Purpose |
+| --- | --- |
+| `SUPABASE_URL` | Project URL, e.g. `https://<project-ref>.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Secret key used server-side. **Never add a `VITE_` prefix** — that would ship it to the browser. |
+| `ADMIN_EMAILS` | Comma-separated admin emails (optional; the owner account is allowed by default) |
+
+`SUPABASE_SECRET_KEY` is accepted as an alternative to `SUPABASE_SERVICE_ROLE_KEY`
+when using Supabase's new-style keys.
+
+Tabs are addressable by slug, e.g. `/admin?tab=users` or `/admin?tab=featured`:
+`overview`, `users`, `library`, `featured`, `settings`, `audit`.
+
+What the console does:
+
+- **Overview** — accounts, new signups, library entries by status, most-tracked titles
+- **Users** — search accounts, inspect library size, purge a library or delete an account
+- **Library entries** — search and moderate every tracked title
+- **Editor's Picks** — pin catalog titles to the homepage
+- **Site settings** — the site-wide announcement banner
+- **Audit log** — every privileged action, with actor and timestamp
+
+---
+
+## Title identity, ids and search results
+
+Titles no longer use upstream ids in URLs. Every catalog entry gets a YuriOrbit
+slug derived from its title (for example `/title/bloom-into-you-2015`), which is
+what `ContentCard`, the library, and history all link to.
+
+- `src/lib/catalog/identity.ts` — slug building, title normalisation, provider-id
+  detection.
+- `src/lib/catalog/registry.ts` — a small localStorage registry that remembers
+  which slug belongs to which provider id, so a slug link can be resolved later
+  even though the catalog is fetched live from AniList/MangaDex/TMDB.
+- `src/lib/catalog/canonical.ts` — merges the same work returned by both APIs
+  (title + alt titles, family-gated) before results are rendered, so searching
+  "Bloom Into You" no longer shows it twice.
+- Legacy links (`ANILIST-…`, `MANGADEX-…`, `TMDB-movie-…`) still resolve, and old
+  library rows keep working.
+
+MangaDex artwork is served through `/api/mangadex/covers/*` (see
+`functions/api/mangadex/[[path]].ts`). This keeps covers same-origin — the browser
+otherwise blocks them — and drops the `Referer` header, because MangaDex answers
+cross-origin cover requests with a "you can read this at mangadex.org" placeholder
+image.
+
+---
+
+## Homepage hero
+
+`src/components/home/Hero.tsx` is one rotating hero for the whole catalogue: it
+cross-fades real picks across manga, manhwa, manhua, webtoons, novels, anime,
+films and live-action dramas, with a spotlight tab per format. There is no
+hard-coded pick list — `HomePage` builds the deck from the live rails (plus
+admin-pinned titles when they exist, enriched from the live entries), and the
+order rotates after each full pass so a returning visitor sees different picks.
+It pauses on hover/focus, respects reduced motion, and is the only place the
+homepage advertises what the site has.
+
+---
+
+## Content filter (maturity)
+
+Every title is rated on MangaDex's four-step scale: **Safe**, **Suggestive**,
+**Erotica**, **Pornographic**. Providers are mapped onto it in
+`src/lib/content/maturity.ts` — MangaDex content ratings verbatim, AniList
+`isAdult` plus strongly applied tags, TMDB's `adult` flag, MAL's explicit genres.
+
+- The visitor's level lives in `src/lib/content/maturity-preference.ts`
+  (localStorage) and defaults to **Suggestive**, so explicit titles are hidden
+  for new visitors. Erotica and Pornographic require a one-time 18+ confirmation
+  on `/settings`.
+- The filter is applied inside `src/lib/providers/index.ts`, so every rail, page
+  and search result is covered, and the upstream queries are tightened too:
+  MangaDex receives only the allowed `contentRating`s, AniList flips its
+  `isAdult` filter, TMDB's `include_adult` follows the level. Cache keys carry
+  the level, and changing it clears the provider cache.
+- Direct links to a title above the chosen level open an age-gate panel instead
+  of the page content; cards carry a `PG` / `18+` badge.
+
+This is a browsing preference based on third-party ratings — not age
+verification. The Terms and Privacy pages say so.
+
+---
+
+## Live search
+
+`src/lib/search.ts` is the single search entry point for the navbar typeahead
+(`src/components/search/SearchCommand.tsx`) and `/search`:
+
+- **Title and aliases** — provider text search, merged and de-duplicated.
+- **Exact ids** — YuriOrbit slugs and `ANILIST-…` / `MANGADEX-…` / `JIKAN-…` /
+  `TMDB-movie-…` ids resolve straight to the title.
+- **Creators** — AniList `Staff` + `staffMedia` and TMDB person credits, so an
+  author, artist, director or cast name finds their GL works.
+- **Format** — `/search` filters hits by format (manga, manhwa, manhua, webtoons,
+  novels, screen) and keeps the choice in `?format=`.
+
+Typing is debounced (~350 ms); the navbar panel groups by format and supports
+↑/↓/Enter/Esc. Results respect the content filter.
+
+---
+
+## TMDB (live-action films and dramas)
+
+TMDB provides the live-action side of the catalogue. `src/lib/providers/tmdb.ts`
+uses `/discover` with verified GL keyword ids (lesbian, yuri, sapphic, wlw, girls
+love, baihe) plus native-language text searches, so Korean, Japanese, Chinese and
+Thai dramas are reachable rather than only English-titled films.
+
+All requests go through `/api/tmdb/*`, which injects the server-side secret. That
+function must be deployed: if `https://<site>/api/tmdb/configuration` returns a
+404 (rather than JSON), the route is missing and TMDB results will silently fall
+back to AniList — films and dramas will look like anime only.

@@ -1,9 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
-import { Settings as SettingsIcon, Trash2, Download, Upload, Info, CheckCircle2, BookOpen, Sliders } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Settings as SettingsIcon, Trash2, Download, Upload, Info, CheckCircle2, BookOpen, Sliders, Pencil, UserRound, ShieldAlert, Lock } from 'lucide-react';
 import { useLibrary } from '@/hooks/useLibrary';
+import { useMaturity } from '@/hooks/useMaturity';
+import type { MaturityLevel } from '@/types/content';
+import { MATURITY_DESCRIPTIONS, MATURITY_LABELS, MATURITY_LEVELS } from '@/types/content';
+import { maturityRank, requiresAdultConfirmation } from '@/lib/content/maturity';
+import { cn } from '@/lib/utils/format';
 
 export function SettingsPage() {
   const { library, clearLibrary } = useLibrary();
+  const { level: maturityLevel, adultAcknowledged, setLevel, acknowledge } = useMaturity();
+  const [pendingLevel, setPendingLevel] = useState<MaturityLevel | null>(null);
 
   // Persistent settings state
   const [reducedMotion, setReducedMotion] = useState<boolean>(() => {
@@ -180,6 +188,106 @@ export function SettingsPage() {
               </div>
             </label>
           </div>
+        </section>
+
+        {/* Content filter */}
+        <section className="card-surface p-5">
+          <div className="mb-1 flex items-center gap-2">
+            <ShieldAlert className="h-4 w-4 text-rose-400" />
+            <h2 className="text-lg font-semibold text-ink-50">Content filter</h2>
+          </div>
+          <p className="mb-4 text-xs text-ink-400">
+            The highest rating you want to see anywhere on YuriOrbit — home, search, every format page.
+            Anything above it is hidden, and explicit titles need a one-time 18+ confirmation.
+          </p>
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            {MATURITY_LEVELS.map((option) => {
+              const selected = option === maturityLevel;
+              const locked = requiresAdultConfirmation(option) && !adultAcknowledged;
+              return (
+                <button
+                  key={option}
+                  onClick={() => {
+                    if (locked) {
+                      setPendingLevel(option);
+                      return;
+                    }
+                    setLevel(option);
+                  }}
+                  className={cn(
+                    'rounded-xl border px-3 py-2.5 text-left transition-colors',
+                    selected
+                      ? 'border-rose-500/50 bg-rose-500/10'
+                      : 'border-ink-800 bg-ink-900/60 hover:border-ink-700 hover:bg-ink-850'
+                  )}
+                  aria-pressed={selected}
+                >
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-ink-100">
+                    {locked && <Lock className="h-3 w-3 text-ink-500" />}
+                    {MATURITY_LABELS[option]}
+                    {requiresAdultConfirmation(option) && (
+                      <span className="rounded bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-rose-300">18+</span>
+                    )}
+                    {selected && <CheckCircle2 className="ml-auto h-3.5 w-3.5 text-rose-400" />}
+                  </span>
+                  <span className="mt-0.5 block text-[11px] leading-relaxed text-ink-400">
+                    {MATURITY_DESCRIPTIONS[option]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="mt-3 text-[11px] text-ink-500">
+            Currently showing:{' '}
+            <span className="text-ink-300">
+              {MATURITY_LEVELS.slice(0, maturityRank(maturityLevel) + 1).join(', ').toLowerCase()}
+            </span>
+          </p>
+
+          {pendingLevel && (
+            <div className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/5 p-4">
+              <p className="text-sm font-medium text-ink-100">This unlocks 18+ content</p>
+              <p className="mt-1 text-xs leading-relaxed text-ink-300">
+                Choosing {MATURITY_LABELS[pendingLevel]} shows sexually explicit titles from every provider, and can
+                surface them in search and on the home page. Confirm you are 18 or older to continue.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  className="btn-primary text-xs"
+                  onClick={() => {
+                    acknowledge();
+                    setLevel(pendingLevel);
+                    setPendingLevel(null);
+                  }}
+                >
+                  I am 18 or older
+                </button>
+                <button className="btn-secondary text-xs" onClick={() => setPendingLevel(null)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          <p className="mt-3 text-[11px] leading-relaxed text-ink-500">
+            The filter is a browsing preference, not a verification of your age. Clear this site's storage to reset it.
+          </p>
+        </section>
+
+        {/* Public profile — edited on /profile */}
+        <section className="card-surface p-5">
+          <div className="mb-1 flex items-center gap-2">
+            <UserRound className="h-4 w-4 text-rose-400" />
+            <h2 className="text-lg font-semibold text-ink-50">Public profile</h2>
+          </div>
+          <p className="mb-4 text-xs text-ink-400">
+            Username, display name, bio, avatar and visibility live on your profile page.
+          </p>
+          <Link to="/profile" className="btn-secondary text-xs">
+            <Pencil className="h-3.5 w-3.5" /> Go to profile
+          </Link>
         </section>
 
         {/* Reader Preferences */}
