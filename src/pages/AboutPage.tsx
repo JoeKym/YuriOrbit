@@ -101,6 +101,11 @@ export function AboutPage() {
           <span>Visit JoeKym Labs</span>
           <span className="text-ink-400">&rarr;</span>
         </a>
+        <p className="mt-4 text-xs text-ink-400">
+          Questions, corrections or press enquiries? See the{' '}
+          <Link to="/contact" className="text-rose-300 hover:underline">contact page</Link>{' '}
+          or the <Link to="/faq" className="text-rose-300 hover:underline">FAQ</Link>.
+        </p>
       </div>
 
       <div className="mt-10 text-center">
