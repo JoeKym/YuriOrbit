@@ -181,9 +181,13 @@ export async function searchGLTitles(filter: ContentFilter, page = 1, perPage = 
     } else if (filter.contentType === 'MOVIE') {
       extra.type = 'ANIME';
       extra.format_in = ['MOVIE'];
-    } else if (filter.contentType === 'TV') {
+    } else if (filter.contentType === 'TV' || filter.contentType === 'DRAMA') {
       extra.type = 'ANIME';
       extra.format_in = ['TV', 'TV_SHORT', 'OVA', 'ONA'];
+    } else if (filter.contentType === 'WEBTOON') {
+      // AniList has no webtoon format: it indexes them as digital manga.
+      extra.type = 'MANGA';
+      extra.format_in = ['MANGA', 'ONE_SHOT'];
     } else if (filter.contentType === 'LIGHT_NOVEL') {
       extra.type = 'MANGA';
       extra.format_in = ['NOVEL'];

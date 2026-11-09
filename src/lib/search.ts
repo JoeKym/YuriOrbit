@@ -67,7 +67,8 @@ export async function liveSearch(
   const empty: LiveSearchResult = { query, hits: [], creators: [], total: 0, error: false };
   if (query.length < 2) return empty;
 
-  const cacheKey = `search_${query.toLowerCase()}_${getMaturityLevel()}`;
+  // The limit is part of the key: /search grows its page size with "Load more".
+  const cacheKey = `search_${query.toLowerCase()}_${getMaturityLevel()}_${limit}`;
   const cached = getCached<LiveSearchResult>(cacheKey);
   if (cached) return cached;
 
