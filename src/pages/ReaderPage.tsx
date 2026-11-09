@@ -12,6 +12,7 @@ import {
   RefreshCw,
   AlertCircle,
   CheckCircle2,
+  ShieldAlert,
 } from 'lucide-react';
 import type { ContentTitle, ChapterInfo } from '@/types/content';
 import {
@@ -23,6 +24,7 @@ import {
 import { getFallbackCover, cn } from '@/lib/utils/format';
 import { useLibrary } from '@/hooks/useLibrary';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { fetchContentModeration, getModerationFor, type ContentModerationItem } from '@/lib/moderation/contentModeration';
 
 export function ReaderPage() {
   const { id } = useParams<{ id: string }>();
@@ -30,6 +32,7 @@ export function ReaderPage() {
 
   const [title, setTitle] = useState<ContentTitle | null>(null);
   const [loadingTitle, setLoadingTitle] = useState(true);
+  const [moderation, setModeration] = useState<ContentModerationItem | null>(null);
   usePageMeta({
     title: title ? `Read ${title.title}` : (loadingTitle ? 'Loading…' : 'Reader'),
     description: title?.title
@@ -80,9 +83,10 @@ export function ReaderPage() {
       if (!id) return;
       setLoadingTitle(true);
       try {
-        const result = await getTitleById(id);
+        const [result, modMap] = await Promise.all([getTitleById(id), fetchContentModeration()]);
         if (cancelled) return;
         setTitle(result);
+        setModeration(getModerationFor(modMap, id));
       } catch {
         if (!cancelled) setTitle(null);
       } finally {
@@ -99,6 +103,7 @@ export function ReaderPage() {
 
     async function loadChapters() {
       if (!title || !id) return;
+      if (moderation && (moderation.action === 'takedown' || moderation.action === 'suspended')) { setReadableChapters([]); setLoadingChapters(false); return; }
 
       setLoadingChapters(true);
       try {
@@ -155,7 +160,7 @@ export function ReaderPage() {
 
     loadChapters();
     return () => { cancelled = true; };
-  }, [title, id]);
+  }, [title, id, moderation]);
 
   // 3. Load page images for active chapter
   const activeChapter = readableChapters[activeChapterIndex];
@@ -248,6 +253,23 @@ export function ReaderPage() {
         <BookOpen className="mb-4 h-12 w-12 text-ink-600" />
         <p className="text-lg font-medium text-ink-200">Title not found</p>
         <Link to="/discover" className="btn-primary mt-4">Back to Discover</Link>
+      </div>
+    );
+  }
+
+  if (moderation && (moderation.action === 'takedown' || moderation.action === 'suspended')) {
+    return (
+      <div className="mx-auto flex max-w-xl flex-col items-center px-4 py-24 text-center md:px-6">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-error-500/30 bg-error-500/10">
+          <ShieldAlert className="h-7 w-7 text-error-400" />
+        </div>
+        <h1 className="font-display text-2xl font-semibold text-ink-50">Reader unavailable</h1>
+        <p className="mt-3 max-w-md text-sm text-ink-300">This title is currently restricted due to a moderation action.</p>
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          <Link to="/appeals" className="btn-primary">Submit an appeal</Link>
+          <Link to={`/title/${title.id}`} className="btn-secondary">Title details</Link>
+          <Link to="/discover" className="btn-ghost">Discover</Link>
+        </div>
       </div>
     );
   }
