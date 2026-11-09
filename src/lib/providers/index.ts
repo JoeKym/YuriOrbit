@@ -34,6 +34,7 @@ import { getMaturityLevel } from '@/lib/content/maturity-preference';
 import { filterByMaturity } from '@/lib/content/maturity';
 import { canonicalizeTitle, canonicalizeTitles } from '@/lib/catalog/canonical';
 import { findRegisteredBySlug, getRegisteredTitle, registerTitles } from '@/lib/catalog/registry';
+import { fetchContentModeration, filterModeratedTitles } from '@/lib/moderation/contentModeration';
 import { isLegacyProviderId, slugToQuery, slugifyTitle, titleKey } from '@/lib/catalog/identity';
 
 export { classifyGL, filterGL, glConfidence, GL_ALLOWED_CLASSIFICATIONS } from './classify';
@@ -60,12 +61,21 @@ function levelKey(): string {
   return getMaturityLevel();
 }
 
+async function withoutBlocked<T extends ContentTitle>(titles: T[]): Promise<T[]> {
+  try {
+    const map = await fetchContentModeration();
+    return filterModeratedTitles(titles, map) as T[];
+  } catch {
+    return titles;
+  }
+}
+
 // ─── Trending / Popular ────────────────────────────────────────────────────────
 
 export async function getTrendingGL(perPage = 20): Promise<ContentTitle[]> {
   const cacheKey = `trending_${perPage}_${levelKey()}`;
   const cached = getCached<ContentTitle[]>(cacheKey);
-  if (cached && cached.length > 0) return cached;
+  if (cached && cached.length > 0) return withoutBlocked(cached);
 
   const [anilist, mangadex] = await Promise.allSettled([
     anilistTrending(perPage),
@@ -76,7 +86,7 @@ export async function getTrendingGL(perPage = 20): Promise<ContentTitle[]> {
   if (anilist.status === 'fulfilled') results.push(...anilist.value);
   if (mangadex.status === 'fulfilled') results.push(...mangadex.value);
 
-  const final = visible(canonicalizeTitles(results.filter(isGL)).slice(0, perPage * 2));
+  const final = await withoutBlocked(visible(canonicalizeTitles(results.filter(isGL)).slice(0, perPage * 2)));
 
   if (final.length > 0) setCached(cacheKey, final);
   return final;
@@ -85,7 +95,7 @@ export async function getTrendingGL(perPage = 20): Promise<ContentTitle[]> {
 export async function getPopularGL(perPage = 50): Promise<ContentTitle[]> {
   const cacheKey = `popular_${perPage}_${levelKey()}`;
   const cached = getCached<ContentTitle[]>(cacheKey);
-  if (cached && cached.length > 0) return cached;
+  if (cached && cached.length > 0) return withoutBlocked(cached);
 
   const [anilist, mangadex] = await Promise.allSettled([
     anilistPopular(perPage),
@@ -96,7 +106,7 @@ export async function getPopularGL(perPage = 50): Promise<ContentTitle[]> {
   if (anilist.status === 'fulfilled') results.push(...anilist.value);
   if (mangadex.status === 'fulfilled') results.push(...mangadex.value);
 
-  const final = visible(canonicalizeTitles(results.filter(isGL)).slice(0, perPage * 2));
+  const final = await withoutBlocked(visible(canonicalizeTitles(results.filter(isGL)).slice(0, perPage * 2)));
 
   if (final.length > 0) setCached(cacheKey, final);
   return final;
@@ -105,10 +115,10 @@ export async function getPopularGL(perPage = 50): Promise<ContentTitle[]> {
 export async function getRecentGL(perPage = 20): Promise<ContentTitle[]> {
   const cacheKey = `recent_${perPage}_${levelKey()}`;
   const cached = getCached<ContentTitle[]>(cacheKey);
-  if (cached && cached.length > 0) return cached;
+  if (cached && cached.length > 0) return withoutBlocked(cached);
 
   const results = await anilistRecent(perPage);
-  const final = visible(canonicalizeTitles(results.filter(isGL)));
+  const final = await withoutBlocked(visible(canonicalizeTitles(results.filter(isGL))));
 
   if (final.length > 0) setCached(cacheKey, final);
   return final;
@@ -117,10 +127,10 @@ export async function getRecentGL(perPage = 20): Promise<ContentTitle[]> {
 export async function getCompletedGL(perPage = 20): Promise<ContentTitle[]> {
   const cacheKey = `completed_${perPage}_${levelKey()}`;
   const cached = getCached<ContentTitle[]>(cacheKey);
-  if (cached && cached.length > 0) return cached;
+  if (cached && cached.length > 0) return withoutBlocked(cached);
 
   const results = await anilistCompleted(perPage);
-  const final = visible(canonicalizeTitles(results.filter(isGL)));
+  const final = await withoutBlocked(visible(canonicalizeTitles(results.filter(isGL))));
 
   if (final.length > 0) setCached(cacheKey, final);
   return final;
@@ -129,10 +139,10 @@ export async function getCompletedGL(perPage = 20): Promise<ContentTitle[]> {
 export async function getGLByGenre(genre: string, perPage = 20): Promise<ContentTitle[]> {
   const cacheKey = `genre_${genre}_${perPage}_${levelKey()}`;
   const cached = getCached<ContentTitle[]>(cacheKey);
-  if (cached && cached.length > 0) return cached;
+  if (cached && cached.length > 0) return withoutBlocked(cached);
 
   const results = await anilistByGenre(genre, perPage);
-  const final = visible(canonicalizeTitles(results.filter(isGL)));
+  const final = await withoutBlocked(visible(canonicalizeTitles(results.filter(isGL))));
 
   if (final.length > 0) setCached(cacheKey, final);
   return final;
@@ -144,7 +154,7 @@ export async function getGLByContentType(
 ): Promise<ContentTitle[]> {
   const cacheKey = `type_${contentType}_${perPage}_${levelKey()}`;
   const cached = getCached<ContentTitle[]>(cacheKey);
-  if (cached && cached.length > 0) return cached;
+  if (cached && cached.length > 0) return withoutBlocked(cached);
 
   let results: ContentTitle[];
   if (contentType === 'MOVIE') {
@@ -157,7 +167,7 @@ export async function getGLByContentType(
     results = await anilistByType(contentType, perPage);
   }
 
-  const final = visible(canonicalizeTitles(results.filter(isGL)));
+  const final = await withoutBlocked(visible(canonicalizeTitles(results.filter(isGL))));
   if (final.length > 0) setCached(cacheKey, final);
   return final;
 }
@@ -198,7 +208,7 @@ export async function searchGLTitles(
   }
 
   // Cross-provider duplicates collapse into one canonical entry here.
-  const deduped = visible(canonicalizeTitles(items.filter(isGL)));
+  const deduped = await withoutBlocked(visible(canonicalizeTitles(items.filter(isGL))));
 
   return {
     items: deduped,
@@ -232,20 +242,20 @@ export async function getCreatorTitles(query: string, perPage = 3): Promise<Crea
   const groups: CreatorGroup[] = [];
   const seenNames = new Set<string>();
 
-  const push = (name: string, titles: ContentTitle[]) => {
+  const push = async (name: string, titles: ContentTitle[]) => {
     const key = name.toLowerCase();
     if (seenNames.has(key)) return;
-    const canonical = visible(canonicalizeTitles(titles.filter(isGL)));
+    const canonical = await withoutBlocked(visible(canonicalizeTitles(titles.filter(isGL))));
     if (canonical.length === 0) return;
     seenNames.add(key);
     groups.push({ name, titles: canonical });
   };
 
   if (anilist.status === 'fulfilled') {
-    for (const match of anilist.value) push(match.name, match.titles);
+    for (const match of anilist.value) await push(match.name, match.titles);
   }
   if (tmdb.status === 'fulfilled') {
-    for (const match of tmdb.value) push(match.name, match.titles);
+    for (const match of tmdb.value) await push(match.name, match.titles);
   }
 
   return groups;
