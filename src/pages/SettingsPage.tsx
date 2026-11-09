@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Settings as SettingsIcon, Trash2, Download, Upload, Info, CheckCircle2, BookOpen, Sliders, Pencil, UserRound, ShieldAlert, Lock } from 'lucide-react';
+import { Settings as SettingsIcon, Trash2, Download, Upload, Info, CheckCircle2, BookOpen, Sliders, Pencil, UserRound, ShieldAlert, Lock, AlertTriangle, RotateCcw } from 'lucide-react';
 import { useLibrary } from '@/hooks/useLibrary';
 import { useMaturity } from '@/hooks/useMaturity';
 import type { MaturityLevel } from '@/types/content';
 import { MATURITY_DESCRIPTIONS, MATURITY_LABELS, MATURITY_LEVELS } from '@/types/content';
 import { maturityRank, requiresAdultConfirmation } from '@/lib/content/maturity';
+import { resetMaturityPreference } from '@/lib/content/maturity-preference';
 import { cn } from '@/lib/utils/format';
 
 export function SettingsPage() {
@@ -140,6 +141,48 @@ export function SettingsPage() {
     };
     reader.readAsText(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleResetSettings = () => {
+    if (!confirm('Reset all settings to defaults? This restores appearance, reader, data saver, and content filter preferences. Your library data will not be affected.')) {
+      return;
+    }
+    try {
+      localStorage.removeItem('yuriorbit_reduced_motion');
+      localStorage.removeItem('yuriorbit_reader_width');
+      localStorage.removeItem('yuriorbit_reader_bg');
+      localStorage.removeItem('yuriorbit_data_saver');
+    } catch {}
+    setReducedMotion(false);
+    setReaderWidth('normal');
+    setReaderBg('dark');
+    setDataSaver(false);
+    resetMaturityPreference();
+    setPendingLevel(null);
+    setFeedback('Settings have been reset to defaults.');
+    setTimeout(() => setFeedback(null), 3000);
+  };
+
+  const handleClearAllLocalData = () => {
+    if (!confirm('Clear all local data on this device? This removes your local library and resets all settings to defaults. If you are signed in, cloud-synced library data remains in your account.')) {
+      return;
+    }
+    try {
+      localStorage.removeItem('yuriorbit_library');
+      localStorage.removeItem('yuriorbit_reduced_motion');
+      localStorage.removeItem('yuriorbit_reader_width');
+      localStorage.removeItem('yuriorbit_reader_bg');
+      localStorage.removeItem('yuriorbit_data_saver');
+    } catch {}
+    clearLibrary();
+    setReducedMotion(false);
+    setReaderWidth('normal');
+    setReaderBg('dark');
+    setDataSaver(false);
+    resetMaturityPreference();
+    setPendingLevel(null);
+    setFeedback('All local data has been cleared and settings reset to defaults.');
+    setTimeout(() => setFeedback(null), 4000);
   };
 
   return (
@@ -396,6 +439,70 @@ export function SettingsPage() {
               <p className="text-xs text-ink-400 leading-relaxed">
                 Sign in to sync your library across devices. Your saved titles, reading progress, ratings, and notes are stored securely in your account. When not signed in, data stays in your browser. Use Export to keep a backup.
               </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Danger Zone */}
+        <section className="rounded-2xl border border-rose-500/25 bg-rose-500/[0.03] p-5">
+          <div className="mb-1 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-rose-400" />
+            <h2 className="text-lg font-semibold text-ink-50">Danger zone</h2>
+          </div>
+          <p className="mb-4 text-xs leading-relaxed text-ink-400">
+            Irreversible actions for data stored on this device. Export a backup first if you might need it later.
+          </p>
+
+          <div className="space-y-3">
+            <div className="flex flex-col gap-3 rounded-xl border border-ink-800/80 bg-ink-950/30 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-ink-100">Reset settings to defaults</p>
+                <p className="mt-0.5 text-xs text-ink-400">
+                  Restores appearance, reader preferences, data saver, and content filter. Does not touch your library.
+                </p>
+              </div>
+              <button
+                onClick={handleResetSettings}
+                className="btn-secondary shrink-0 text-xs border-rose-500/30 text-rose-300 hover:border-rose-500/50 hover:text-rose-200 flex items-center gap-1.5"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Reset settings
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-3 rounded-xl border border-ink-800/80 bg-ink-950/30 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-ink-100">Clear local library</p>
+                <p className="mt-0.5 text-xs text-ink-400">
+                  Removes saved titles and reading progress stored in this browser. Cloud-synced data (if signed in) is not deleted.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  if (confirm('Clear all local library data? This will reset your saved bookmarks and reading progress.')) {
+                    clearLibrary();
+                    setFeedback('Local library data has been cleared.');
+                    setTimeout(() => setFeedback(null), 3000);
+                  }
+                }}
+                className="btn-secondary shrink-0 text-xs text-error-400 hover:text-error-300 border-rose-500/30 flex items-center gap-1.5"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Clear library
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-3 rounded-xl border border-rose-500/20 bg-rose-500/[0.04] p-3.5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-ink-100">Clear all local data</p>
+                <p className="mt-0.5 text-xs text-ink-400">
+                  Removes local library and resets all settings on this device. Export a backup first if needed.
+                </p>
+              </div>
+              <button
+                onClick={handleClearAllLocalData}
+                className="btn-secondary shrink-0 text-xs border-rose-500/40 bg-rose-500/10 text-rose-200 hover:bg-rose-500/15 flex items-center gap-1.5"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Clear all local data
+              </button>
             </div>
           </div>
         </section>
