@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import {
   Activity,
   Compass,
+  Inbox,
   LayoutDashboard,
   ListChecks,
   Megaphone,
@@ -21,13 +22,15 @@ import { LibraryTab } from '@/components/admin/LibraryTab';
 import { FeaturedTab } from '@/components/admin/FeaturedTab';
 import { SiteSettingsTab } from '@/components/admin/SiteSettingsTab';
 import { AuditTab } from '@/components/admin/AuditTab';
+import { FeedbackTab } from '@/components/admin/FeedbackTab';
 
-type TabKey = 'overview' | 'users' | 'library' | 'featured' | 'settings' | 'audit';
+type TabKey = 'overview' | 'users' | 'library' | 'feedback' | 'featured' | 'settings' | 'audit';
 
 const TABS: { key: TabKey; label: string; icon: typeof Shield }[] = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard },
   { key: 'users', label: 'Users', icon: Users },
   { key: 'library', label: 'Library entries', icon: ListChecks },
+  { key: 'feedback', label: 'Feedback', icon: Inbox },
   { key: 'featured', label: "Editor's Picks", icon: Sparkles },
   { key: 'settings', label: 'Site settings', icon: Megaphone },
   { key: 'audit', label: 'Audit log', icon: Activity },
@@ -135,6 +138,7 @@ export function AdminPage() {
       {tab === 'overview' && <OverviewTab onNavigate={setTab} />}
       {tab === 'users' && <UsersTab />}
       {tab === 'library' && <LibraryTab />}
+      {tab === 'feedback' && <FeedbackTab />}
       {tab === 'featured' && <FeaturedTab />}
       {tab === 'settings' && <SiteSettingsTab />}
       {tab === 'audit' && <AuditTab />}
