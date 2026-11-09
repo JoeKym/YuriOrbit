@@ -21,6 +21,7 @@ import { AboutPage } from '@/pages/AboutPage';
 import { ContactPage } from '@/pages/ContactPage';
 import { FaqPage } from '@/pages/FaqPage';
 import { FeedbackPage } from '@/pages/FeedbackPage';
+import { AppealsPage } from '@/pages/AppealsPage';
 import { PrivacyPage } from '@/pages/PrivacyPage';
 import { TermsPage } from '@/pages/TermsPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';

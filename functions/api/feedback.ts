@@ -21,8 +21,20 @@ interface Env {
   SUPABASE_SECRET_KEY?: string;
 }
 
+// Schema-compatible kinds (DB CHECK constraint). Appeals/reviews use category values.
 const KINDS = new Set(['feedback', 'report', 'contact']);
-const CATEGORIES = new Set(['issue', 'feature', 'general', 'metadata']);
+const CATEGORIES = new Set([
+  'issue',
+  'feature',
+  'general',
+  'metadata',
+  'appeal',
+  'appeal_account',
+  'appeal_content',
+  'review',
+  'testimonial',
+  'takedown',
+]);
 
 const LIMITS = {
   messageMin: 3,
@@ -124,11 +136,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return json({ ok: true });
   }
 
-  const kind = typeof body.kind === 'string' ? body.kind : 'feedback';
-  if (!KINDS.has(kind)) return fail('Unknown feedback kind.', 400);
-
-  const category = typeof body.category === 'string' ? body.category : 'general';
-  if (!CATEGORIES.has(category)) return fail('Unknown feedback category.', 400);
+  let kind = typeof body.kind === 'string' ? body.kind : 'feedback';
+  let category = typeof body.category === 'string' ? body.category : 'general';
+  // Map logical kinds to schema-compatible storage when needed.
+  if (kind === 'appeal' || kind === 'review') {
+    if (!CATEGORIES.has(category)) category = kind === 'appeal' ? 'appeal' : 'review';
+    kind = kind === 'appeal' ? 'contact' : 'feedback';
+  }
+  if (!KINDS.has(kind)) return fail('Unknown submission kind.', 400);
+  if (!CATEGORIES.has(category)) return fail('Unknown submission category.', 400);
 
   const message = clean(body.message, LIMITS.message);
   if (!message || message.length < LIMITS.messageMin) {
@@ -140,8 +156,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
     return fail('That contact email does not look valid.', 400);
   }
-  // Contact messages are answered by email, so a reply address is required.
-  if (kind === 'contact' && !contactEmail) {
+  // Contact/appeal messages should be answerable.
+  if ((kind === 'contact' || category.startsWith('appeal')) && !contactEmail) {
     return fail('Please add an email address so we can reply.', 400);
   }
 

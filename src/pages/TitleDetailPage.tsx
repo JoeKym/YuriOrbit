@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import {
   Heart, BookOpen, Play, Share2, Flag, ExternalLink, Star,
   ChevronLeft, Calendar, Globe, Layers, Hash, TrendingUp, Users,
-  CheckCircle, Loader2
+  CheckCircle, Loader2, ShieldAlert
 } from 'lucide-react';
 import type { ContentTitle, LibraryStatus } from '@/types/content';
 import { CONTENT_TYPE_LABELS, LIBRARY_STATUS_LABELS } from '@/types/content';
@@ -15,6 +15,7 @@ import { maturityOf, isWithinMaturity } from '@/lib/content/maturity';
 import { MATURITY_LABELS } from '@/types/content';
 import { submitFeedback } from '@/lib/feedback';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { fetchContentModeration, getModerationFor, type ContentModerationItem } from '@/lib/moderation/contentModeration';
 
 const STATUSES: LibraryStatus[] = ['CURRENT', 'PLANNED', 'COMPLETED', 'ON_HOLD', 'DROPPED', 'FAVOURITE'];
 
@@ -28,6 +29,7 @@ export function TitleDetailPage() {
   const [reportMessage, setReportMessage] = useState('');
   const [reportStatus, setReportStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [reportError, setReportError] = useState<string | null>(null);
+  const [moderation, setModeration] = useState<ContentModerationItem | null>(null);
 
   const { isInLibrary, addToLibrary, removeFromLibrary, getEntry, updateProgress, updateRating, updateNotes } = useLibrary();
   const { level } = useMaturity();
@@ -50,9 +52,10 @@ export function TitleDetailPage() {
       setError(false);
       if (!id) return;
       try {
-        const result = await getTitleById(id);
+        const [result, modMap] = await Promise.all([getTitleById(id), fetchContentModeration()]);
         if (cancelled) return;
         setTitle(result);
+        setModeration(getModerationFor(modMap, id));
       } catch {
         if (!cancelled) setError(true);
       } finally {
@@ -88,6 +91,28 @@ export function TitleDetailPage() {
         <p className="text-lg font-medium text-ink-200">Title not found</p>
         <p className="mt-1 text-sm text-ink-400">This title may not exist or could not be loaded.</p>
         <Link to="/discover" className="btn-primary mt-4">Back to Discover</Link>
+      </div>
+    );
+  }
+
+  if (moderation && (moderation.action === 'takedown' || moderation.action === 'suspended')) {
+    return (
+      <div className="mx-auto flex max-w-xl flex-col items-center px-4 py-24 text-center md:px-6">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-error-500/30 bg-error-500/10">
+          <ShieldAlert className="h-7 w-7 text-error-400" />
+        </div>
+        <p className="mb-1 text-[11px] uppercase tracking-wider text-error-300/90">
+          Content {moderation.action === 'takedown' ? 'takedown' : 'temporarily suspended'}
+        </p>
+        <h1 className="font-display text-2xl font-semibold text-ink-50">This title is unavailable</h1>
+        <p className="mt-3 max-w-md text-sm leading-relaxed text-ink-300">
+          This page is currently restricted due to a moderation action. If you believe this is a mistake, you can submit an appeal for review.
+        </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          <Link to="/appeals" className="btn-primary">Submit an appeal</Link>
+          <Link to="/contact" className="btn-secondary">Contact</Link>
+          <Link to="/discover" className="btn-ghost">Back to Discover</Link>
+        </div>
       </div>
     );
   }

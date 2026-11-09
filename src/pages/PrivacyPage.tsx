@@ -2,84 +2,117 @@ import { Link } from 'react-router-dom';
 import { usePageMeta } from '@/hooks/usePageMeta';
 
 export function PrivacyPage() {
-  usePageMeta({ title: 'Privacy Policy', description: 'Read how YuriOrbit handles your data, privacy, and account information.', path: '/privacy' });
+  usePageMeta({
+    title: 'Privacy Policy',
+    description: 'Read how YuriOrbit handles your data, privacy, account controls, moderation, and appeals information.',
+    path: '/privacy',
+  });
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
-      <h1 className="font-display text-3xl font-semibold text-ink-50 mb-2">Privacy Policy</h1>
-      <p className="text-sm text-ink-400 mb-8">Last updated: November 2026</p>
+      <h1 className="mb-2 font-display text-3xl font-semibold text-ink-50">Privacy Policy</h1>
+      <p className="mb-8 text-sm text-ink-400">Last updated: November 2026</p>
 
-      <div className="space-y-6 text-ink-300 leading-relaxed">
+      <div className="space-y-6 leading-relaxed text-ink-300">
         <section>
-          <h2 className="text-lg font-semibold text-ink-100 mb-2">1. Offline & Local-First by Default</h2>
+          <h2 className="mb-2 text-lg font-semibold text-ink-100">1. Local-first by default</h2>
           <p className="text-sm">
-            You can use YuriOrbit completely anonymously without an account. When unauthenticated, your personal library,
-            reading history, chapter bookmarks, favorites, notes, and display preferences (such as reader layout, theme,
-            and content maturity filter level) are stored exclusively in your browser's local storage.
+            You can use YuriOrbit without an account. When unauthenticated, personal library data, reading/watching
+            progress, bookmarks/favorites, notes, and preferences (such as theme, reader layout, and content maturity
+            filter) may be stored locally in your browser. Local data stays on your device unless you choose to use
+            cloud features.
           </p>
           <p className="mt-2 text-sm">
-            This data never leaves your device and is never transmitted to our servers. You can permanently clear it at
-            any time simply by clearing your browser's site data.
+            You can clear local data at any time from <Link to="/settings" className="text-rose-300 hover:underline">Settings → Danger Zone</Link>{' '}
+            or by clearing your browser/site data.
           </p>
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-ink-100 mb-2">2. Optional Cloud Accounts (Supabase)</h2>
+          <h2 className="mb-2 text-lg font-semibold text-ink-100">2. Optional accounts and synced data</h2>
           <p className="text-sm">
-            If you choose to create a cloud account, authentication and encrypted database synchronization are managed
-            via Supabase with Postgres Row-Level Security (RLS). We collect:
+            If you create an account, authentication and supported cloud features are provided through Supabase-backed
+            services. Depending on the feature, we may process:
           </p>
-          <ul className="mt-2 list-disc list-inside space-y-1 text-sm text-ink-300">
-            <li>Your email address and a cryptographically hashed password (we never have access to plain-text passwords).</li>
-            <li>Your chosen public profile fields (display name, username, bio, avatar image URL).</li>
-            <li>Your synchronized library items, including read status, score ratings, and private reading notes.</li>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+            <li>Account identifiers (email, user ID) and authentication/session data.</li>
+            <li>Profile fields you choose to set (e.g., display name, username, bio, avatar URL, visibility settings).</li>
+            <li>Synced library entries, progress/status, ratings, and notes where cloud sync is used.</li>
+            <li>Submissions you send (feedback, contact messages, reports, appeals, or reviews/testimonials), including any contact details you provide.</li>
           </ul>
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-ink-100 mb-2">3. Profile Privacy & Database Isolation</h2>
+          <h2 className="mb-2 text-lg font-semibold text-ink-100">3. Moderation, safety, and appeals data</h2>
           <p className="text-sm">
-            You have full control over your profile visibility. Public profiles showcase your favorite titles and reading
-            milestones. Private notes and personal account settings are strictly shielded at the database level using
-            row-level security policies. You can set your entire profile to Private at any time in Settings, which hides
-            your library from all external visitors.
+            To operate the service safely and accurately, we may process moderation-related information, such as reports
+            of incorrect metadata, abuse/safety reports, moderation actions (warnings, suspensions, bans, content
+            restrictions/takedowns), reasons, timestamps, and appeal submissions. This information is used to review
+            issues, enforce policies, prevent abuse, and maintain service integrity.
           </p>
-        </section>
-
-        <section>
-          <h2 className="text-lg font-semibold text-ink-100 mb-2">4. Third-Party Network Requests & Edge Proxies</h2>
-          <p className="text-sm">
-            To provide live discovery, catalogue requests communicate with external APIs:
-          </p>
-          <ul className="mt-2 list-disc list-inside space-y-1 text-sm text-ink-300">
-            <li><strong className="text-ink-100">AniList:</strong> Queried directly from your client for anime and manga information.</li>
-            <li><strong className="text-ink-100">MangaDex & TMDB:</strong> Routed through secure Cloudflare Pages Functions edge proxies to enforce proper CORS handling, DDoS mitigation headers, and server-side secret management.</li>
-          </ul>
           <p className="mt-2 text-sm">
-            These external services receive standard HTTP request data (such as IP address and user-agent string). We do not
-            share your personal account data or email address with any third-party providers.
+            Appeal and report submissions may include identifiers (username, email if provided, title IDs/URLs) and the
+            message you submit. Please avoid sharing sensitive personal information unless necessary for your request.
           </p>
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-ink-100 mb-2">5. No Tracking & No Ad Networks</h2>
+          <h2 className="mb-2 text-lg font-semibold text-ink-100">4. Profile visibility and controls</h2>
           <p className="text-sm">
-            YuriOrbit does not sell your personal data, employ cross-site tracking cookies, use third-party fingerprinting,
-            or run behavioral ad networks. We believe your reading tastes and favorite works should remain entirely your own.
+            You control supported profile visibility settings. Public profiles may display information you choose to
+            make public. Private notes and account settings are intended to remain private to your account context.
+            You can manage account/profile preferences in <Link to="/settings" className="text-rose-300 hover:underline">Settings</Link>.
           </p>
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-ink-100 mb-2">6. Data Portability and Deletion</h2>
+          <h2 className="mb-2 text-lg font-semibold text-ink-100">5. Third-party services and network requests</h2>
           <p className="text-sm">
-            You own your data. You can export your complete library at any time as a JSON backup from the Settings page.
-            If you wish to permanently delete your account and all associated cloud library records, you can do so through
-            your account settings, by emailing the project administrators at{' '}
-            <a href="mailto:mail.jkyme@gmail.com" className="text-rose-300 hover:underline">
-              mail.jkyme@gmail.com
-            </a>
-            , or through the{' '}
-            <Link to="/contact" className="text-rose-300 hover:underline">contact page</Link>.
+            YuriOrbit aggregates metadata and discovery data from external providers (for example, AniList, MangaDex,
+            TMDB, and other configured sources). Requests may be sent directly from your device or routed through
+            server/edge functions (e.g., Cloudflare Pages Functions) for CORS, caching, and key management.
+          </p>
+          <p className="mt-2 text-sm">
+            These providers may receive standard technical request data (such as IP address and user agent). We do not
+            sell your personal data and do not intentionally share your account password or private notes with metadata
+            providers.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-2 text-lg font-semibold text-ink-100">6. No behavioral ad tracking</h2>
+          <p className="text-sm">
+            YuriOrbit does not run behavioral ad networks, and we do not infer a user’s sexuality from reading
+            preferences. We aim to minimize data collection to what is needed to provide and protect the service.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-2 text-lg font-semibold text-ink-100">7. Maintenance and service operations</h2>
+          <p className="text-sm">
+            During maintenance, the site may temporarily limit access and display a maintenance notice. Operational logs
+            and error information may be processed to diagnose issues and keep the service reliable, subject to platform
+            and infrastructure constraints.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-2 text-lg font-semibold text-ink-100">8. Data export, deletion, and requests</h2>
+          <p className="text-sm">
+            Where supported, you can export a local backup from Settings. You can delete your account from{' '}
+            <Link to="/settings" className="text-rose-300 hover:underline">Settings → Danger Zone</Link> (self-service) or
+            request help via <Link to="/contact" className="text-rose-300 hover:underline">Contact</Link> /{' '}
+            <a href="mailto:mail.jkyme@gmail.com" className="text-rose-300 hover:underline">mail.jkyme@gmail.com</a>.
+            Deletion/removal is subject to technical, legal, and operational requirements (for example, security logs
+            or records needed to handle abuse/rights requests may be retained where appropriate).
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-2 text-lg font-semibold text-ink-100">9. Changes to this policy</h2>
+          <p className="text-sm">
+            We may update this policy as features evolve (including moderation, appeals, reviews, and account controls).
+            The “Last updated” date reflects the latest revision.
           </p>
         </section>
       </div>

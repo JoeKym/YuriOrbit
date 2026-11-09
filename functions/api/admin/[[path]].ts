@@ -265,6 +265,17 @@ async function handleUsers(ctx: AdminContext, url: URL): Promise<Response> {
     }
   }
 
+  // Moderation notes (best-effort) from site settings.
+  let moderationNotes: Record<string, string> = {};
+  try {
+    const settingsRes = await rest(env, 'site_settings?select=key,value&key=eq.user_moderation');
+    if (settingsRes.ok) {
+      const rows = (await readJson<{ key: string; value: unknown }[]>(settingsRes)) ?? [];
+      const val = rows[0]?.value;
+      if (val && typeof val === 'object') moderationNotes = val as Record<string, string>;
+    }
+  } catch {}
+
   return json({
     page,
     perPage,
@@ -280,12 +291,14 @@ async function handleUsers(ctx: AdminContext, url: URL): Promise<Response> {
         (u.user_metadata?.full_name as string | undefined) ||
         null,
       libraryCount: libraryCounts[u.id] ?? 0,
+      bannedUntil: (u as { banned_until?: string }).banned_until ?? null,
+      moderationNote: moderationNotes[u.id] ?? null,
     })),
   });
 }
 
 async function handleUserAction(ctx: AdminContext, request: Request): Promise<Response> {
-  const body = await readJson<{ action?: string; userId?: string }>(request);
+  const body = await readJson<{ action?: string; userId?: string; durationHours?: number; reason?: string }>(request);
   const action = body?.action;
   const userId = body?.userId;
 
@@ -298,6 +311,41 @@ async function handleUserAction(ctx: AdminContext, request: Request): Promise<Re
     });
     if (!res.ok) return fail(`Could not purge library (HTTP ${res.status}).`, 502);
     await audit(ctx, 'user.purge_library', userId, {});
+    return json({ ok: true });
+  }
+
+  if (action === 'ban' || action === 'suspend' || action === 'unban') {
+    if (userId === ctx.actorId) return fail('You cannot moderate your own admin account.', 400);
+    const hours = action === 'unban'
+      ? 0
+      : Math.max(1, Math.min(876000, Math.floor(body?.durationHours || (action === 'ban' ? 876000 : 24))));
+    const ban_duration = action === 'unban' ? 'none' : `${hours}h`;
+    const res = await fetch(`${ctx.env.SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
+      method: 'PUT',
+      headers: svcHeaders(ctx.env),
+      body: JSON.stringify({ ban_duration }),
+    });
+    if (!res.ok) {
+      const detail = await readJson<{ msg?: string; error_description?: string }>(res);
+      return fail(detail?.msg || detail?.error_description || `Could not update user moderation (HTTP ${res.status}).`, 502);
+    }
+    // Best-effort moderation note in site_settings.
+    try {
+      const getRes = await rest(ctx.env, 'site_settings?select=value&key=eq.user_moderation');
+      let map: Record<string, unknown> = {};
+      if (getRes.ok) {
+        const rows = (await readJson<{ value?: unknown }[]>(getRes)) ?? [];
+        if (rows[0]?.value && typeof rows[0].value === 'object') map = rows[0].value as Record<string, unknown>;
+      }
+      if (action === 'unban') delete map[userId];
+      else map[userId] = { action, durationHours: hours, reason: body?.reason || '', updatedAt: new Date().toISOString(), updatedBy: ctx.actorEmail };
+      await rest(ctx.env, 'site_settings?on_conflict=key', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({ key: 'user_moderation', value: map, updated_at: new Date().toISOString(), updated_by: ctx.actorEmail }),
+      });
+    } catch {}
+    await audit(ctx, `user.${action}`, userId, { durationHours: hours, reason: body?.reason || '' });
     return json({ ok: true });
   }
 
@@ -474,6 +522,7 @@ async function handleFeedback(ctx: AdminContext, url: URL): Promise<Response> {
   const { env } = ctx;
   const status = (url.searchParams.get('status') || '').trim();
   const kind = (url.searchParams.get('kind') || '').trim();
+  const category = (url.searchParams.get('category') || '').replace(/[,()*]/g, ' ').trim();
   // Strip PostgREST syntax characters so the search term cannot break `or=(…)`.
   const q = (url.searchParams.get('q') || '').replace(/[,()*]/g, ' ').trim();
   const page = Math.max(1, Number.parseInt(url.searchParams.get('page') || '1', 10) || 1);
@@ -481,9 +530,16 @@ async function handleFeedback(ctx: AdminContext, url: URL): Promise<Response> {
 
   const filters: string[] = ['select=*', 'order=created_at.desc'];
   if (FEEDBACK_STATUSES.includes(status)) filters.push(`status=eq.${status}`);
-  if (kind === 'feedback' || kind === 'report' || kind === 'contact') {
+  // Logical filters: appeals/reviews are stored as schema-compatible kinds with specific categories.
+  if (kind === 'appeal') {
+    filters.push('kind=eq.contact');
+    filters.push('category=in.(appeal,appeal_account,appeal_content,takedown)');
+  } else if (kind === 'review') {
+    filters.push('category=in.(review,testimonial)');
+  } else if (kind === 'feedback' || kind === 'report' || kind === 'contact') {
     filters.push(`kind=eq.${kind}`);
   }
+  if (category) filters.push(`category=eq.${encodeURIComponent(category)}`);
   if (q) {
     const term = encodeURIComponent(q);
     filters.push(
@@ -556,6 +612,90 @@ async function handleAudit(ctx: AdminContext): Promise<Response> {
   return json({ entries: (await readJson(res)) ?? [] });
 }
 
+
+async function handleTraffic(ctx: AdminContext): Promise<Response> {
+  const { env } = ctx;
+  const [usersRes, entriesRes, featuredCount, settingsRes, feedbackRes, auditRes] = await Promise.all([
+    fetch(`${env.SUPABASE_URL}/auth/v1/admin/users?page=1&per_page=1000`, { headers: svcHeaders(env) }),
+    rest(env, 'library_entries?select=title_id,title,status,updated_at&order=updated_at.desc&limit=2000'),
+    countRows(env, 'featured_titles'),
+    rest(env, 'site_settings?select=key,value'),
+    rest(env, 'feedback_reports?select=id,kind,category,status,created_at&order=created_at.desc&limit=1000'),
+    rest(env, 'admin_audit_log?select=*&order=created_at.desc&limit=12'),
+  ]);
+
+  let totalUsers = 0;
+  let newUsers7d = 0;
+  let usersWarning: string | null = null;
+  if (usersRes.ok) {
+    const payload = await readJson<{ users?: { created_at?: string }[]; total?: number }>(usersRes);
+    const users = payload?.users ?? [];
+    totalUsers = typeof payload?.total === 'number' ? payload.total : users.length;
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    newUsers7d = users.filter((u) => u.created_at && new Date(u.created_at).getTime() >= cutoff).length;
+  } else {
+    usersWarning = `Could not list users (HTTP ${usersRes.status}).`;
+  }
+
+  const entries = entriesRes.ok ? ((await readJson<{ title_id: string; title: string; status: string }[]>(entriesRes)) ?? []) : [];
+  const byStatus = entries.reduce<Record<string, number>>((acc, row) => {
+    acc[row.status] = (acc[row.status] || 0) + 1;
+    return acc;
+  }, {});
+  const titleCounts = new Map<string, { title: string; count: number }>();
+  for (const row of entries) {
+    const current = titleCounts.get(row.title_id);
+    if (current) current.count += 1;
+    else titleCounts.set(row.title_id, { title: row.title || row.title_id, count: 1 });
+  }
+  const topTitles = Array.from(titleCounts.entries())
+    .map(([titleId, value]) => ({ titleId, title: value.title, count: value.count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  const settings = settingsRes.ok ? ((await readJson<{ key: string; value: unknown }[]>(settingsRes)) ?? []) : [];
+  const maintenance = settings.find((s) => s.key === 'maintenance')?.value as { active?: boolean } | undefined;
+  const announcement = settings.find((s) => s.key === 'announcement')?.value as { active?: boolean } | undefined;
+  const userMod = settings.find((s) => s.key === 'user_moderation')?.value;
+  const contentMod = settings.find((s) => s.key === 'content_moderation')?.value;
+  const contentActions = contentMod && typeof contentMod === 'object' ? Object.keys(contentMod as object).length : 0;
+  const takedowns = contentMod && typeof contentMod === 'object'
+    ? Object.values(contentMod as Record<string, { action?: string }>).filter((v) => v?.action === 'takedown').length
+    : 0;
+  const usersWithNotes = userMod && typeof userMod === 'object' ? Object.keys(userMod as object).length : 0;
+
+  const feedbackRows = feedbackRes.ok ? ((await readJson<{ kind: string; category: string; status: string; created_at: string }[]>(feedbackRes)) ?? []) : [];
+  const cutoff7 = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const byKind: Record<string, number> = {};
+  const byCategory: Record<string, number> = {};
+  let totalOpen = 0;
+  let recent7d = 0;
+  for (const r of feedbackRows) {
+    byKind[r.kind] = (byKind[r.kind] || 0) + 1;
+    byCategory[r.category] = (byCategory[r.category] || 0) + 1;
+    if (r.status === 'open') totalOpen += 1;
+    if (r.created_at && new Date(r.created_at).getTime() >= cutoff7) recent7d += 1;
+  }
+
+  const recentAudit = auditRes.ok ? ((await readJson<unknown[]>(auditRes)) ?? []) : [];
+
+  return json({
+    generatedAt: new Date().toISOString(),
+    users: { total: totalUsers, last7d: newUsers7d, warning: usersWarning },
+    library: { total: entries.length, byStatus, topTitles },
+    feedback: { totalOpen, byKind, byCategory, recent7d },
+    moderation: { usersWithNotes, contentActions, takedowns },
+    featured: featuredCount ?? 0,
+    announcementActive: Boolean(announcement?.active),
+    maintenanceActive: Boolean(maintenance?.active),
+    recentAudit,
+    notes: [
+      'Traffic/activity metrics are derived from available application data (accounts, library activity, submissions, moderation, and audit events).',
+      'For request-level web analytics (page views, referrers, geos, devices), connect a dedicated analytics provider or add client/server event instrumentation.',
+    ],
+  });
+}
+
 /* ─────────────────────────────── entrypoint ───────────────────────────────── */
 
 export const onRequest: PagesFunction<Env> = async (context) => {
@@ -604,6 +744,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   try {
     if (route === 'me' && method === 'GET') return await handleMe(ctx);
     if (route === 'stats' && method === 'GET') return await handleStats(ctx);
+    if (route === 'traffic' && method === 'GET') return await handleTraffic(ctx);
     if (route === 'users' && method === 'GET') return await handleUsers(ctx, url);
     if (route === 'users' && method === 'POST') return await handleUserAction(ctx, request);
     if (route === 'library' && method === 'GET') return await handleLibrary(ctx, url);

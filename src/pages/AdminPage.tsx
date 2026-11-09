@@ -24,14 +24,23 @@ import { FeaturedTab } from '@/components/admin/FeaturedTab';
 import { SiteSettingsTab } from '@/components/admin/SiteSettingsTab';
 import { AuditTab } from '@/components/admin/AuditTab';
 import { FeedbackTab } from '@/components/admin/FeedbackTab';
+import { TrafficTab } from '@/components/admin/TrafficTab';
+import { AppealsTab } from '@/components/admin/AppealsTab';
+import { ContentModerationTab } from '@/components/admin/ContentModerationTab';
+import { ReviewsTab } from '@/components/admin/ReviewsTab';
+import { BarChart3, Scale, ShieldAlert, Quote } from 'lucide-react';
 import { usePageMeta } from '@/hooks/usePageMeta';
 
-type TabKey = 'overview' | 'users' | 'library' | 'feedback' | 'contact' | 'featured' | 'settings' | 'audit';
+type TabKey = 'overview' | 'traffic' | 'users' | 'appeals' | 'moderation' | 'reviews' | 'library' | 'feedback' | 'contact' | 'featured' | 'settings' | 'audit';
 
 const TABS: { key: TabKey; label: string; icon: typeof Shield }[] = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { key: 'traffic', label: 'Traffic', icon: BarChart3 },
   { key: 'users', label: 'Users', icon: Users },
-  { key: 'library', label: 'Library entries', icon: ListChecks },
+  { key: 'appeals', label: 'Appeals', icon: Scale },
+  { key: 'moderation', label: 'Content moderation', icon: ShieldAlert },
+  { key: 'reviews', label: 'Reviews', icon: Quote },
+  { key: 'library', label: 'Library', icon: ListChecks },
   { key: 'feedback', label: 'Feedback', icon: Inbox },
   { key: 'contact', label: 'Contact', icon: Mail },
   { key: 'featured', label: "Editor's Picks", icon: Sparkles },
@@ -141,7 +150,11 @@ export function AdminPage() {
       </div>
 
       {tab === 'overview' && <OverviewTab onNavigate={setTab} />}
+      {tab === 'traffic' && <TrafficTab />}
       {tab === 'users' && <UsersTab />}
+      {tab === 'appeals' && <AppealsTab />}
+      {tab === 'moderation' && <ContentModerationTab />}
+      {tab === 'reviews' && <ReviewsTab />}
       {tab === 'library' && <LibraryTab />}
       {tab === 'feedback' && <FeedbackTab />}
       {tab === 'contact' && <FeedbackTab mode="contact" />}

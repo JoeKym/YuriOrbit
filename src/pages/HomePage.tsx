@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Heart } from 'lucide-react';
 import { Hero } from '@/components/home/Hero';
+import { TestimonialsSection } from '@/components/site/TestimonialsSection';
 import { Carousel } from '@/components/content/Carousel';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import type { ContentTitle, ContentType } from '@/types/content';
@@ -266,6 +267,8 @@ export function HomePage() {
         <Carousel title="Emotional Drama" titles={get('drama')} loading={loading} />
         <Carousel title="Historical GL" titles={get('historical')} loading={loading} />
       </div>
+
+      <TestimonialsSection />
     </div>
   );
 }
