@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Hash, Search, SlidersHorizontal, UserRound } from 'lucide-react';
 import { ContentCardGrid, ContentCardSkeleton } from '@/components/content/ContentCard';
+import { LoadMoreButton } from '@/components/content/LoadMoreButton';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useMaturity } from '@/hooks/useMaturity';
 import { FORMAT_FILTERS, liveSearch, matchesFormat, type FormatFilter, type LiveSearchResult } from '@/lib/search';
@@ -9,6 +10,9 @@ import { MATURITY_LABELS } from '@/types/content';
 import { cn } from '@/lib/utils/format';
 
 const FORMAT_KEYS = FORMAT_FILTERS.map((filter) => filter.key);
+
+/** Results fetched per request; "Load more" asks for another batch. */
+const SEARCH_PAGE = 60;
 
 export function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -19,6 +23,8 @@ export function SearchPage() {
   const [input, setInput] = useState(query);
   const [result, setResult] = useState<LiveSearchResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadedLimit, setLoadedLimit] = useState(SEARCH_PAGE);
   const { level } = useMaturity();
 
   const debouncedInput = useDebounce(input, 350);
@@ -43,11 +49,14 @@ export function SearchPage() {
     if (trimmed.length < 2) {
       setResult(null);
       setLoading(false);
+      setLoadingMore(false);
+      setLoadedLimit(SEARCH_PAGE);
       return;
     }
 
     setLoading(true);
-    liveSearch(trimmed, { limit: 60, includeCreators: true })
+    setLoadedLimit(SEARCH_PAGE);
+    liveSearch(trimmed, { limit: SEARCH_PAGE, includeCreators: true })
       .then((next) => {
         if (!cancelled) setResult(next);
       })
@@ -59,6 +68,23 @@ export function SearchPage() {
       cancelled = true;
     };
   }, [query, level]);
+
+  const loadMoreResults = async () => {
+    const trimmed = query.trim();
+    if (trimmed.length < 2 || loadingMore) return;
+
+    const nextLimit = loadedLimit + SEARCH_PAGE;
+    setLoadingMore(true);
+    try {
+      const next = await liveSearch(trimmed, { limit: nextLimit, includeCreators: true });
+      setResult(next);
+      setLoadedLimit(nextLimit);
+    } catch {
+      // Keep the results already on screen if the next batch fails.
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const hits = useMemo(
     () => (result?.hits ?? []).filter((hit) => matchesFormat(hit.title, format)),
@@ -192,6 +218,13 @@ export function SearchPage() {
                   })}
                 </div>
               )}
+
+              <LoadMoreButton
+                onClick={loadMoreResults}
+                loading={loadingMore}
+                hasMore={(result?.hits.length ?? 0) >= loadedLimit}
+                count={hits.length}
+              />
             </>
           )}
         </>

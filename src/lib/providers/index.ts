@@ -170,19 +170,16 @@ export async function searchGLTitles(
   perPage = 20
 ): Promise<PaginatedResult> {
   const contentType = filter.contentType;
+  const isScreen = contentType === 'MOVIE' || contentType === 'TV' || contentType === 'DRAMA';
 
-  const promises: Promise<PaginatedResult>[] = [
-    anilistSearch(filter, page, perPage),
-    mangadexSearchGL(filter, page, perPage),
-  ];
+  // MangaDex only indexes comics, so it stays out of film/series and novel queries.
+  const useMangaDex = !isScreen && contentType !== 'LIGHT_NOVEL';
+  const promises: Promise<PaginatedResult>[] = [anilistSearch(filter, page, perPage)];
+  if (useMangaDex) {
+    promises.push(mangadexSearchGL(filter, page, perPage));
+  }
 
-  if (
-    contentType === 'MOVIE' ||
-    contentType === 'TV' ||
-    contentType === 'DRAMA' ||
-    !contentType ||
-    contentType === 'ALL'
-  ) {
+  if (isScreen || !contentType || contentType === 'ALL') {
     promises.push(tmdbSearchGL(filter, page));
   }
 

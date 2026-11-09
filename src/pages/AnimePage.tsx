@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertCircle, Film, RotateCcw, Search, Sparkles, Tv } from 'lucide-react';
 import { ContentCardGrid, ContentCardSkeleton } from '@/components/content/ContentCard';
-import type { ContentTitle } from '@/types/content';
-import { getGLByContentType } from '@/lib/providers';
-import { GL_ALLOWED_CLASSIFICATIONS } from '@/lib/providers/classify';
+import { LoadMoreButton } from '@/components/content/LoadMoreButton';
+import type { ContentType, PaginatedResult } from '@/types/content';
+import { searchGLTitles } from '@/lib/providers';
+import { usePaginatedTitles } from '@/hooks/usePaginatedTitles';
 import { cn } from '@/lib/utils/format';
 
 type AnimeTab = 'ALL' | 'TV' | 'MOVIE';
@@ -15,59 +16,31 @@ const TABS: { value: AnimeTab; label: string; icon: typeof Tv }[] = [
   { value: 'MOVIE', label: 'Films', icon: Film },
 ];
 
+const PER_PAGE = 24;
+
+/** One page of anime for a tab. "Everything" merges series and films. */
+async function fetchAnimePage(tab: AnimeTab, page: number): Promise<PaginatedResult> {
+  if (tab !== 'ALL') {
+    return searchGLTitles({ contentType: tab as ContentType }, page, PER_PAGE);
+  }
+
+  const [series, films] = await Promise.all([
+    searchGLTitles({ contentType: 'TV' }, page, PER_PAGE / 2),
+    searchGLTitles({ contentType: 'MOVIE' }, page, PER_PAGE / 2),
+  ]);
+
+  return {
+    items: [...series.items, ...films.items],
+    page,
+    perPage: PER_PAGE,
+    total: (series.total ?? 0) + (films.total ?? 0),
+    hasNextPage: series.hasNextPage || films.hasNextPage,
+  };
+}
+
 export function AnimePage() {
-  const [titles, setTitles] = useState<ContentTitle[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
   const [tab, setTab] = useState<AnimeTab>('ALL');
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      setLoading(true);
-      setError(false);
-      try {
-        const [series, films] = await Promise.allSettled([
-          getGLByContentType('TV', 30),
-          getGLByContentType('MOVIE', 30),
-        ]);
-
-        if (cancelled) return;
-
-        const merged: ContentTitle[] = [];
-        const seen = new Set<string>();
-        for (const result of [series, films]) {
-          if (result.status !== 'fulfilled') continue;
-          for (const title of result.value) {
-            if (seen.has(title.id)) continue;
-            seen.add(title.id);
-            merged.push(title);
-          }
-        }
-
-        const glOnly = merged.filter((t) => GL_ALLOWED_CLASSIFICATIONS.includes(t.glClassification));
-
-        if (glOnly.length === 0 && series.status === 'rejected' && films.status === 'rejected') {
-          setError(true);
-        }
-
-        setTitles(glOnly);
-      } catch {
-        if (!cancelled) setError(true);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [reloadKey]);
-
-  const filtered = tab === 'ALL' ? titles : titles.filter((t) => t.contentType === tab);
+  const feed = usePaginatedTitles((page) => fetchAnimePage(tab, page), tab);
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
@@ -98,20 +71,20 @@ export function AnimePage() {
             </button>
           );
         })}
-        {!loading && !error && (
+        {!feed.loading && !feed.error && (
           <span className="ml-auto text-xs text-ink-400">
-            {filtered.length} title{filtered.length !== 1 ? 's' : ''}
+            {feed.titles.length} title{feed.titles.length !== 1 ? 's' : ''}
           </span>
         )}
       </div>
 
-      {loading ? (
+      {feed.loading ? (
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
           {Array.from({ length: 14 }).map((_, i) => (
             <ContentCardSkeleton key={i} />
           ))}
         </div>
-      ) : error ? (
+      ) : feed.error ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-ink-800 bg-ink-900/40 p-8 py-20 text-center">
           <AlertCircle className="mb-3 h-10 w-10 text-rose-400" />
           <h3 className="text-base font-semibold text-ink-100">Unable to load anime</h3>
@@ -120,7 +93,7 @@ export function AnimePage() {
           </p>
           <div className="mt-4 flex gap-3">
             <button
-              onClick={() => setReloadKey((k) => k + 1)}
+              onClick={feed.reload}
               className="btn-primary flex items-center gap-1.5 text-xs"
             >
               <RotateCcw className="h-3.5 w-3.5" />
@@ -131,7 +104,7 @@ export function AnimePage() {
             </Link>
           </div>
         </div>
-      ) : filtered.length === 0 ? (
+      ) : feed.titles.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-ink-800 p-8 py-20 text-center">
           <Search className="mb-3 h-10 w-10 text-ink-600" />
           <h3 className="text-base font-medium text-ink-200">No anime in this category yet</h3>
@@ -143,7 +116,15 @@ export function AnimePage() {
           </Link>
         </div>
       ) : (
-        <ContentCardGrid titles={filtered} />
+        <>
+          <ContentCardGrid titles={feed.titles} />
+          <LoadMoreButton
+            onClick={feed.loadMore}
+            loading={feed.loadingMore}
+            hasMore={feed.hasNextPage}
+            count={feed.titles.length}
+          />
+        </>
       )}
     </div>
   );
