@@ -84,6 +84,10 @@ export function FaqPage() {
 
       <div className="mt-10 text-center">
         <Link to="/discover" className="btn-primary">Start Exploring GL Titles</Link>
+        <p className="mt-4 text-sm text-ink-400">
+          Still have a question? <Link to="/contact" className="text-rose-300 hover:underline">Contact us</Link>{' '}
+          or <Link to="/feedback" className="text-rose-300 hover:underline">send feedback</Link>.
+        </p>
       </div>
     </div>
   );

@@ -37,6 +37,14 @@ const FOOTER_SECTIONS = [
     ],
   },
   {
+    title: 'Support',
+    links: [
+      { to: '/faq', label: 'FAQ' },
+      { to: '/contact', label: 'Contact Us' },
+      { to: '/feedback', label: 'Send Feedback' },
+    ],
+  },
+  {
     title: 'Legal',
     links: [
       { to: '/privacy', label: 'Privacy Policy' },
@@ -49,7 +57,7 @@ export function Footer() {
   return (
     <footer className="mt-16 border-t border-ink-800 bg-ink-950">
       <div className="mx-auto max-w-[1600px] px-4 py-12 md:px-6">
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-3 lg:grid-cols-7">
           <div className="col-span-2">
             <Link to="/" className="flex items-center gap-2 mb-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500 to-lavender-600">
