@@ -47,6 +47,17 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/tmdb/, ''),
       },
+      // Production serves this from functions/_lib/anilist-proxy.ts, which adds
+      // the edge cache. Plain `vite dev` has no Pages Functions, so forward the
+      // GraphQL POST to AniList directly.
+      '/api/anilist': {
+        target: 'https://graphql.anilist.co',
+        changeOrigin: true,
+        rewrite: () => '/',
+        headers: {
+          Accept: 'application/json',
+        },
+      },
     },
   },
   optimizeDeps: {

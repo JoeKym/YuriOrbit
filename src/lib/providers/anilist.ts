@@ -8,6 +8,24 @@ const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
 const REQUEST_TIMEOUT = 15000;
 const REQUEST_DELAY = 350;
 
+const env = (import.meta as { env?: Record<string, string> }).env || {};
+const isBrowser = typeof window !== 'undefined';
+const clean = (val?: string) =>
+  !val || val.trim() === '' || val.trim().toLowerCase() === 'value' ? undefined : val.trim();
+
+/**
+ * In the browser every AniList query goes through our same-origin edge proxy
+ * (functions/_lib/anilist-proxy.ts), which caches each distinct query so the
+ * upstream call count is bounded by TTL rather than by visitors. Node/test runs
+ * have no Pages Function, so they talk to AniList directly.
+ */
+const configuredAnilistProxy = clean(env.VITE_ANILIST_API_URL);
+const ANILIST_PROXY = configuredAnilistProxy
+  ? configuredAnilistProxy.replace(/\/+$/, '')
+  : isBrowser
+    ? '/api/anilist'
+    : '';
+
 // AniList tags Yuri as a tag
 const GL_TAGS = ['Yuri'];
 
@@ -76,32 +94,64 @@ function timeoutFetch(url: string, options: RequestInit, ms: number): Promise<Re
 
 let lastRequestTime = 0;
 
-async function anilistQuery(query: string, variables: Record<string, unknown>): Promise<unknown> {
+/** Only needed when we talk to AniList ourselves; the edge proxy paces upstream. */
+async function paceAnilistRequest(): Promise<void> {
   const now = Date.now();
   const elapsed = now - lastRequestTime;
   if (elapsed < REQUEST_DELAY) {
     await new Promise((r) => setTimeout(r, REQUEST_DELAY - elapsed));
   }
   lastRequestTime = Date.now();
+}
 
+/** Error carrying the HTTP status, so callers can tell 404/5xx from a GraphQL error. */
+type AnilistError = Error & { status?: number };
+
+async function postAnilistQuery(endpoint: string, body: string): Promise<unknown> {
   const resp = await timeoutFetch(
-    ANILIST_ENDPOINT,
+    endpoint,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ query, variables }),
+      body,
     },
     REQUEST_TIMEOUT
   );
   if (!resp.ok) {
     const text = await resp.text().catch(() => '');
-    throw new Error(`AniList ${resp.status}: ${text.slice(0, 200)}`);
+    const error = new Error(`AniList ${resp.status}: ${text.slice(0, 200)}`) as AnilistError;
+    error.status = resp.status;
+    throw error;
   }
   const json = await resp.json();
   if (json.errors) {
-    throw new Error(json.errors[0]?.message || 'AniList GraphQL error');
+    // Status 200: the query itself is wrong, retrying elsewhere will not help.
+    const error = new Error(json.errors[0]?.message || 'AniList GraphQL error') as AnilistError;
+    error.status = 200;
+    throw error;
   }
   return json.data;
+}
+
+async function anilistQuery(query: string, variables: Record<string, unknown>): Promise<unknown> {
+  const body = JSON.stringify({ query, variables });
+
+  if (ANILIST_PROXY) {
+    try {
+      return await postAnilistQuery(ANILIST_PROXY, body);
+    } catch (error) {
+      // A missing or broken proxy (static-only self-host, Pages Function down)
+      // must not take the catalogue with it: AniList accepts browser requests.
+      const status = (error as AnilistError).status;
+      const proxyUnavailable = status === undefined || status === 404 || status === 405 || status >= 500;
+      if (!isBrowser || !proxyUnavailable) throw error;
+      await paceAnilistRequest();
+    }
+  } else {
+    await paceAnilistRequest();
+  }
+
+  return postAnilistQuery(ANILIST_ENDPOINT, body);
 }
 
 interface MediaFilterVars {
