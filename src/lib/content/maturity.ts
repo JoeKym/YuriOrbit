@@ -41,6 +41,8 @@ export function mangadexContentRatings(max: MaturityLevel): ('safe' | 'suggestiv
   const allowed: ('safe' | 'suggestive' | 'erotica' | 'pornographic')[] = ['safe'];
   if (maturityRank(max) >= maturityRank('SUGGESTIVE')) allowed.push('suggestive');
   if (maturityRank(max) >= maturityRank('EROTICA')) allowed.push('erotica');
+  // At EROTICA level, also include pornographic so the library grows in adult settings
+  if (max === 'EROTICA') allowed.push('pornographic');
   if (maturityRank(max) >= maturityRank('PORNOGRAPHIC')) allowed.push('pornographic');
   return allowed;
 }
@@ -134,7 +136,14 @@ export function isWithinMaturity(
   title: Pick<ContentTitle, 'maturityRating' | 'isAdult' | 'tags' | 'genres' | 'description'>,
   max: MaturityLevel
 ): boolean {
-  return maturityRank(maturityOf(title)) <= maturityRank(max);
+  const titleRank = maturityRank(maturityOf(title));
+  const maxRank = maturityRank(max);
+  // At EROTICA level, also include PORNOGRAPHIC titles so the library grows in adult settings
+  if (max === 'EROTICA' && titleRank > maxRank) {
+    const inferred = maturityOf(title);
+    if (inferred === 'PORNOGRAPHIC') return true;
+  }
+  return titleRank <= maxRank;
 }
 
 export function filterByMaturity<
