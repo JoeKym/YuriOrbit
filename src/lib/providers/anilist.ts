@@ -14,17 +14,17 @@ const clean = (val?: string) =>
   !val || val.trim() === '' || val.trim().toLowerCase() === 'value' ? undefined : val.trim();
 
 /**
- * In the browser every AniList query goes through our same-origin edge proxy
- * (functions/_lib/anilist-proxy.ts), which caches each distinct query so the
- * upstream call count is bounded by TTL rather than by visitors. Node/test runs
- * have no Pages Function, so they talk to AniList directly.
+ * Optional AniList proxy, off unless VITE_ANILIST_API_URL points at one.
+ *
+ * functions/_lib/anilist-proxy.ts caches each distinct query at the edge, which
+ * is what we want, but it cannot work on Cloudflare: AniList blocks Pages /
+ * Workers egress IPs wholesale ("You have been manually blocked"), because that
+ * egress is shared. So the browser calls graphql.anilist.co directly, where the
+ * visitor's own IP is what AniList accepts. Point this at a relay with its own
+ * egress address to switch the cached path back on.
  */
 const configuredAnilistProxy = clean(env.VITE_ANILIST_API_URL);
-const ANILIST_PROXY = configuredAnilistProxy
-  ? configuredAnilistProxy.replace(/\/+$/, '')
-  : isBrowser
-    ? '/api/anilist'
-    : '';
+const ANILIST_PROXY = configuredAnilistProxy ? configuredAnilistProxy.replace(/\/+$/, '') : '';
 
 // AniList tags Yuri as a tag
 const GL_TAGS = ['Yuri'];
@@ -143,7 +143,10 @@ async function anilistQuery(query: string, variables: Record<string, unknown>): 
       // A missing or broken proxy (static-only self-host, Pages Function down)
       // must not take the catalogue with it: AniList accepts browser requests.
       const status = (error as AnilistError).status;
-      const proxyUnavailable = status === undefined || status === 404 || status === 405 || status >= 500;
+      // 403 included on purpose: upstream policy blocks are the failure mode we
+      // actually hit, and a direct call is better than a dead catalogue.
+      const proxyUnavailable =
+        status === undefined || status === 403 || status === 404 || status === 405 || status >= 500;
       if (!isBrowser || !proxyUnavailable) throw error;
       await paceAnilistRequest();
     }
