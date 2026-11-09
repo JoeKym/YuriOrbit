@@ -2,11 +2,13 @@
  * YuriOrbit public feedback endpoint — Cloudflare Pages Function.
  *
  * Routes:
- *   POST /api/feedback   { kind, category, message, contactEmail?, pageUrl?, titleId?, titleName? }
+ *   POST /api/feedback
+ *     { kind, category, message, contactEmail?, name?, subject?, pageUrl?, titleId?, titleName? }
  *
- * Used by the /feedback form and by the "Report incorrect information" control
- * on title pages. Rows land in `feedback_reports` and are triaged in the admin
- * console (Feedback tab).
+ * Used by the /feedback form, the "Report incorrect information" control on
+ * title pages, and the on-site contact form at /contact (kind: 'contact').
+ * Rows land in `feedback_reports` and are triaged in the admin console
+ * (Feedback and Contact tabs).
  *
  * Security model: this route is public by design, so it only ever INSERTs, and
  * it does so with the service role key (which never reaches the browser). Input
@@ -19,7 +21,7 @@ interface Env {
   SUPABASE_SECRET_KEY?: string;
 }
 
-const KINDS = new Set(['feedback', 'report']);
+const KINDS = new Set(['feedback', 'report', 'contact']);
 const CATEGORIES = new Set(['issue', 'feature', 'general', 'metadata']);
 
 const LIMITS = {
@@ -29,6 +31,8 @@ const LIMITS = {
   pageUrl: 500,
   titleId: 200,
   titleName: 300,
+  name: 120,
+  subject: 200,
 };
 
 const JSON_HEADERS = {
@@ -41,6 +45,8 @@ interface FeedbackBody {
   category?: string;
   message?: string;
   contactEmail?: string;
+  name?: string;
+  subject?: string;
   pageUrl?: string;
   titleId?: string;
   titleName?: string;
@@ -100,7 +106,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   if (!env.SUPABASE_URL || !serviceKey(env)) {
     return fail(
-      'Feedback is not configured on this deployment yet. Please email mail.jkyme@gmail.com instead.',
+      'Messages are not configured on this deployment yet. Please email mail.jkyme@gmail.com instead.',
       501,
       { needsSetup: true }
     );
@@ -126,12 +132,17 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const message = clean(body.message, LIMITS.message);
   if (!message || message.length < LIMITS.messageMin) {
-    return fail(`Please describe it in at least ${LIMITS.messageMin} characters.`, 400);
+    const what = kind === 'contact' ? 'your message' : 'it';
+    return fail(`Please write ${what} in at least ${LIMITS.messageMin} characters.`, 400);
   }
 
   const contactEmail = clean(body.contactEmail, LIMITS.email);
   if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
     return fail('That contact email does not look valid.', 400);
+  }
+  // Contact messages are answered by email, so a reply address is required.
+  if (kind === 'contact' && !contactEmail) {
+    return fail('Please add an email address so we can reply.', 400);
   }
 
   const authHeader = request.headers.get('Authorization') || '';
@@ -143,6 +154,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     category,
     message,
     contact_email: contactEmail,
+    contact_name: clean(body.name, LIMITS.name),
+    subject: clean(body.subject, LIMITS.subject),
     user_id: user?.id ?? null,
     user_email: user?.email ?? null,
     page_url: clean(body.pageUrl, LIMITS.pageUrl),
@@ -159,11 +172,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     if (!res.ok) {
       console.error('[feedback] insert failed', res.status, await res.text());
-      return fail('Could not save your feedback right now. Please try again shortly.', 502);
+      return fail('Could not send your message right now. Please try again shortly.', 502);
     }
   } catch (err) {
     console.error('[feedback] insert error', err);
-    return fail('Could not save your feedback right now. Please try again shortly.', 502);
+    return fail('Could not send your message right now. Please try again shortly.', 502);
   }
 
   return json({ ok: true });

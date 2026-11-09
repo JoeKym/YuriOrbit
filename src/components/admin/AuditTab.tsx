@@ -9,8 +9,8 @@ const ACTION_LABELS: Record<string, string> = {
   'featured.add': 'Featured a title',
   'featured.remove': 'Unfeatured a title',
   'settings.update': 'Updated site settings',
-  'feedback.update_status': 'Triaged a feedback submission',
-  'feedback.delete': 'Deleted a feedback submission',
+  'feedback.update_status': 'Triaged a feedback or contact message',
+  'feedback.delete': 'Deleted a feedback or contact message',
 };
 
 export function AuditTab() {

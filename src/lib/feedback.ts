@@ -1,13 +1,13 @@
 /**
  * Client for the public feedback endpoint (/api/feedback).
  *
- * Used by the /feedback form and by the "Report incorrect information" control
- * on title pages. Submissions are stored server-side and triaged in the admin
- * console under the Feedback tab.
+ * Used by the /feedback form, the "Report incorrect information" control on
+ * title pages, and the contact form at /contact. Submissions are stored
+ * server-side and triaged in the admin console (Feedback and Contact tabs).
  */
 import { supabase } from '@/lib/supabase';
 
-export type FeedbackKind = 'feedback' | 'report';
+export type FeedbackKind = 'feedback' | 'report' | 'contact';
 export type FeedbackCategory = 'issue' | 'feature' | 'general' | 'metadata';
 
 export interface FeedbackInput {
@@ -15,6 +15,10 @@ export interface FeedbackInput {
   category: FeedbackCategory;
   message: string;
   contactEmail?: string;
+  /** Sender name, used by contact messages. */
+  name?: string;
+  /** Subject line, used by contact messages. */
+  subject?: string;
   pageUrl?: string;
   titleId?: string;
   titleName?: string;
@@ -47,6 +51,8 @@ export async function submitFeedback(input: FeedbackInput): Promise<FeedbackResu
     ...input,
     message: input.message.trim(),
     contactEmail: input.contactEmail?.trim() || undefined,
+    name: input.name?.trim() || undefined,
+    subject: input.subject?.trim() || undefined,
     pageUrl: input.pageUrl ?? (typeof window !== 'undefined' ? window.location.pathname : undefined),
   };
 

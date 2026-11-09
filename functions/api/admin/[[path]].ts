@@ -481,11 +481,13 @@ async function handleFeedback(ctx: AdminContext, url: URL): Promise<Response> {
 
   const filters: string[] = ['select=*', 'order=created_at.desc'];
   if (FEEDBACK_STATUSES.includes(status)) filters.push(`status=eq.${status}`);
-  if (kind === 'feedback' || kind === 'report') filters.push(`kind=eq.${kind}`);
+  if (kind === 'feedback' || kind === 'report' || kind === 'contact') {
+    filters.push(`kind=eq.${kind}`);
+  }
   if (q) {
     const term = encodeURIComponent(q);
     filters.push(
-      `or=(message.ilike.*${term}*,contact_email.ilike.*${term}*,title_name.ilike.*${term}*)`
+      `or=(message.ilike.*${term}*,contact_email.ilike.*${term}*,contact_name.ilike.*${term}*,subject.ilike.*${term}*,title_name.ilike.*${term}*)`
     );
   }
 
@@ -496,8 +498,8 @@ async function handleFeedback(ctx: AdminContext, url: URL): Promise<Response> {
 
   if (!res.ok) {
     const hint =
-      res.status === 404
-        ? ' Has the feedback_reports migration been applied?'
+      res.status === 404 || res.status === 400
+        ? ' Has the feedback/contact migration been applied?'
         : '';
     return fail(`Could not load feedback (HTTP ${res.status}).${hint}`, 502);
   }

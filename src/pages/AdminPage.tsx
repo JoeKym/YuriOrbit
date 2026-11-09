@@ -5,6 +5,7 @@ import {
   Compass,
   Inbox,
   LayoutDashboard,
+  Mail,
   ListChecks,
   Megaphone,
   Shield,
@@ -24,13 +25,14 @@ import { SiteSettingsTab } from '@/components/admin/SiteSettingsTab';
 import { AuditTab } from '@/components/admin/AuditTab';
 import { FeedbackTab } from '@/components/admin/FeedbackTab';
 
-type TabKey = 'overview' | 'users' | 'library' | 'feedback' | 'featured' | 'settings' | 'audit';
+type TabKey = 'overview' | 'users' | 'library' | 'feedback' | 'contact' | 'featured' | 'settings' | 'audit';
 
 const TABS: { key: TabKey; label: string; icon: typeof Shield }[] = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard },
   { key: 'users', label: 'Users', icon: Users },
   { key: 'library', label: 'Library entries', icon: ListChecks },
   { key: 'feedback', label: 'Feedback', icon: Inbox },
+  { key: 'contact', label: 'Contact', icon: Mail },
   { key: 'featured', label: "Editor's Picks", icon: Sparkles },
   { key: 'settings', label: 'Site settings', icon: Megaphone },
   { key: 'audit', label: 'Audit log', icon: Activity },
@@ -139,6 +141,7 @@ export function AdminPage() {
       {tab === 'users' && <UsersTab />}
       {tab === 'library' && <LibraryTab />}
       {tab === 'feedback' && <FeedbackTab />}
+      {tab === 'contact' && <FeedbackTab mode="contact" />}
       {tab === 'featured' && <FeaturedTab />}
       {tab === 'settings' && <SiteSettingsTab />}
       {tab === 'audit' && <AuditTab />}

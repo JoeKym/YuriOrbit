@@ -81,9 +81,11 @@ export type FeedbackStatus = 'open' | 'resolved' | 'dismissed';
 
 export interface FeedbackReport {
   id: string;
-  kind: 'feedback' | 'report';
+  kind: 'feedback' | 'report' | 'contact';
   category: string;
   message: string;
+  contact_name: string | null;
+  subject: string | null;
   contact_email: string | null;
   user_id: string | null;
   user_email: string | null;

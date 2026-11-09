@@ -7,6 +7,7 @@ import {
   Mail,
   MessageSquare,
   RefreshCw,
+  Reply,
   RotateCcw,
   Search,
   Trash2,
@@ -15,6 +16,14 @@ import { Link } from 'react-router-dom';
 import { adminApi, type FeedbackReport, type FeedbackStatus } from '@/lib/admin/api';
 import { useDebounce } from '@/hooks/useDebounce';
 import { cn } from '@/lib/utils/format';
+
+interface FeedbackTabProps {
+  /**
+   * 'feedback' lists feedback submissions and content reports.
+   * 'contact' lists messages sent from the on-site contact form.
+   */
+  mode?: 'feedback' | 'contact';
+}
 
 type StatusFilter = FeedbackStatus | '';
 
@@ -38,11 +47,12 @@ const STATUS_STYLES: Record<FeedbackStatus, string> = {
   dismissed: 'border-ink-700 bg-ink-850 text-ink-400',
 };
 
-export function FeedbackTab() {
+export function FeedbackTab({ mode = 'feedback' }: FeedbackTabProps) {
+  const isContact = mode === 'contact';
   const [query, setQuery] = useState('');
   const debounced = useDebounce(query, 350);
   const [status, setStatus] = useState<StatusFilter>('open');
-  const [kind, setKind] = useState<'all' | 'feedback' | 'report'>('all');
+  const [kind, setKind] = useState<'feedback' | 'report'>('feedback');
   const [page, setPage] = useState(1);
   const [reports, setReports] = useState<FeedbackReport[]>([]);
   const [total, setTotal] = useState(0);
@@ -58,7 +68,7 @@ export function FeedbackTab() {
     const result = await adminApi.feedback({
       q: debounced,
       status,
-      kind: kind === 'all' ? '' : kind,
+      kind: isContact ? 'contact' : kind,
       page,
       perPage,
     });
@@ -69,7 +79,7 @@ export function FeedbackTab() {
       setError(result.error);
     }
     setLoading(false);
-  }, [debounced, status, kind, page]);
+  }, [debounced, status, kind, page, isContact]);
 
   useEffect(() => {
     load();
@@ -88,7 +98,8 @@ export function FeedbackTab() {
   };
 
   const handleDelete = async (report: FeedbackReport) => {
-    if (!window.confirm('Delete this submission permanently?')) return;
+    const what = isContact ? 'message' : 'submission';
+    if (!window.confirm(`Delete this ${what} permanently?`)) return;
     setBusyId(report.id);
     const result = await adminApi.deleteFeedback(report.id);
     setBusyId(null);
@@ -106,19 +117,36 @@ export function FeedbackTab() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search message, contact or title…"
+            placeholder={
+              isContact ? 'Search subject, name, email or message…' : 'Search message, contact or title…'
+            }
             className="input-field py-2 pl-9 text-xs"
           />
         </div>
-        <select
-          value={kind}
-          onChange={(e) => setKind(e.target.value as 'all' | 'feedback' | 'report')}
-          className="rounded-lg border border-ink-700 bg-ink-850 px-3 py-2 text-xs text-ink-50 focus:outline-none"
-        >
-          <option value="all">All types</option>
-          <option value="feedback">Feedback</option>
-          <option value="report">Content reports</option>
-        </select>
+        {!isContact && (
+          <div className="flex rounded-lg border border-ink-700 bg-ink-850 p-0.5 text-xs">
+            <button
+              type="button"
+              onClick={() => setKind('feedback')}
+              className={cn(
+                'rounded-md px-2.5 py-1.5 transition-colors',
+                kind === 'feedback' ? 'bg-ink-700 text-ink-50' : 'text-ink-300 hover:text-ink-100'
+              )}
+            >
+              Feedback
+            </button>
+            <button
+              type="button"
+              onClick={() => setKind('report')}
+              className={cn(
+                'rounded-md px-2.5 py-1.5 transition-colors',
+                kind === 'report' ? 'bg-ink-700 text-ink-50' : 'text-ink-300 hover:text-ink-100'
+              )}
+            >
+              Content reports
+            </button>
+          </div>
+        )}
         <button
           type="button"
           onClick={load}
@@ -128,7 +156,9 @@ export function FeedbackTab() {
         >
           <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
         </button>
-        <span className="text-xs text-ink-400">{total} submissions</span>
+        <span className="text-xs text-ink-400">
+          {total} {isContact ? 'messages' : 'submissions'}
+        </span>
       </div>
 
       <div className="flex flex-wrap gap-1.5">
@@ -157,16 +187,18 @@ export function FeedbackTab() {
 
       {loading ? (
         <div className="flex items-center gap-2 rounded-xl border border-ink-800 bg-ink-900 p-6 text-sm text-ink-300">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading submissions…
+          <Loader2 className="h-4 w-4 animate-spin" /> Loading {isContact ? 'messages' : 'submissions'}…
         </div>
       ) : reports.length === 0 ? (
         <div className="card-surface p-6 text-xs text-ink-400">
-          {status === 'open' ? 'No open submissions. Nice and quiet.' : 'No submissions match these filters.'}
+          {status === 'open'
+            ? `No open ${isContact ? 'messages' : 'submissions'}. Nice and quiet.`
+            : `No ${isContact ? 'messages' : 'submissions'} match these filters.`}
         </div>
       ) : (
         <ul className="space-y-2">
           {reports.map((report) => {
-            const KindIcon = report.kind === 'report' ? Flag : MessageSquare;
+            const KindIcon = report.kind === 'report' ? Flag : isContact ? Mail : MessageSquare;
             const busy = busyId === report.id;
             return (
               <li key={report.id} className="card-surface p-4">
@@ -180,11 +212,13 @@ export function FeedbackTab() {
                     )}
                   >
                     <KindIcon className="h-3 w-3" />
-                    {report.kind === 'report' ? 'Content report' : 'Feedback'}
+                    {report.kind === 'report' ? 'Content report' : isContact ? 'Contact' : 'Feedback'}
                   </span>
-                  <span className="text-[11px] text-ink-400">
-                    {CATEGORY_LABELS[report.category] || report.category}
-                  </span>
+                  {!isContact && (
+                    <span className="text-[11px] text-ink-400">
+                      {CATEGORY_LABELS[report.category] || report.category}
+                    </span>
+                  )}
                   <span
                     className={cn(
                       'rounded-md border px-1.5 py-0.5 text-[10px] font-medium capitalize',
@@ -198,11 +232,19 @@ export function FeedbackTab() {
                   </span>
                 </div>
 
-                <p className="mt-2 whitespace-pre-wrap break-words text-sm text-ink-200">
+                {isContact && report.subject && (
+                  <p className="mt-2 text-sm font-medium text-ink-100">{report.subject}</p>
+                )}
+
+                <p className="mt-1 whitespace-pre-wrap break-words text-sm text-ink-200">
                   {report.message}
                 </p>
 
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-ink-400">
+                  {isContact && report.contact_name && (
+                    <span className="text-ink-200">{report.contact_name}</span>
+                  )}
+
                   {report.title_id ? (
                     <Link
                       to={`/title/${report.title_id}`}
@@ -212,13 +254,13 @@ export function FeedbackTab() {
                       {report.title_name || report.title_id}
                     </Link>
                   ) : (
-                    report.page_url && <span className="text-ink-500">from {report.page_url}</span>
+                    report.page_url && !isContact && <span className="text-ink-500">from {report.page_url}</span>
                   )}
 
                   {report.contact_email && (
                     <a
                       href={`mailto:${report.contact_email}?subject=${encodeURIComponent(
-                        'Re: your YuriOrbit feedback'
+                        report.subject ? `Re: ${report.subject}` : 'Re: your message to YuriOrbit'
                       )}`}
                       className="inline-flex items-center gap-1 hover:text-ink-100"
                     >
@@ -239,6 +281,16 @@ export function FeedbackTab() {
                 </div>
 
                 <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  {report.contact_email && (
+                    <a
+                      href={`mailto:${report.contact_email}?subject=${encodeURIComponent(
+                        report.subject ? `Re: ${report.subject}` : 'Re: your message to YuriOrbit'
+                      )}`}
+                      className="btn-secondary px-2.5 py-1 text-[11px]"
+                    >
+                      <Reply className="h-3 w-3" /> Reply
+                    </a>
+                  )}
                   {report.status === 'open' ? (
                     <>
                       <button
