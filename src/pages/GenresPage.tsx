@@ -7,10 +7,13 @@ import { getPopularGL } from '@/lib/providers';
 import { GL_ALLOWED_CLASSIFICATIONS } from '@/lib/providers/classify';
 import { ContentCardSkeleton } from '@/components/content/ContentCard';
 import { getFallbackCover } from '@/lib/utils/format';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 const FEATURED_GENRES = ['Romance', 'Drama', 'Comedy', 'Fantasy', 'Historical', 'School Life', 'Slice of Life', 'Mystery', 'Supernatural', 'Science Fiction', 'Tragedy', 'Slow Burn', 'Action'];
 
 export function GenresPage() {
+  usePageMeta({ title: 'Genres', description: 'Browse Girls\' Love titles by genre on YuriOrbit.', path: '/genres' });
+
   const [genreData, setGenreData] = useState<Record<string, ContentTitle[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);

@@ -4,10 +4,13 @@ import { ContentCardGrid, ContentCardSkeleton } from '@/components/content/Conte
 import { LoadMoreButton } from '@/components/content/LoadMoreButton';
 import { searchGLTitles } from '@/lib/providers';
 import { usePaginatedTitles } from '@/hooks/usePaginatedTitles';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 const PER_PAGE = 24;
 
 export function TrendingPage() {
+  usePageMeta({ title: 'Trending', description: 'See trending Girls\' Love titles on YuriOrbit.', path: '/trending' });
+
   const feed = usePaginatedTitles(
     (page) => searchGLTitles({ sort: 'TRENDING' }, page, PER_PAGE),
     'trending'

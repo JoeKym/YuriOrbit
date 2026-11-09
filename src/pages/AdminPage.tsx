@@ -24,6 +24,7 @@ import { FeaturedTab } from '@/components/admin/FeaturedTab';
 import { SiteSettingsTab } from '@/components/admin/SiteSettingsTab';
 import { AuditTab } from '@/components/admin/AuditTab';
 import { FeedbackTab } from '@/components/admin/FeedbackTab';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 type TabKey = 'overview' | 'users' | 'library' | 'feedback' | 'contact' | 'featured' | 'settings' | 'audit';
 
@@ -45,6 +46,8 @@ function isTabKey(value: string | null): value is TabKey {
 }
 
 export function AdminPage() {
+  usePageMeta({ title: 'Admin Console', description: 'YuriOrbit admin console.', path: '/admin', noIndex: true });
+
   const { user, isAuthenticated, isLoading } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 

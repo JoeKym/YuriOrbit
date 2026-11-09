@@ -1,7 +1,13 @@
 import { Link } from 'react-router-dom';
 import { Heart, Compass, BookOpen, Shield, Globe, Sparkles, Film, Eye } from 'lucide-react';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 export function AboutPage() {
+  usePageMeta({
+    title: 'About',
+    description: 'Learn about YuriOrbit, a discovery platform for Girls\' Love anime, manga, manhwa, webtoons, novels, and dramas.',
+    path: '/about',
+  });
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
       <div className="text-center mb-10">

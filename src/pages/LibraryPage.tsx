@@ -5,6 +5,7 @@ import { useLibrary } from '@/hooks/useLibrary';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { CONTENT_TYPE_LABELS, LIBRARY_STATUS_LABELS, type LibraryStatus } from '@/types/content';
 import { cn, getFallbackCover } from '@/lib/utils/format';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 const STATUS_FILTERS: (LibraryStatus | 'ALL')[] = ['ALL', 'CURRENT', 'PLANNED', 'COMPLETED', 'FAVOURITE', 'ON_HOLD', 'DROPPED'];
 
@@ -18,6 +19,8 @@ const STATUS_ICONS: Record<LibraryStatus, typeof Heart> = {
 };
 
 export function LibraryPage() {
+  usePageMeta({ title: 'My Library', description: 'Track and manage your Girls\' Love reading and watching list on YuriOrbit.', path: '/library', noIndex: true });
+
   const { library, removeFromLibrary, clearLibrary, isAuthenticated } = useLibrary();
   const { isLoading } = useAuth();
   const [filter, setFilter] = useState<LibraryStatus | 'ALL'>('ALL');

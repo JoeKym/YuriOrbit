@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, Megaphone, Save } from 'lucide-react';
+import { Construction, Loader2, Megaphone, Save, Power, Clock } from 'lucide-react';
 import { adminApi, type Announcement } from '@/lib/admin/api';
+import { cn } from '@/lib/utils/format';
 
-const EMPTY: Announcement = {
+const EMPTY_ANNOUNCEMENT: Announcement = {
   text: '',
   tone: 'info',
   active: false,
@@ -10,21 +11,45 @@ const EMPTY: Announcement = {
   linkHref: '',
 };
 
+interface MaintenanceState {
+  active: boolean;
+  message: string;
+  eta: string;
+}
+
+const EMPTY_MAINTENANCE: MaintenanceState = {
+  active: false,
+  message: '',
+  eta: '',
+};
+
 export function SiteSettingsTab() {
-  const [announcement, setAnnouncement] = useState<Announcement>(EMPTY);
+  const [announcement, setAnnouncement] = useState<Announcement>(EMPTY_ANNOUNCEMENT);
+  const [maintenance, setMaintenance] = useState<MaintenanceState>(EMPTY_MAINTENANCE);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [savingAnnouncement, setSavingAnnouncement] = useState(false);
+  const [savingMaintenance, setSavingMaintenance] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [savedAnnouncement, setSavedAnnouncement] = useState(false);
+  const [savedMaintenance, setSavedMaintenance] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     const result = await adminApi.settings();
     if (result.ok && result.data) {
-      const row = result.data.settings.find((s) => s.key === 'announcement');
-      if (row && row.value && typeof row.value === 'object') {
-        setAnnouncement({ ...EMPTY, ...(row.value as Announcement) });
+      const announcementRow = result.data.settings.find((s) => s.key === 'announcement');
+      if (announcementRow && announcementRow.value && typeof announcementRow.value === 'object') {
+        setAnnouncement({ ...EMPTY_ANNOUNCEMENT, ...(announcementRow.value as Announcement) });
+      }
+      const maintenanceRow = result.data.settings.find((s) => s.key === 'maintenance');
+      if (maintenanceRow && maintenanceRow.value && typeof maintenanceRow.value === 'object') {
+        const v = maintenanceRow.value as Partial<MaintenanceState>;
+        setMaintenance({
+          active: Boolean(v.active),
+          message: typeof v.message === 'string' ? v.message : '',
+          eta: typeof v.eta === 'string' ? v.eta : '',
+        });
       }
     } else {
       setError(result.error);
@@ -36,18 +61,51 @@ export function SiteSettingsTab() {
     load();
   }, [load]);
 
-  const handleSave = async () => {
-    setSaving(true);
+  const clearMaintenanceCache = () => {
+    try {
+      sessionStorage.removeItem('yuriorbit:maintenance_cache');
+    } catch {}
+  };
+
+  const handleSaveAnnouncement = async () => {
+    setSavingAnnouncement(true);
     setError(null);
-    setSaved(false);
+    setSavedAnnouncement(false);
     const result = await adminApi.saveSetting('announcement', announcement);
-    setSaving(false);
+    setSavingAnnouncement(false);
     if (result.ok) {
-      setSaved(true);
-      window.setTimeout(() => setSaved(false), 3000);
+      setSavedAnnouncement(true);
+      window.setTimeout(() => setSavedAnnouncement(false), 3000);
     } else {
       setError(result.error);
     }
+  };
+
+  const handleSaveMaintenance = async (next?: MaintenanceState) => {
+    const payload = next ?? maintenance;
+    setSavingMaintenance(true);
+    setError(null);
+    setSavedMaintenance(false);
+    const result = await adminApi.saveSetting('maintenance', {
+      active: payload.active,
+      message: payload.message.trim(),
+      eta: payload.eta.trim(),
+      startedAt: payload.active ? new Date().toISOString() : undefined,
+    });
+    setSavingMaintenance(false);
+    if (result.ok) {
+      clearMaintenanceCache();
+      setSavedMaintenance(true);
+      window.setTimeout(() => setSavedMaintenance(false), 3000);
+    } else {
+      setError(result.error);
+    }
+  };
+
+  const toggleMaintenance = async () => {
+    const next = { ...maintenance, active: !maintenance.active };
+    setMaintenance(next);
+    await handleSaveMaintenance(next);
   };
 
   if (loading) {
@@ -67,6 +125,108 @@ export function SiteSettingsTab() {
 
   return (
     <div className="space-y-5">
+      {/* Maintenance mode */}
+      <div
+        className={cn(
+          'card-surface p-5',
+          maintenance.active && 'border-warning-500/40 bg-warning-500/[0.04]'
+        )}
+      >
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-ink-100">
+            <Construction className="h-4 w-4 text-warning-400" /> Maintenance mode
+          </h2>
+          <button
+            onClick={toggleMaintenance}
+            disabled={savingMaintenance}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60',
+              maintenance.active
+                ? 'bg-success-500/15 text-success-300 border border-success-500/30 hover:bg-success-500/25'
+                : 'bg-warning-500/15 text-warning-300 border border-warning-500/30 hover:bg-warning-500/25'
+            )}
+          >
+            {savingMaintenance ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Power className="h-3.5 w-3.5" />
+            )}
+            {maintenance.active ? 'Disable maintenance' : 'Enable maintenance'}
+          </button>
+        </div>
+        <p className="mb-4 text-xs text-ink-400">
+          When enabled, the site shows a full maintenance screen to visitors. Admin and sign-in routes remain accessible so you can turn it off.
+        </p>
+
+        {maintenance.active && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-warning-500/30 bg-warning-500/10 px-3 py-2 text-xs text-warning-300">
+            <Construction className="h-3.5 w-3.5 flex-shrink-0" />
+            Maintenance mode is <strong>active</strong>. Visitors see the maintenance page.
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <div>
+            <label className="mb-1 block text-[11px] text-ink-400">Maintenance message (shown to visitors)</label>
+            <textarea
+              value={maintenance.message}
+              onChange={(e) => setMaintenance({ ...maintenance, message: e.target.value })}
+              rows={3}
+              maxLength={400}
+              placeholder="We’re performing scheduled maintenance to improve YuriOrbit. Thanks for your patience."
+              className="input-field text-xs"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-[11px] text-ink-400">
+              ETA (optional) — shown as &quot;Estimated return&quot;
+            </label>
+            <div className="relative">
+              <Clock className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-500" />
+              <input
+                value={maintenance.eta}
+                onChange={(e) => setMaintenance({ ...maintenance, eta: e.target.value })}
+                placeholder="e.g. 22:00 UTC, ~30 minutes, or 2026-11-10 14:00 UTC"
+                className="input-field pl-9 text-xs"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 flex items-center gap-3">
+          <button
+            onClick={() => handleSaveMaintenance()}
+            disabled={savingMaintenance}
+            className="btn-primary text-xs"
+          >
+            {savingMaintenance ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Save maintenance settings
+          </button>
+          {savedMaintenance && <span className="text-xs text-success-400">Saved.</span>}
+        </div>
+
+        <div className="mt-4 rounded-xl border border-ink-800 bg-ink-950/40 p-4">
+          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-400">Visitor preview</h3>
+          <div className="rounded-lg border border-ink-800 bg-ink-900 p-4 text-center">
+            <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-warning-500/30 bg-warning-500/10 px-2.5 py-0.5 text-[10px] font-medium text-warning-400">
+              <Construction className="h-3 w-3" /> Maintenance in progress
+            </div>
+            <p className="font-display text-lg font-semibold text-ink-50">We'll be right back</p>
+            <p className="mt-1 text-xs text-ink-300">
+              {maintenance.message.trim() || 'YuriOrbit is temporarily down for maintenance.'}
+            </p>
+            {maintenance.eta.trim() && (
+              <p className="mt-2 text-[11px] text-ink-400">
+                Estimated return: <span className="text-ink-200">{maintenance.eta.trim()}</span>
+              </p>
+            )}
+          </div>
+          <p className="mt-2 text-[11px] text-ink-500">
+            The live maintenance page also sets its own metadata (title/description/noindex) while active.
+          </p>
+        </div>
+      </div>
+
+      {/* Announcement banner */}
       <div className="card-surface p-5">
         <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink-100">
           <Megaphone className="h-4 w-4 text-rose-400" /> Site announcement banner
@@ -93,7 +253,7 @@ export function SiteSettingsTab() {
               onChange={(e) => setAnnouncement({ ...announcement, text: e.target.value })}
               rows={2}
               maxLength={200}
-              placeholder="Scheduled maintenance tonight at 22:00 UTC."
+              placeholder="New GL titles added this week."
               className="input-field text-xs"
             />
           </div>
@@ -136,17 +296,17 @@ export function SiteSettingsTab() {
         </div>
 
         <div className="mt-4 flex items-center gap-3">
-          <button onClick={handleSave} disabled={saving} className="btn-primary text-xs">
-            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Save banner
+          <button onClick={handleSaveAnnouncement} disabled={savingAnnouncement} className="btn-primary text-xs">
+            {savingAnnouncement ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Save banner
           </button>
-          {saved && <span className="text-xs text-success-400">Saved.</span>}
+          {savedAnnouncement && <span className="text-xs text-success-400">Saved.</span>}
         </div>
 
         {error && <p className="mt-3 text-xs text-error-400">{error}</p>}
       </div>
 
       <div className="card-surface p-5">
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-400">Preview</h3>
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-400">Banner preview</h3>
         {announcement.text ? (
           <div className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-xs ${toneClasses}`}>
             <Megaphone className="h-3.5 w-3.5 flex-shrink-0" />

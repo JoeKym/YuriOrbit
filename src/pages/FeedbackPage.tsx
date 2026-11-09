@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertCircle, CheckCircle, Loader2, Send } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { usePageMeta } from '@/hooks/usePageMeta';
 import {
   FEEDBACK_FALLBACK_EMAIL,
   submitFeedback,
@@ -17,6 +18,8 @@ const CATEGORY_OPTIONS: { value: FeedbackCategory; label: string }[] = [
 const MESSAGE_MAX = 4000;
 
 export function FeedbackPage() {
+  usePageMeta({ title: 'Feedback', description: 'Share feedback or report an issue to help improve YuriOrbit.', path: '/feedback' });
+
   const { user } = useAuth();
   const [category, setCategory] = useState<FeedbackCategory>('issue');
   const [message, setMessage] = useState('');

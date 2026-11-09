@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom';
 import { HelpCircle, Shield, BookOpen, Globe, Clock } from 'lucide-react';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 export function FaqPage() {
+  usePageMeta({ title: 'FAQ', description: 'Frequently asked questions about YuriOrbit, discovery, tracking, and account features.', path: '/faq' });
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
       <div className="text-center mb-10">

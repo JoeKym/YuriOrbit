@@ -14,6 +14,7 @@ import { useMaturity } from '@/hooks/useMaturity';
 import { maturityOf, isWithinMaturity } from '@/lib/content/maturity';
 import { MATURITY_LABELS } from '@/types/content';
 import { submitFeedback } from '@/lib/feedback';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 const STATUSES: LibraryStatus[] = ['CURRENT', 'PLANNED', 'COMPLETED', 'ON_HOLD', 'DROPPED', 'FAVOURITE'];
 
@@ -30,6 +31,17 @@ export function TitleDetailPage() {
 
   const { isInLibrary, addToLibrary, removeFromLibrary, getEntry, updateProgress, updateRating, updateNotes } = useLibrary();
   const { level } = useMaturity();
+  usePageMeta({
+    title: title?.title || (loading ? 'Loading…' : 'Title'),
+    description: title?.synopsis
+      ? title.synopsis.replace(/\s+/g, ' ').slice(0, 160)
+      : title?.title
+        ? `Discover ${title.title} on YuriOrbit.`
+        : 'View Girls\' Love title details on YuriOrbit.',
+    path: id ? `/title/${id}` : undefined,
+    image: title?.coverImage || title?.bannerImage,
+  });
+
 
   useEffect(() => {
     let cancelled = false;

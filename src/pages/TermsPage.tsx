@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 export function TermsPage() {
+  usePageMeta({ title: 'Terms of Use', description: 'Read the terms of use for YuriOrbit.', path: '/terms' });
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
       <h1 className="font-display text-3xl font-semibold text-ink-50 mb-2">Terms of Use</h1>

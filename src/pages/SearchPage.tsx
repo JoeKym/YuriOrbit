@@ -8,6 +8,7 @@ import { useMaturity } from '@/hooks/useMaturity';
 import { FORMAT_FILTERS, liveSearch, matchesFormat, type FormatFilter, type LiveSearchResult } from '@/lib/search';
 import { MATURITY_LABELS } from '@/types/content';
 import { cn } from '@/lib/utils/format';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 const FORMAT_KEYS = FORMAT_FILTERS.map((filter) => filter.key);
 
@@ -26,6 +27,13 @@ export function SearchPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadedLimit, setLoadedLimit] = useState(SEARCH_PAGE);
   const { level } = useMaturity();
+
+  usePageMeta({
+    title: query ? `Search: ${query}` : 'Search',
+    description: 'Search Girls\' Love anime, manga, manhwa, webtoons, novels, and dramas on YuriOrbit.',
+    path: '/search',
+    noIndex: true,
+  });
 
   const debouncedInput = useDebounce(input, 350);
 

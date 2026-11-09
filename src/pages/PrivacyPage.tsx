@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 export function PrivacyPage() {
+  usePageMeta({ title: 'Privacy Policy', description: 'Read how YuriOrbit handles your data, privacy, and account information.', path: '/privacy' });
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
       <h1 className="font-display text-3xl font-semibold text-ink-50 mb-2">Privacy Policy</h1>

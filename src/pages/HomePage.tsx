@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Heart } from 'lucide-react';
 import { Hero } from '@/components/home/Hero';
 import { Carousel } from '@/components/content/Carousel';
+import { usePageMeta } from '@/hooks/usePageMeta';
 import type { ContentTitle, ContentType } from '@/types/content';
 import { GL_ALLOWED_CLASSIFICATIONS } from '@/lib/providers/classify';
 import { getTrendingGL, getPopularGL, getRecentGL, getCompletedGL, getGLByContentType } from '@/lib/providers';
@@ -68,6 +69,13 @@ function buildHeroDeck(pinned: ContentTitle[], pool: ContentTitle[]): ContentTit
 }
 
 export function HomePage() {
+  usePageMeta({
+    title: 'Your World of Girls\' Love',
+    description:
+      "Discover, track, and enjoy curated Yuri and Girls' Love anime, manga, manhwa, webtoons, light novels, and live-action dramas from around the globe.",
+    path: '/',
+    siteNameSuffix: false,
+  });
   const [sections, setSections] = useState<Record<string, ContentTitle[]>>({});
   const [pinned, setPinned] = useState<ContentTitle[]>([]);
   const [loading, setLoading] = useState(true);

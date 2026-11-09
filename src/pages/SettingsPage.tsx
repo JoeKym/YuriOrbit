@@ -1,18 +1,50 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { Settings as SettingsIcon, Trash2, Download, Upload, Info, CheckCircle2, BookOpen, Sliders, Pencil, UserRound, ShieldAlert, Lock, AlertTriangle, RotateCcw } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  Settings as SettingsIcon,
+  Trash2,
+  Download,
+  Upload,
+  Info,
+  CheckCircle2,
+  BookOpen,
+  Sliders,
+  Pencil,
+  UserRound,
+  ShieldAlert,
+  Lock,
+  AlertTriangle,
+  RotateCcw,
+  Palette,
+  UserX,
+  Loader2,
+} from 'lucide-react';
 import { useLibrary } from '@/hooks/useLibrary';
 import { useMaturity } from '@/hooks/useMaturity';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { supabase } from '@/lib/supabase';
 import type { MaturityLevel } from '@/types/content';
 import { MATURITY_DESCRIPTIONS, MATURITY_LABELS, MATURITY_LEVELS } from '@/types/content';
 import { maturityRank, requiresAdultConfirmation } from '@/lib/content/maturity';
 import { resetMaturityPreference } from '@/lib/content/maturity-preference';
+import { THEMES, type ThemeId, getStoredTheme, applyTheme, THEME_STORAGE_KEY } from '@/lib/theme/themes';
+import { usePageMeta } from '@/hooks/usePageMeta';
 import { cn } from '@/lib/utils/format';
 
 export function SettingsPage() {
+  usePageMeta({
+    title: 'Settings',
+    description: 'Manage your YuriOrbit appearance, content filter, reader preferences, and account data.',
+    path: '/settings',
+  });
+
+  const navigate = useNavigate();
   const { library, clearLibrary } = useLibrary();
   const { level: maturityLevel, adultAcknowledged, setLevel, acknowledge } = useMaturity();
+  const { isAuthenticated, logout } = useAuth();
   const [pendingLevel, setPendingLevel] = useState<MaturityLevel | null>(null);
+  const [theme, setTheme] = useState<ThemeId>(() => getStoredTheme());
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   // Persistent settings state
   const [reducedMotion, setReducedMotion] = useState<boolean>(() => {
@@ -48,7 +80,14 @@ export function SettingsPage() {
   });
 
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedbackTone, setFeedbackTone] = useState<'success' | 'error'>('success');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const showFeedback = (msg: string, tone: 'success' | 'error' = 'success', ms = 3500) => {
+    setFeedbackTone(tone);
+    setFeedback(msg);
+    setTimeout(() => setFeedback(null), ms);
+  };
 
   // Sync reduced motion to document root
   useEffect(() => {
@@ -62,7 +101,6 @@ export function SettingsPage() {
     } catch {}
   }, [reducedMotion]);
 
-  // Sync reader preferences
   useEffect(() => {
     try {
       localStorage.setItem('yuriorbit_reader_width', readerWidth);
@@ -81,6 +119,11 @@ export function SettingsPage() {
     } catch {}
   }, [dataSaver]);
 
+  const handleThemeChange = (id: ThemeId) => {
+    setTheme(id);
+    applyTheme(id);
+  };
+
   // Export JSON backup
   const handleExport = () => {
     const backup = {
@@ -92,6 +135,7 @@ export function SettingsPage() {
         readerWidth,
         readerBg,
         dataSaver,
+        theme,
       },
     };
     const data = JSON.stringify(backup, null, 2);
@@ -102,8 +146,7 @@ export function SettingsPage() {
     a.download = `yuriorbit-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    setFeedback('Library and preferences exported successfully.');
-    setTimeout(() => setFeedback(null), 3000);
+    showFeedback('Library and preferences exported successfully.');
   };
 
   // Import JSON backup
@@ -128,61 +171,114 @@ export function SettingsPage() {
           if (typeof parsed.preferences.dataSaver === 'boolean') {
             setDataSaver(parsed.preferences.dataSaver);
           }
+          if (parsed.preferences.theme && THEMES.some((t) => t.id === parsed.preferences.theme)) {
+            handleThemeChange(parsed.preferences.theme as ThemeId);
+          }
         }
         if (Array.isArray(parsed.library)) {
           localStorage.setItem('yuriorbit_library', JSON.stringify(parsed.library));
         }
-        setFeedback('Backup restored successfully. Refresh to see updated library items.');
-        setTimeout(() => setFeedback(null), 4000);
+        showFeedback('Backup restored successfully. Refresh to see updated library items.', 'success', 4500);
       } catch {
-        setFeedback('Failed to parse backup file. Please ensure it is a valid YuriOrbit JSON export.');
-        setTimeout(() => setFeedback(null), 4000);
+        showFeedback('Failed to parse backup file. Please ensure it is a valid YuriOrbit JSON export.', 'error', 4500);
       }
     };
     reader.readAsText(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleResetSettings = () => {
-    if (!confirm('Reset all settings to defaults? This restores appearance, reader, data saver, and content filter preferences. Your library data will not be affected.')) {
-      return;
-    }
+  const clearLocalSettingsState = () => {
     try {
       localStorage.removeItem('yuriorbit_reduced_motion');
       localStorage.removeItem('yuriorbit_reader_width');
       localStorage.removeItem('yuriorbit_reader_bg');
       localStorage.removeItem('yuriorbit_data_saver');
+      localStorage.removeItem(THEME_STORAGE_KEY);
     } catch {}
     setReducedMotion(false);
     setReaderWidth('normal');
     setReaderBg('dark');
     setDataSaver(false);
+    handleThemeChange('velvet');
     resetMaturityPreference();
     setPendingLevel(null);
-    setFeedback('Settings have been reset to defaults.');
-    setTimeout(() => setFeedback(null), 3000);
+  };
+
+  const handleResetSettings = () => {
+    if (
+      !confirm(
+        'Reset all settings to defaults? This restores appearance, theme, reader, data saver, and content filter preferences. Your library data will not be affected.'
+      )
+    ) {
+      return;
+    }
+    clearLocalSettingsState();
+    showFeedback('Settings have been reset to defaults.');
   };
 
   const handleClearAllLocalData = () => {
-    if (!confirm('Clear all local data on this device? This removes your local library and resets all settings to defaults. If you are signed in, cloud-synced library data remains in your account.')) {
+    if (
+      !confirm(
+        'Clear all local data on this device? This removes your local library and resets all settings to defaults. If you are signed in, cloud-synced library data remains in your account.'
+      )
+    ) {
       return;
     }
     try {
       localStorage.removeItem('yuriorbit_library');
-      localStorage.removeItem('yuriorbit_reduced_motion');
-      localStorage.removeItem('yuriorbit_reader_width');
-      localStorage.removeItem('yuriorbit_reader_bg');
-      localStorage.removeItem('yuriorbit_data_saver');
     } catch {}
     clearLibrary();
-    setReducedMotion(false);
-    setReaderWidth('normal');
-    setReaderBg('dark');
-    setDataSaver(false);
-    resetMaturityPreference();
-    setPendingLevel(null);
-    setFeedback('All local data has been cleared and settings reset to defaults.');
-    setTimeout(() => setFeedback(null), 4000);
+    clearLocalSettingsState();
+    showFeedback('All local data has been cleared and settings reset to defaults.', 'success', 4500);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!isAuthenticated || !supabase) {
+      showFeedback('Sign in to delete your account.', 'error');
+      return;
+    }
+    const typed = window.prompt(
+      'This will permanently delete your account and cloud library data. This cannot be undone.\n\nType DELETE to confirm:'
+    );
+    if (typed !== 'DELETE') {
+      if (typed !== null) showFeedback('Account deletion cancelled (confirmation did not match).', 'error');
+      return;
+    }
+
+    setDeletingAccount(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        showFeedback('Your session has expired. Sign in again to delete your account.', 'error');
+        setDeletingAccount(false);
+        return;
+      }
+
+      const res = await fetch('/api/account', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const body = (await res.json().catch(() => ({}))) as { error?: string; ok?: boolean };
+      if (!res.ok || !body.ok) {
+        showFeedback(body.error || `Could not delete account (HTTP ${res.status}).`, 'error', 6000);
+        setDeletingAccount(false);
+        return;
+      }
+
+      try {
+        localStorage.removeItem('yuriorbit_library');
+      } catch {}
+      clearLibrary();
+      clearLocalSettingsState();
+      await logout().catch(() => {});
+      navigate('/', { replace: true });
+    } catch (err) {
+      showFeedback(err instanceof Error ? err.message : 'Network error while deleting account.', 'error', 6000);
+    } finally {
+      setDeletingAccount(false);
+    }
   };
 
   return (
@@ -193,8 +289,19 @@ export function SettingsPage() {
       </div>
 
       {feedback && (
-        <div className="mb-6 flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3.5 text-xs font-medium text-emerald-300">
-          <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+        <div
+          className={cn(
+            'mb-6 flex items-center gap-2 rounded-xl border p-3.5 text-xs font-medium',
+            feedbackTone === 'error'
+              ? 'border-error-500/20 bg-error-500/10 text-error-300'
+              : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+          )}
+        >
+          {feedbackTone === 'error' ? (
+            <AlertTriangle className="h-4 w-4 flex-shrink-0 text-error-400" />
+          ) : (
+            <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-400" />
+          )}
           <span>{feedback}</span>
         </div>
       )}
@@ -208,13 +315,47 @@ export function SettingsPage() {
           </div>
           <p className="mb-4 text-xs text-ink-400">Personalize display style and interface animations.</p>
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-300">Theme</label>
-              <div className="flex items-center gap-2 text-xs text-ink-200">
-                <span className="rounded-lg border border-rose-500/30 bg-ink-850 px-3 py-1.5 font-medium text-rose-300">
-                  Dark Velvet (Default)
-                </span>
+              <label className="mb-2 flex items-center gap-1.5 text-xs font-medium text-ink-300">
+                <Palette className="h-3.5 w-3.5 text-rose-400" /> Theme
+              </label>
+              <p className="mb-3 text-[11px] text-ink-500">GL-aligned color themes. Saved on this device.</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {THEMES.map((t) => {
+                  const selected = t.id === theme;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => handleThemeChange(t.id)}
+                      className={cn(
+                        'flex items-start gap-3 rounded-xl border p-3 text-left transition-colors',
+                        selected
+                          ? 'border-rose-500/50 bg-rose-500/10'
+                          : 'border-ink-800 bg-ink-900/60 hover:border-ink-700 hover:bg-ink-850'
+                      )}
+                      aria-pressed={selected}
+                    >
+                      <span className="mt-0.5 flex shrink-0 -space-x-1">
+                        {t.swatches.map((c, i) => (
+                          <span
+                            key={i}
+                            className="inline-block h-4 w-4 rounded-full ring-2 ring-ink-900"
+                            style={{ backgroundColor: c }}
+                          />
+                        ))}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="flex items-center gap-1.5 text-sm font-medium text-ink-100">
+                          {t.name}
+                          {selected && <CheckCircle2 className="h-3.5 w-3.5 text-rose-400" />}
+                        </span>
+                        <span className="mt-0.5 block text-[11px] leading-relaxed text-ink-400">{t.description}</span>
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -415,8 +556,7 @@ export function SettingsPage() {
               onClick={() => {
                 if (confirm('Clear all local library data? This will reset your saved bookmarks and reading progress.')) {
                   clearLibrary();
-                  setFeedback('Local library data has been cleared.');
-                  setTimeout(() => setFeedback(null), 3000);
+                  showFeedback('Local library data has been cleared.');
                 }
               }}
               className="btn-secondary text-xs text-error-400 hover:text-error-300 flex items-center gap-1.5"
@@ -450,7 +590,7 @@ export function SettingsPage() {
             <h2 className="text-lg font-semibold text-ink-50">Danger zone</h2>
           </div>
           <p className="mb-4 text-xs leading-relaxed text-ink-400">
-            Irreversible actions for data stored on this device. Export a backup first if you might need it later.
+            Irreversible actions for data on this device and, when signed in, your account. Export a backup first if you might need it later.
           </p>
 
           <div className="space-y-3">
@@ -458,7 +598,7 @@ export function SettingsPage() {
               <div className="min-w-0">
                 <p className="text-sm font-medium text-ink-100">Reset settings to defaults</p>
                 <p className="mt-0.5 text-xs text-ink-400">
-                  Restores appearance, reader preferences, data saver, and content filter. Does not touch your library.
+                  Restores appearance, theme, reader preferences, data saver, and content filter. Does not touch your library.
                 </p>
               </div>
               <button
@@ -480,8 +620,7 @@ export function SettingsPage() {
                 onClick={() => {
                   if (confirm('Clear all local library data? This will reset your saved bookmarks and reading progress.')) {
                     clearLibrary();
-                    setFeedback('Local library data has been cleared.');
-                    setTimeout(() => setFeedback(null), 3000);
+                    showFeedback('Local library data has been cleared.');
                   }
                 }}
                 className="btn-secondary shrink-0 text-xs text-error-400 hover:text-error-300 border-rose-500/30 flex items-center gap-1.5"
@@ -503,6 +642,31 @@ export function SettingsPage() {
               >
                 <Trash2 className="h-3.5 w-3.5" /> Clear all local data
               </button>
+            </div>
+
+            <div className="flex flex-col gap-3 rounded-xl border border-error-500/30 bg-error-500/[0.06] p-3.5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-ink-100">Delete account</p>
+                <p className="mt-0.5 text-xs text-ink-400">
+                  {isAuthenticated
+                    ? 'Permanently deletes your account and cloud library data. You will be signed out. This cannot be undone.'
+                    : 'Sign in to permanently delete your account and associated cloud data.'}
+                </p>
+              </div>
+              {isAuthenticated ? (
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deletingAccount}
+                  className="btn-secondary shrink-0 text-xs border-error-500/50 bg-error-500/10 text-error-200 hover:bg-error-500/20 disabled:opacity-60 flex items-center gap-1.5"
+                >
+                  {deletingAccount ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserX className="h-3.5 w-3.5" />}
+                  {deletingAccount ? 'Deleting…' : 'Delete account'}
+                </button>
+              ) : (
+                <Link to="/auth?next=/settings" className="btn-secondary shrink-0 text-xs flex items-center gap-1.5">
+                  Sign in
+                </Link>
+              )}
             </div>
           </div>
         </section>

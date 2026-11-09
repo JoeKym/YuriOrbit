@@ -19,6 +19,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { migrateLocalToCloud, hasLocalLibraryData, hasMigratedLocal } from '@/hooks/useLibrary';
 import { normalizeUsername, saveMyProfile, validateUsername } from '@/lib/profiles';
 import { cn } from '@/lib/utils/format';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 type Mode = 'signin' | 'signup' | 'forgot' | 'reset';
 
@@ -92,6 +93,8 @@ function Field({
 }
 
 export function AuthPage() {
+  usePageMeta({ title: 'Sign In', description: 'Sign in or create a YuriOrbit account.', path: '/auth', noIndex: true });
+
   const { login, register, resetPassword, updatePassword, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

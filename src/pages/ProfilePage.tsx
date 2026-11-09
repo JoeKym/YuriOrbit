@@ -18,6 +18,7 @@ import { fetchMyProfile, type Profile } from '@/lib/profiles';
 import { ProfileEditor } from '@/components/profile/ProfileEditor';
 import { LIBRARY_STATUS_LABELS } from '@/types/content';
 import { getFallbackCover } from '@/lib/utils/format';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 function ProfileSkeleton() {
   return (
@@ -33,6 +34,8 @@ function ProfileSkeleton() {
 }
 
 export function ProfilePage() {
+  usePageMeta({ title: 'Profile', description: 'Manage your YuriOrbit profile and account details.', path: '/profile', noIndex: true });
+
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const { library } = useLibrary();
 

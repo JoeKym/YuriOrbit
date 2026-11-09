@@ -3,8 +3,209 @@
 @tailwind utilities;
 
 @layer base {
+  :root,
+  [data-theme="velvet"] {
+    /* Dark Velvet (default) — deep ink with rose & lavender */
+    --color-ink-950: 10 8 16;
+    --color-ink-900: 18 16 26;
+    --color-ink-850: 24 21 35;
+    --color-ink-800: 30 26 44;
+    --color-ink-750: 37 33 53;
+    --color-ink-700: 45 40 64;
+    --color-ink-600: 58 52 80;
+    --color-ink-500: 74 67 96;
+    --color-ink-400: 107 99 133;
+    --color-ink-300: 144 137 168;
+    --color-ink-200: 184 178 204;
+    --color-ink-100: 216 212 228;
+    --color-ink-50: 240 238 246;
+
+    --color-rose-50: 253 242 246;
+    --color-rose-100: 252 231 239;
+    --color-rose-200: 251 207 225;
+    --color-rose-300: 248 168 201;
+    --color-rose-400: 242 117 168;
+    --color-rose-500: 232 77 138;
+    --color-rose-600: 209 46 111;
+    --color-rose-700: 176 31 87;
+    --color-rose-800: 143 26 71;
+    --color-rose-900: 117 23 60;
+
+    --color-lavender-50: 246 243 255;
+    --color-lavender-100: 237 232 255;
+    --color-lavender-200: 220 207 255;
+    --color-lavender-300: 196 173 255;
+    --color-lavender-400: 168 132 255;
+    --color-lavender-500: 147 98 240;
+    --color-lavender-600: 125 68 219;
+    --color-lavender-700: 103 51 186;
+    --color-lavender-800: 85 42 153;
+    --color-lavender-900: 70 37 125;
+    color-scheme: dark;
+  }
+
+  [data-theme="sakura"] {
+    /* Sakura Blush — warm plum nights and soft cherry-blossom pinks */
+    --color-ink-950: 22 12 16;
+    --color-ink-900: 30 18 24;
+    --color-ink-850: 40 24 32;
+    --color-ink-800: 50 30 40;
+    --color-ink-750: 61 37 49;
+    --color-ink-700: 74 45 60;
+    --color-ink-600: 94 58 76;
+    --color-ink-500: 120 76 98;
+    --color-ink-400: 156 110 132;
+    --color-ink-300: 188 148 166;
+    --color-ink-200: 214 184 196;
+    --color-ink-100: 234 216 224;
+    --color-ink-50: 248 240 244;
+
+    --color-rose-50: 255 242 245;
+    --color-rose-100: 255 228 235;
+    --color-rose-200: 255 201 216;
+    --color-rose-300: 255 166 190;
+    --color-rose-400: 245 120 154;
+    --color-rose-500: 240 106 138;
+    --color-rose-600: 214 70 106;
+    --color-rose-700: 182 44 82;
+    --color-rose-800: 148 32 68;
+    --color-rose-900: 120 24 56;
+
+    --color-lavender-50: 255 244 248;
+    --color-lavender-100: 252 232 240;
+    --color-lavender-200: 246 210 224;
+    --color-lavender-300: 242 166 184;
+    --color-lavender-400: 232 140 166;
+    --color-lavender-500: 214 112 144;
+    --color-lavender-600: 188 82 120;
+    --color-lavender-700: 156 58 98;
+    --color-lavender-800: 126 44 80;
+    --color-lavender-900: 100 34 64;
+    color-scheme: dark;
+  }
+
+  [data-theme="wisteria"] {
+    /* Wisteria Dusk — lavender-forward twilight */
+    --color-ink-950: 12 10 22;
+    --color-ink-900: 20 16 32;
+    --color-ink-850: 28 22 44;
+    --color-ink-800: 36 28 56;
+    --color-ink-750: 45 35 68;
+    --color-ink-700: 56 44 82;
+    --color-ink-600: 72 58 104;
+    --color-ink-500: 92 76 128;
+    --color-ink-400: 124 108 160;
+    --color-ink-300: 158 144 190;
+    --color-ink-200: 192 182 216;
+    --color-ink-100: 220 214 236;
+    --color-ink-50: 242 240 250;
+
+    --color-rose-50: 248 244 255;
+    --color-rose-100: 240 232 255;
+    --color-rose-200: 224 208 255;
+    --color-rose-300: 200 176 255;
+    --color-rose-400: 176 124 240;
+    --color-rose-500: 160 100 232;
+    --color-rose-600: 136 74 210;
+    --color-rose-700: 112 54 180;
+    --color-rose-800: 90 42 148;
+    --color-rose-900: 72 32 120;
+
+    --color-lavender-50: 242 244 255;
+    --color-lavender-100: 230 234 255;
+    --color-lavender-200: 206 214 255;
+    --color-lavender-300: 176 188 255;
+    --color-lavender-400: 140 156 255;
+    --color-lavender-500: 124 140 240;
+    --color-lavender-600: 100 112 216;
+    --color-lavender-700: 78 88 184;
+    --color-lavender-800: 62 70 150;
+    --color-lavender-900: 50 56 122;
+    color-scheme: dark;
+  }
+
+  [data-theme="noir-rose"] {
+    /* Noir Rose — near-black with vivid rose accents */
+    --color-ink-950: 8 7 10;
+    --color-ink-900: 14 12 16;
+    --color-ink-850: 20 17 22;
+    --color-ink-800: 26 22 29;
+    --color-ink-750: 33 28 36;
+    --color-ink-700: 42 35 45;
+    --color-ink-600: 58 48 62;
+    --color-ink-500: 78 66 84;
+    --color-ink-400: 112 98 118;
+    --color-ink-300: 148 134 154;
+    --color-ink-200: 186 174 190;
+    --color-ink-100: 218 210 222;
+    --color-ink-50: 242 238 244;
+
+    --color-rose-50: 255 242 247;
+    --color-rose-100: 255 228 238;
+    --color-rose-200: 255 200 222;
+    --color-rose-300: 255 160 196;
+    --color-rose-400: 255 122 179;
+    --color-rose-500: 255 77 141;
+    --color-rose-600: 230 40 110;
+    --color-rose-700: 196 20 88;
+    --color-rose-800: 158 14 72;
+    --color-rose-900: 128 10 58;
+
+    --color-lavender-50: 255 244 250;
+    --color-lavender-100: 255 230 244;
+    --color-lavender-200: 255 204 232;
+    --color-lavender-300: 255 170 214;
+    --color-lavender-400: 255 130 194;
+    --color-lavender-500: 240 100 170;
+    --color-lavender-600: 212 70 144;
+    --color-lavender-700: 178 48 118;
+    --color-lavender-800: 144 36 96;
+    --color-lavender-900: 116 28 78;
+    color-scheme: dark;
+  }
+
+  [data-theme="moonlit"] {
+    /* Moonlit Lily — cool blue-silver night with soft rose glow */
+    --color-ink-950: 9 12 18;
+    --color-ink-900: 14 18 26;
+    --color-ink-850: 20 25 36;
+    --color-ink-800: 26 32 46;
+    --color-ink-750: 33 40 56;
+    --color-ink-700: 42 50 70;
+    --color-ink-600: 56 66 90;
+    --color-ink-500: 74 86 114;
+    --color-ink-400: 104 118 148;
+    --color-ink-300: 138 152 178;
+    --color-ink-200: 178 188 208;
+    --color-ink-100: 212 218 232;
+    --color-ink-50: 238 242 248;
+
+    --color-rose-50: 253 242 246;
+    --color-rose-100: 252 230 238;
+    --color-rose-200: 250 206 222;
+    --color-rose-300: 244 174 200;
+    --color-rose-400: 236 138 176;
+    --color-rose-500: 232 138 176;
+    --color-rose-600: 208 100 144;
+    --color-rose-700: 176 72 116;
+    --color-rose-800: 142 54 94;
+    --color-rose-900: 114 42 76;
+
+    --color-lavender-50: 242 246 255;
+    --color-lavender-100: 230 238 255;
+    --color-lavender-200: 208 222 255;
+    --color-lavender-300: 176 200 255;
+    --color-lavender-400: 138 174 232;
+    --color-lavender-500: 122 158 224;
+    --color-lavender-600: 96 130 200;
+    --color-lavender-700: 74 104 170;
+    --color-lavender-800: 58 82 138;
+    --color-lavender-900: 46 66 112;
+    color-scheme: dark;
+  }
+
   * {
-    border-color: theme('colors.ink.700');
+    border-color: rgb(var(--color-ink-700));
   }
 
   html {

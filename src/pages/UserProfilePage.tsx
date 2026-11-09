@@ -6,6 +6,7 @@ import { LIBRARY_STATUS_LABELS } from '@/types/content';
 import { fetchProfileByUsername, fetchPublicLibrary, type Profile } from '@/lib/profiles';
 import { cn, getFallbackCover } from '@/lib/utils/format';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 export function UserProfilePage() {
   const { username = '' } = useParams<{ username: string }>();
@@ -16,6 +17,17 @@ export function UserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsSetup, setNeedsSetup] = useState(false);
+  usePageMeta({
+    title: profile?.displayName || profile?.username ? `@${profile?.username || username}` : (loading ? 'Loading profile…' : 'Profile'),
+    description: profile?.bio
+      ? profile.bio.replace(/\s+/g, ' ').slice(0, 160)
+      : profile
+        ? `View ${profile.displayName || profile.username || 'this user'}'s public profile on YuriOrbit.`
+        : 'View a YuriOrbit user profile.',
+    path: username ? `/user/${username}` : undefined,
+    noIndex: !profile?.isPublic,
+  });
+
 
   useEffect(() => {
     let cancelled = false;
