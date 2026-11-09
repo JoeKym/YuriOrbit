@@ -77,25 +77,6 @@ export interface AuditEntry {
   created_at: string;
 }
 
-export type FeedbackStatus = 'open' | 'resolved' | 'dismissed';
-
-export interface FeedbackReport {
-  id: string;
-  kind: 'feedback' | 'report';
-  category: string;
-  message: string;
-  contact_email: string | null;
-  user_id: string | null;
-  user_email: string | null;
-  page_url: string | null;
-  title_id: string | null;
-  title_name: string | null;
-  status: FeedbackStatus;
-  created_at: string;
-  resolved_at: string | null;
-  resolved_by: string | null;
-}
-
 async function adminRequest<T>(
   path: string,
   init: RequestInit = {}
@@ -213,25 +194,6 @@ export const adminApi = {
   settings: () => adminRequest<{ settings: { key: string; value: unknown; updated_at: string }[] }>('/settings'),
   saveSetting: (key: string, value: unknown) =>
     adminRequest<{ ok: boolean }>('/settings', { method: 'PUT', body: JSON.stringify({ key, value }) }),
-
-  feedback: (params: { status?: string; kind?: string; q?: string; page?: number; perPage?: number }) => {
-    const search = new URLSearchParams();
-    if (params.status) search.set('status', params.status);
-    if (params.kind) search.set('kind', params.kind);
-    if (params.q) search.set('q', params.q);
-    if (params.page) search.set('page', String(params.page));
-    if (params.perPage) search.set('perPage', String(params.perPage));
-    return adminRequest<{ reports: FeedbackReport[]; total: number; page: number; perPage: number }>(
-      `/feedback?${search.toString()}`
-    );
-  },
-  updateFeedbackStatus: (id: string, status: FeedbackStatus) =>
-    adminRequest<{ ok: boolean }>('/feedback', {
-      method: 'PUT',
-      body: JSON.stringify({ id, status }),
-    }),
-  deleteFeedback: (id: string) =>
-    adminRequest<{ ok: boolean }>(`/feedback?id=${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
   audit: () => adminRequest<{ entries: AuditEntry[] }>('/audit'),
 };

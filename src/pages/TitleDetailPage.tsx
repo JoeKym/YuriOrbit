@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   Heart, BookOpen, Play, Share2, Flag, ExternalLink, Star,
-  ChevronLeft, Calendar, Globe, Layers, Hash, TrendingUp, Users,
-  CheckCircle, Loader2
+  ChevronLeft, Calendar, Globe, Layers, Hash, TrendingUp, Users
 } from 'lucide-react';
 import type { ContentTitle, LibraryStatus } from '@/types/content';
 import { CONTENT_TYPE_LABELS, LIBRARY_STATUS_LABELS } from '@/types/content';
@@ -13,7 +12,6 @@ import { cn, formatScore, getFallbackCover, getFallbackBanner, getStatusLabel, g
 import { useMaturity } from '@/hooks/useMaturity';
 import { maturityOf, isWithinMaturity } from '@/lib/content/maturity';
 import { MATURITY_LABELS } from '@/types/content';
-import { submitFeedback } from '@/lib/feedback';
 
 const STATUSES: LibraryStatus[] = ['CURRENT', 'PLANNED', 'COMPLETED', 'ON_HOLD', 'DROPPED', 'FAVOURITE'];
 
@@ -23,10 +21,6 @@ export function TitleDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
-  const [reportOpen, setReportOpen] = useState(false);
-  const [reportMessage, setReportMessage] = useState('');
-  const [reportStatus, setReportStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
-  const [reportError, setReportError] = useState<string | null>(null);
 
   const { isInLibrary, addToLibrary, removeFromLibrary, getEntry, updateProgress, updateRating, updateNotes } = useLibrary();
   const { level } = useMaturity();
@@ -115,29 +109,6 @@ export function TitleDetailPage() {
       try { await navigator.share({ title: title.title, url }); } catch { /* cancelled */ }
     } else {
       navigator.clipboard.writeText(url);
-    }
-  };
-
-  const handleReportSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setReportStatus('submitting');
-    setReportError(null);
-
-    const result = await submitFeedback({
-      kind: 'report',
-      category: 'metadata',
-      message: reportMessage.trim() || `Incorrect information reported for ${title.title}.`,
-      titleId: title.id,
-      titleName: title.title,
-      pageUrl: `/title/${title.id}`,
-    });
-
-    if (result.ok) {
-      setReportStatus('success');
-      setReportMessage('');
-    } else {
-      setReportStatus('error');
-      setReportError(result.error);
     }
   };
 
@@ -403,81 +374,11 @@ export function TitleDetailPage() {
 
         <div className="mt-8">
           <button
-            onClick={() => {
-              setReportOpen((open) => !open);
-              setReportStatus('idle');
-              setReportError(null);
-            }}
+            onClick={() => alert('Thank you for the report. Our team will review this title\'s metadata.')}
             className="btn-ghost text-xs text-ink-400"
-            aria-expanded={reportOpen}
           >
             <Flag className="h-3.5 w-3.5" /> Report incorrect information
           </button>
-
-          {reportOpen && (
-            <div className="card-surface mt-3 max-w-xl p-4">
-              {reportStatus === 'success' ? (
-                <div className="flex items-start gap-2 text-xs text-ink-200">
-                  <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-success-400" />
-                  <div>
-                    <p className="font-medium text-ink-100">Report received</p>
-                    <p className="mt-1 text-ink-400">
-                      Thanks — the admin team will review this title's metadata.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setReportOpen(false)}
-                    className="ml-auto text-ink-400 hover:text-ink-100"
-                  >
-                    Close
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleReportSubmit} className="space-y-3">
-                  <label htmlFor="title-report-details" className="block text-xs font-medium text-ink-200">
-                    What looks wrong? (title, year, cover, tags, episodes…)
-                  </label>
-                  <textarea
-                    id="title-report-details"
-                    rows={3}
-                    maxLength={4000}
-                    value={reportMessage}
-                    onChange={(e) => setReportMessage(e.target.value)}
-                    placeholder={`Tell us what is incorrect about "${title.title}"…`}
-                    className="w-full rounded-md border border-ink-700 bg-ink-950 px-3 py-2 text-sm text-ink-300 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-                  />
-                  {reportStatus === 'error' && reportError && (
-                    <p role="alert" className="text-xs text-rose-300">
-                      {reportError}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="submit"
-                      disabled={reportStatus === 'submitting'}
-                      className="btn-primary text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {reportStatus === 'submitting' ? (
-                        <>
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Sending…
-                        </>
-                      ) : (
-                        'Send report'
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setReportOpen(false)}
-                      className="btn-ghost text-xs"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>

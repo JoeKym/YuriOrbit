@@ -17,9 +17,6 @@
  *   DELETE /api/admin/featured?id=
  *   GET    /api/admin/settings
  *   PUT    /api/admin/settings         { key, value }
- *   GET    /api/admin/feedback?status=&kind=&q=&page=&perPage=
- *   PUT    /api/admin/feedback         { id, status: 'open' | 'resolved' | 'dismissed' }
- *   DELETE /api/admin/feedback?id=
  *   GET    /api/admin/audit
  *
  * Security model:
@@ -468,81 +465,6 @@ async function handleSettings(ctx: AdminContext, request: Request): Promise<Resp
   return json({ ok: true });
 }
 
-const FEEDBACK_STATUSES = ['open', 'resolved', 'dismissed'];
-
-async function handleFeedback(ctx: AdminContext, url: URL): Promise<Response> {
-  const { env } = ctx;
-  const status = (url.searchParams.get('status') || '').trim();
-  const kind = (url.searchParams.get('kind') || '').trim();
-  // Strip PostgREST syntax characters so the search term cannot break `or=(…)`.
-  const q = (url.searchParams.get('q') || '').replace(/[,()*]/g, ' ').trim();
-  const page = Math.max(1, Number.parseInt(url.searchParams.get('page') || '1', 10) || 1);
-  const perPage = Math.min(100, Math.max(1, Number.parseInt(url.searchParams.get('perPage') || '25', 10) || 25));
-
-  const filters: string[] = ['select=*', 'order=created_at.desc'];
-  if (FEEDBACK_STATUSES.includes(status)) filters.push(`status=eq.${status}`);
-  if (kind === 'feedback' || kind === 'report') filters.push(`kind=eq.${kind}`);
-  if (q) {
-    const term = encodeURIComponent(q);
-    filters.push(
-      `or=(message.ilike.*${term}*,contact_email.ilike.*${term}*,title_name.ilike.*${term}*)`
-    );
-  }
-
-  const from = (page - 1) * perPage;
-  const res = await rest(env, `feedback_reports?${filters.join('&')}`, {
-    headers: { Prefer: 'count=exact', Range: `${from}-${from + perPage - 1}` },
-  });
-
-  if (!res.ok) {
-    const hint =
-      res.status === 404
-        ? ' Has the feedback_reports migration been applied?'
-        : '';
-    return fail(`Could not load feedback (HTTP ${res.status}).${hint}`, 502);
-  }
-
-  const rows = (await readJson<Record<string, unknown>[]>(res)) ?? [];
-  const range = res.headers.get('content-range') || '';
-  const total = Number.parseInt(range.split('/')[1] || '', 10);
-
-  return json({ page, perPage, total: Number.isFinite(total) ? total : rows.length, reports: rows });
-}
-
-async function handleFeedbackUpdate(ctx: AdminContext, request: Request): Promise<Response> {
-  const body = await readJson<{ id?: string; status?: string }>(request);
-  if (!body?.id) return fail('id is required.', 400);
-  if (!body.status || !FEEDBACK_STATUSES.includes(body.status)) {
-    return fail('status must be one of: open, resolved, dismissed.', 400);
-  }
-
-  const res = await rest(ctx.env, `feedback_reports?id=eq.${encodeURIComponent(body.id)}`, {
-    method: 'PATCH',
-    headers: { Prefer: 'return=minimal' },
-    body: JSON.stringify({
-      status: body.status,
-      resolved_at: body.status === 'open' ? null : new Date().toISOString(),
-      resolved_by: body.status === 'open' ? null : ctx.actorEmail,
-    }),
-  });
-  if (!res.ok) return fail(`Could not update feedback (HTTP ${res.status}).`, 502);
-  await audit(ctx, 'feedback.update_status', body.id, { status: body.status });
-  return json({ ok: true });
-}
-
-async function handleFeedbackDelete(ctx: AdminContext, url: URL): Promise<Response> {
-  const id = url.searchParams.get('id');
-  if (!id) return fail('id is required.', 400);
-
-  const res = await rest(ctx.env, `feedback_reports?id=eq.${encodeURIComponent(id)}`, {
-    method: 'DELETE',
-    headers: { Prefer: 'return=minimal' },
-  });
-  if (!res.ok) return fail(`Could not delete feedback (HTTP ${res.status}).`, 502);
-  await audit(ctx, 'feedback.delete', id, {});
-  return json({ ok: true });
-}
-
 async function handleAudit(ctx: AdminContext): Promise<Response> {
   const res = await rest(
     ctx.env,
@@ -612,9 +534,6 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     if (route === 'settings' && (method === 'GET' || method === 'PUT' || method === 'POST')) {
       return await handleSettings(ctx, request);
     }
-    if (route === 'feedback' && method === 'GET') return await handleFeedback(ctx, url);
-    if (route === 'feedback' && method === 'PUT') return await handleFeedbackUpdate(ctx, request);
-    if (route === 'feedback' && method === 'DELETE') return await handleFeedbackDelete(ctx, url);
     if (route === 'audit' && method === 'GET') return await handleAudit(ctx);
 
     return fail(`Unknown admin route: ${method} /${route}`, 404);
