@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { Heart, BookOpen, CheckCircle, Clock, XCircle, Pause, Trash2, Download, Star, LogIn, Cloud, HardDrive } from 'lucide-react';
 import { useLibrary } from '@/hooks/useLibrary';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { CONTENT_TYPE_LABELS, LIBRARY_STATUS_LABELS, type LibraryStatus } from '@/types/content';
+import { CONTENT_TYPE_LABELS, type LibraryStatus } from '@/types/content';
+import { getLibraryStatusLabel, getLibraryStatusFilterLabel } from '@/lib/utils/status';
 import { cn, getFallbackCover } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
 
@@ -96,7 +97,7 @@ export function LibraryPage() {
             onClick={() => setFilter(s)}
             className={cn('chip transition-colors', filter === s && 'chip-active')}
           >
-            {s === 'ALL' ? 'All' : LIBRARY_STATUS_LABELS[s]}
+            {getLibraryStatusFilterLabel(s)}
           </button>
         ))}
         <select
@@ -138,7 +139,7 @@ export function LibraryPage() {
                   <p className="mt-0.5 text-xs text-ink-400">{CONTENT_TYPE_LABELS[entry.contentType]}</p>
                   <div className="mt-1.5 flex items-center gap-2">
                     <span className="flex items-center gap-1 text-xs text-ink-300">
-                      <Icon className="h-3 w-3" /> {LIBRARY_STATUS_LABELS[entry.status]}
+                      <Icon className="h-3 w-3" /> {getLibraryStatusLabel(entry.status, entry.contentType)}
                     </span>
                   </div>
                   {entry.progress > 0 && (
