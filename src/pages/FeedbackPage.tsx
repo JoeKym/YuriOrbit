@@ -13,6 +13,7 @@ const CATEGORY_OPTIONS: { value: FeedbackCategory; label: string }[] = [
   { value: 'issue', label: 'Issue / Bug Report' },
   { value: 'feature', label: 'Feature Request' },
   { value: 'general', label: 'General Feedback' },
+  { value: 'review', label: 'Review / Testimonial (admin approval)' },
 ];
 
 const MESSAGE_MAX = 4000;
@@ -47,11 +48,14 @@ export function FeedbackPage() {
     setStatus('submitting');
     setError(null);
 
+    const isReview = category === 'review' || category === 'testimonial';
     const result = await submitFeedback({
-      kind: 'feedback',
+      kind: isReview ? 'review' : 'feedback',
       category,
       message: trimmed,
       contactEmail: contact.trim() || undefined,
+      name: undefined,
+      subject: isReview ? 'User review/testimonial' : undefined,
       pageUrl: '/feedback',
       website: honeypot,
     });
@@ -73,13 +77,14 @@ export function FeedbackPage() {
             <CheckCircle className="h-7 w-7 text-white" fill="white" />
           </div>
           <h1 className="font-display text-4xl font-semibold text-ink-50">Thank You</h1>
-          <p className="mt-2 text-lg text-ink-300">Your feedback has been submitted</p>
+          <p className="mt-2 text-lg text-ink-300">{category === 'review' || category === 'testimonial' ? 'Your review/testimonial was submitted' : 'Your feedback has been submitted'}</p>
         </div>
 
         <div className="prose prose-invert max-w-none">
           <p className="text-ink-300 leading-relaxed">
-            We appreciate you taking the time to share your thoughts. Your submission is now in the
-            review queue and is visible to the admin team.
+            {category === 'review' || category === 'testimonial'
+              ? 'Thank you for sharing your experience. Your review/testimonial was sent for admin approval and will only appear publicly if it is approved.'
+              : 'We appreciate you taking the time to share your thoughts. Your submission is now in the review queue and is visible to the admin team.'}
           </p>
           {contact.trim() && (
             <p className="text-ink-400 leading-relaxed text-sm">
