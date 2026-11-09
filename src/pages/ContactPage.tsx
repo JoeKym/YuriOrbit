@@ -16,7 +16,7 @@ import { FEEDBACK_FALLBACK_EMAIL, submitFeedback } from '@/lib/feedback';
 import { usePageMeta } from '@/hooks/usePageMeta';
 
 export function ContactPage() {
-  usePageMeta({ title: 'Contact', description: 'Get in touch with YuriOrbit for questions, corrections, or feedback.', path: '/contact' });
+  usePageMeta({ title: 'Contact', description: 'Contact YuriOrbit for questions, corrections, partnerships, or support. Use Appeals for moderation actions.', path: '/contact' });
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
@@ -29,8 +29,12 @@ export function ContactPage() {
       </div>
 
       <div className="prose prose-invert max-w-none">
-        <p className="text-ink-300 leading-relaxed mb-6">
-          YuriOrbit is built and maintained by JoeKym Labs. We welcome your feedback, questions, and reports.
+        <p className="text-ink-300 leading-relaxed mb-2">
+          YuriOrbit is built and maintained by JoeKym Labs. Reach out for questions, corrections, partnerships, or support.
+        </p>
+        <p className="text-sm text-ink-400 leading-relaxed mb-6">
+          For bug reports/features use <Link to="/feedback" className="text-rose-300 hover:underline">Feedback</Link>.
+          For account or content moderation appeals use <Link to="/appeals" className="text-rose-300 hover:underline">Appeals</Link>.
         </p>
       </div>
 

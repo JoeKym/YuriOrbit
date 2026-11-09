@@ -3,6 +3,7 @@ import { Heart, Star, BookOpen, Check, Bookmark } from 'lucide-react';
 import type { ContentTitle } from '@/types/content';
 import { CONTENT_TYPE_LABELS } from '@/types/content';
 import { cn, formatScore, getFallbackCover } from '@/lib/utils/format';
+import { getStatusDisplay } from '@/lib/utils/status';
 import { useLibrary } from '@/hooks/useLibrary';
 import { titleKey } from '@/lib/catalog/identity';
 import { maturityOf } from '@/lib/content/maturity';
@@ -19,40 +20,7 @@ function formatCount(num?: number): string | null {
   return String(num);
 }
 
-function getStatusIndicator(status?: string): { label: string; dotClass: string; bgClass: string } {
-  switch (status) {
-    case 'RELEASING':
-      return {
-        label: 'Ongoing',
-        dotClass: 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]',
-        bgClass: 'border-emerald-500/30 bg-emerald-950/60 text-emerald-300',
-      };
-    case 'FINISHED':
-      return {
-        label: 'Completed',
-        dotClass: 'bg-sky-400',
-        bgClass: 'border-sky-500/30 bg-sky-950/60 text-sky-300',
-      };
-    case 'HIATUS':
-      return {
-        label: 'Hiatus',
-        dotClass: 'bg-amber-400',
-        bgClass: 'border-amber-500/30 bg-amber-950/60 text-amber-300',
-      };
-    case 'NOT_YET_RELEASED':
-      return {
-        label: 'Upcoming',
-        dotClass: 'bg-purple-400',
-        bgClass: 'border-purple-500/30 bg-purple-950/60 text-purple-300',
-      };
-    default:
-      return {
-        label: '',
-        dotClass: '',
-        bgClass: '',
-      };
-  }
-}
+
 
 export function ContentCard({ title, className }: ContentCardProps) {
   const { library, addToLibrary, removeFromLibrary } = useLibrary();
@@ -70,7 +38,7 @@ export function ContentCard({ title, className }: ContentCardProps) {
         ? null
         : { label: '18+', className: 'border-rose-500/50 bg-rose-600/30 text-rose-100' };
 
-  const statusInfo = getStatusIndicator(title.status);
+  const statusInfo = getStatusDisplay(title.status, title.contentType);
   const popularFormatted = formatCount(title.popularity);
   const primaryGenre = title.genres && title.genres.length > 0 ? title.genres[0] : null;
 

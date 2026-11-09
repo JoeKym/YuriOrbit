@@ -89,6 +89,10 @@ export function AboutPage() {
             <span className="text-rose-400 font-bold">•</span>
             <span><strong>Respectful Maturity Filtering:</strong> Explicit content is hidden by default and requires opt-in browser confirmation.</span>
           </li>
+          <li className="flex items-start gap-2">
+            <span className="text-rose-400 font-bold">•</span>
+            <span><strong>Safety & Appeals:</strong> Accounts/content may be moderated for safety and policy reasons. If you believe an action was wrong, use the <Link to="/appeals" className="text-rose-300 hover:underline">appeals page</Link>.</span>
+          </li>
         </ul>
       </div>
 
