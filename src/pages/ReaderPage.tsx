@@ -22,6 +22,7 @@ import {
 } from '@/lib/providers';
 import { getFallbackCover, cn } from '@/lib/utils/format';
 import { useLibrary } from '@/hooks/useLibrary';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 export function ReaderPage() {
   const { id } = useParams<{ id: string }>();
@@ -29,6 +30,16 @@ export function ReaderPage() {
 
   const [title, setTitle] = useState<ContentTitle | null>(null);
   const [loadingTitle, setLoadingTitle] = useState(true);
+  usePageMeta({
+    title: title ? `Read ${title.title}` : (loadingTitle ? 'Loading…' : 'Reader'),
+    description: title?.title
+      ? `Read ${title.title} on YuriOrbit.`
+      : 'Read Girls\' Love manga and webtoons on YuriOrbit.',
+    path: id ? `/read/${id}` : undefined,
+    image: title?.coverImage,
+    noIndex: true,
+  });
+
 
   // MangaDex matching & chapters
   const [loadingChapters, setLoadingChapters] = useState(false);

@@ -7,6 +7,7 @@ import type { ContentType, PaginatedResult } from '@/types/content';
 import { searchGLTitles } from '@/lib/providers';
 import { usePaginatedTitles } from '@/hooks/usePaginatedTitles';
 import { cn } from '@/lib/utils/format';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 type AnimeTab = 'ALL' | 'TV' | 'MOVIE';
 
@@ -39,6 +40,8 @@ async function fetchAnimePage(tab: AnimeTab, page: number): Promise<PaginatedRes
 }
 
 export function AnimePage() {
+  usePageMeta({ title: 'GL Anime', description: 'Browse Girls\' Love anime on YuriOrbit.', path: '/anime' });
+
   const [tab, setTab] = useState<AnimeTab>('ALL');
   const feed = usePaginatedTitles((page) => fetchAnimePage(tab, page), tab);
 

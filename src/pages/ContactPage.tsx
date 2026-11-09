@@ -13,8 +13,11 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { FEEDBACK_FALLBACK_EMAIL, submitFeedback } from '@/lib/feedback';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 export function ContactPage() {
+  usePageMeta({ title: 'Contact', description: 'Get in touch with YuriOrbit for questions, corrections, or feedback.', path: '/contact' });
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
       <div className="text-center mb-10">

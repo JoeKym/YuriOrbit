@@ -5,6 +5,7 @@ import { LoadMoreButton } from '@/components/content/LoadMoreButton';
 import type { ContentType } from '@/types/content';
 import { searchGLTitles } from '@/lib/providers';
 import { usePaginatedTitles } from '@/hooks/usePaginatedTitles';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 interface CategoryPageProps {
   contentType: ContentType;
@@ -14,6 +15,11 @@ interface CategoryPageProps {
 const PER_PAGE = 30;
 
 export function CategoryPage({ contentType, title }: CategoryPageProps) {
+  usePageMeta({
+    title,
+    description: `Browse curated ${title.toLowerCase()} on YuriOrbit.`,
+    path: window.location.pathname,
+  });
   const feed = usePaginatedTitles(
     (page) => searchGLTitles({ contentType }, page, PER_PAGE),
     contentType

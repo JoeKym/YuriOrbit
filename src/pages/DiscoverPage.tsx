@@ -33,6 +33,7 @@ import {
 import { searchGLTitles } from '@/lib/providers';
 import { GL_ALLOWED_CLASSIFICATIONS } from '@/lib/providers/classify';
 import { cn, formatScore, getFallbackCover } from '@/lib/utils/format';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 interface MediaTypeTab {
   value: ContentType | 'ALL';
@@ -61,6 +62,8 @@ const STATUS_OPTIONS: { value: ReleaseStatus | 'ALL'; label: string }[] = [
 ];
 
 export function DiscoverPage() {
+  usePageMeta({ title: 'Discover', description: 'Discover Girls\' Love anime, manga, manhwa, webtoons, novels, and dramas on YuriOrbit.', path: '/discover' });
+
   const [searchParams, setSearchParams] = useSearchParams();
   const [titles, setTitles] = useState<ContentTitle[]>([]);
   const [loading, setLoading] = useState(true);

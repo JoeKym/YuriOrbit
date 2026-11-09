@@ -5,11 +5,23 @@ import type { ContentTitle } from '@/types/content';
 import { getTitleById } from '@/lib/providers';
 import { CONTENT_TYPE_LABELS } from '@/types/content';
 import { cn, formatScore, getFallbackCover, getFallbackBanner, getStatusLabel, getStatusColor } from '@/lib/utils/format';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 export function WatchPage() {
   const { id } = useParams<{ id: string }>();
   const [title, setTitle] = useState<ContentTitle | null>(null);
   const [loading, setLoading] = useState(true);
+  usePageMeta({
+    title: title ? `Watch ${title.title}` : (loading ? 'Loading…' : 'Watch'),
+    description: title?.synopsis
+      ? title.synopsis.replace(/\s+/g, ' ').slice(0, 160)
+      : title?.title
+        ? `Watch information and details for ${title.title} on YuriOrbit.`
+        : 'Watch Girls\' Love titles on YuriOrbit.',
+    path: id ? `/watch/${id}` : undefined,
+    image: title?.bannerImage || title?.coverImage,
+  });
+
 
   useEffect(() => {
     let cancelled = false;

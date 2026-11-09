@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { usePageMeta } from '@/hooks/usePageMeta';
 import { Heart, Home, Compass } from 'lucide-react';
 
 export function NotFoundPage() {
