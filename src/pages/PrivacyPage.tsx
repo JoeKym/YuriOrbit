@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 export function PrivacyPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
@@ -69,8 +71,12 @@ export function PrivacyPage() {
           <p className="text-sm">
             You own your data. You can export your complete library at any time as a JSON backup from the Settings page.
             If you wish to permanently delete your account and all associated cloud library records, you can do so through
-            your account settings or by contacting the project administrators at{' '}
-            <span className="text-rose-300 font-mono">github.com/JoeKym/YuriOrbit</span>.
+            your account settings, by emailing the project administrators at{' '}
+            <a href="mailto:mail.jkyme@gmail.com" className="text-rose-300 hover:underline">
+              mail.jkyme@gmail.com
+            </a>
+            , or through the{' '}
+            <Link to="/contact" className="text-rose-300 hover:underline">contact page</Link>.
           </p>
         </section>
       </div>

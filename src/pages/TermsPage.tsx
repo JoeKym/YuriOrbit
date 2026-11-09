@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 export function TermsPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
@@ -96,8 +98,12 @@ export function TermsPage() {
             YuriOrbit respects copyright laws and operates in compliance with standard DMCA notice-and-takedown principles.
             If you are a copyright owner or licensing agent who believes that any index entry or cover thumbnail infringes
             upon your rights, please submit a notice to our project maintainers at{' '}
-            <span className="text-rose-300 font-mono">github.com/JoeKym/YuriOrbit</span> with verification of ownership,
-            the specific title or URL, and the requested action. Valid requests are reviewed and addressed promptly.
+            <a href="mailto:mail.jkyme@gmail.com" className="text-rose-300 hover:underline">
+              mail.jkyme@gmail.com
+            </a>{' '}
+            or via the <Link to="/contact" className="text-rose-300 hover:underline">contact page</Link>, with
+            verification of ownership, the specific title or URL, and the requested action. Valid requests are reviewed
+            and addressed promptly.
           </p>
         </section>
       </div>
