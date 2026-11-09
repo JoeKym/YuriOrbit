@@ -57,8 +57,16 @@ export function getFallbackBanner(title: string): string {
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
-export function getStatusLabel(status: string): string {
-  const labels: Record<string, string> = {
+export function getStatusLabel(status: string, contentType?: string): string {
+  const live = contentType === 'TV' || contentType === 'MOVIE';
+  const labels: Record<string, string> = live ? {
+    RELEASING: 'Airing',
+    FINISHED: contentType === 'MOVIE' ? 'Released' : 'Ended',
+    NOT_YET_RELEASED: 'Coming Soon',
+    CANCELLED: 'Canceled',
+    HIATUS: 'On Break',
+    UNKNOWN: 'Unknown',
+  } : {
     RELEASING: 'Releasing',
     FINISHED: 'Completed',
     NOT_YET_RELEASED: 'Not Yet Released',
@@ -69,7 +77,7 @@ export function getStatusLabel(status: string): string {
   return labels[status] || status;
 }
 
-export function getStatusColor(status: string): string {
+export function getStatusColor(status: string, _contentType?: string): string {
   const colors: Record<string, string> = {
     RELEASING: 'text-success-400',
     FINISHED: 'text-ink-300',

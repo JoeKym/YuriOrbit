@@ -7,6 +7,7 @@ import { AnimePage } from '@/pages/AnimePage';
 import { UserProfilePage } from '@/pages/UserProfilePage';
 import { AnnouncementBanner } from '@/components/site/AnnouncementBanner';
 import { MaintenanceGate } from '@/components/site/MaintenanceGate';
+import { AccountModerationGate } from '@/components/site/AccountModerationGate';
 import { DiscoverPage } from '@/pages/DiscoverPage';
 import { CategoryPage } from '@/pages/CategoryPage';
 import { TrendingPage } from '@/pages/TrendingPage';
@@ -39,6 +40,7 @@ export default function App() {
           <AnnouncementBanner />
           <Navbar />
           <MaintenanceGate>
+            <AccountModerationGate>
             <main className="flex-1">
               <Routes>
                 <Route path="/" element={<HomePage />} />
@@ -65,6 +67,7 @@ export default function App() {
                 <Route path="/contact" element={<ContactPage />} />
                 <Route path="/faq" element={<FaqPage />} />
                 <Route path="/feedback" element={<FeedbackPage />} />
+                <Route path="/appeals" element={<AppealsPage />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="/terms" element={<TermsPage />} />
                 <Route path="/admin" element={<AdminPage />} />
@@ -72,6 +75,7 @@ export default function App() {
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </main>
+            </AccountModerationGate>
             <Footer />
           </MaintenanceGate>
         </div>

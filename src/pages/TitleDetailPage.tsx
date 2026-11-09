@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import type { ContentTitle, LibraryStatus } from '@/types/content';
 import { CONTENT_TYPE_LABELS, LIBRARY_STATUS_LABELS } from '@/types/content';
+import { getStatusDisplay } from '@/lib/utils/status';
 import { getTitleById } from '@/lib/providers';
 import { useLibrary } from '@/hooks/useLibrary';
 import { cn, formatScore, getFallbackCover, getFallbackBanner, getStatusLabel, getStatusColor } from '@/lib/utils/format';
@@ -212,7 +213,7 @@ export function TitleDetailPage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               <span className="chip">{CONTENT_TYPE_LABELS[title.contentType]}</span>
-              <span className={cn('text-sm font-medium', getStatusColor(title.status))}>{getStatusLabel(title.status)}</span>
+              <span className={cn('text-sm font-medium', getStatusColor(title.status, title.contentType))}>{getStatusLabel(title.status, title.contentType)}</span>
               {title.glClassification === 'GL_RELATED' && (
                 <span className="chip" style={{ borderColor: '#f59e0b40', color: '#fbbf24', background: '#f59e0b15' }}>GL-Related</span>
               )}
@@ -274,8 +275,11 @@ export function TitleDetailPage() {
 
             <div className="mt-6 flex flex-wrap gap-2">
               {isReadable && (
-                <Link to={`/read/${title.id}`} className="btn-primary">
-                  <BookOpen className="h-4 w-4" /> Start Reading
+                <Link
+                  to={entry?.progress ? `/read/${title.id}?ch=${encodeURIComponent(String(entry.progress))}` : `/read/${title.id}`}
+                  className="btn-primary"
+                >
+                  <BookOpen className="h-4 w-4" /> {entry?.progress ? `Continue Reading · Ch. ${entry.progress}` : 'Start Reading'}
                 </Link>
               )}
               {isWatchable && (

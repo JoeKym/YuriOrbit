@@ -2,10 +2,10 @@
  * YuriOrbit user account API — Cloudflare Pages Function.
  *
  * Routes (self-service, authenticated by the caller's Supabase access token):
+ *   GET    /api/account   — returns the caller's moderation status (for in-app enforcement)
  *   DELETE /api/account   — permanently deletes the caller's own account
  *
- * Uses the service role key server-side to call Supabase Auth Admin API.
- * The caller can ONLY delete their own account (verified from the token).
+ * Uses the service role key server-side. The caller can ONLY access/delete their own account.
  */
 
 interface Env {
@@ -62,19 +62,37 @@ async function verifyUser(env: Env, token: string): Promise<AuthUser | null> {
   return { id: user.id, email: user.email ?? null };
 }
 
+type ModerationEntry = { action?: string; durationHours?: number; reason?: string; updatedAt?: string };
+
+function normalizeModeration(entry: ModerationEntry | null | undefined) {
+  if (!entry || !entry.action || entry.action === 'unban') return null;
+  const updatedAt = entry.updatedAt ? Date.parse(entry.updatedAt) : NaN;
+  const hours = Number(entry.durationHours) || 0;
+  const expiresAt = Number.isFinite(updatedAt) && hours > 0 ? new Date(updatedAt + hours * 3600000).toISOString() : null;
+  const active = !expiresAt || Date.parse(expiresAt) > Date.now();
+  if (!active) return null;
+  return {
+    action: entry.action,
+    reason: typeof entry.reason === 'string' ? entry.reason : '',
+    expiresAt,
+    active: true,
+  };
+}
+
 export const onRequest: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
 
   const configProblem = setupError(env);
-  if (configProblem) return fail(configProblem, 501);
-
-  if (request.method !== 'DELETE') {
-    return fail('Method not allowed.', 405);
+  // GET status should fail open if not configured (don't lock users out due to config), but DELETE needs config.
+  if (request.method === 'GET') {
+    if (configProblem) return json({ ok: true, moderation: null, degraded: true });
+  } else if (configProblem) {
+    return fail(configProblem, 501);
   }
 
   const authHeader = request.headers.get('Authorization') || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
-  if (!token) return fail('Sign in to delete your account.', 401);
+  if (!token) return request.method === 'GET' ? json({ ok: true, moderation: null }) : fail('Sign in to delete your account.', 401);
 
   let user: AuthUser | null = null;
   try {
@@ -82,12 +100,30 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   } catch {
     user = null;
   }
-  if (!user) return fail('Your session is invalid or has expired. Sign in again.', 401);
+  if (!user) return request.method === 'GET' ? json({ ok: true, moderation: null }) : fail('Your session is invalid or has expired. Sign in again.', 401);
 
   const key = serviceKey(env) as string;
 
+  if (request.method === 'GET') {
+    try {
+      const res = await fetch(`${env.SUPABASE_URL}/rest/v1/site_settings?select=value&key=eq.user_moderation`, {
+        headers: { apikey: key, Authorization: `Bearer ${key}` },
+      });
+      if (!res.ok) return json({ ok: true, moderation: null, degraded: true });
+      const rows = (await readJson<{ value?: unknown }[]>(res)) ?? [];
+      const map = rows[0]?.value && typeof rows[0].value === 'object' ? (rows[0].value as Record<string, ModerationEntry>) : {};
+      const moderation = normalizeModeration(map[user.id]);
+      return json({ ok: true, moderation });
+    } catch {
+      return json({ ok: true, moderation: null, degraded: true });
+    }
+  }
+
+  if (request.method !== 'DELETE') {
+    return fail('Method not allowed.', 405);
+  }
+
   // Best-effort cleanup of user-owned data before auth deletion.
-  // library_entries and profiles have foreign keys/cascades in some setups; be defensive.
   try {
     await fetch(`${env.SUPABASE_URL}/rest/v1/library_entries?user_id=eq.${encodeURIComponent(user.id)}`, {
       method: 'DELETE',

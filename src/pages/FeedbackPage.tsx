@@ -19,7 +19,7 @@ const CATEGORY_OPTIONS: { value: FeedbackCategory; label: string }[] = [
 const MESSAGE_MAX = 4000;
 
 export function FeedbackPage() {
-  usePageMeta({ title: 'Feedback', description: 'Share feedback or report an issue to help improve YuriOrbit.', path: '/feedback' });
+  usePageMeta({ title: 'Feedback', description: 'Share feedback, report an issue, or submit a review/testimonial for admin approval.', path: '/feedback' });
 
   const { user } = useAuth();
   const [category, setCategory] = useState<FeedbackCategory>('issue');
@@ -125,9 +125,13 @@ export function FeedbackPage() {
       </div>
 
       <div className="prose prose-invert max-w-none">
-        <p className="text-ink-300 leading-relaxed mb-8">
-          We value your input on YuriOrbit. Please use the form below to report issues, suggest
-          features, or share general feedback.
+        <p className="text-ink-300 leading-relaxed mb-2">
+          Share bug reports, feature ideas, general feedback, or a review/testimonial. Submissions go to the admin review queue.
+        </p>
+        <p className="text-sm text-ink-400 leading-relaxed mb-8">
+          Need to appeal an account or content moderation action? Use the{' '}
+          <Link to="/appeals" className="text-rose-300 hover:underline">Appeals page</Link>.
+          Reviews/testimonials are <span className="text-ink-200">published only after admin approval</span>.
         </p>
       </div>
 
@@ -178,7 +182,7 @@ export function FeedbackPage() {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             className="mt-1 block w-full rounded-md border border-ink-700 bg-ink-950 px-3 py-3 text-sm text-ink-300 resize-y min-h-[100px] focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-            placeholder="Describe the issue, feature request, or feedback..."
+            placeholder="Describe the issue, request, feedback, or your review/testimonial..."
           />
           <p className="mt-1 text-right text-[11px] text-ink-500">
             {message.length}/{MESSAGE_MAX}
