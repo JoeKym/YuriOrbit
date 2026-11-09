@@ -34,6 +34,8 @@ export interface AdminUser {
   confirmed: boolean;
   displayName: string | null;
   libraryCount: number;
+  bannedUntil?: string | null;
+  moderationNote?: { reason?: string; action?: string; until?: string | null; updatedAt?: string; updatedBy?: string } | string | null;
 }
 
 export interface AdminEntry {
@@ -96,6 +98,43 @@ export interface FeedbackReport {
   created_at: string;
   resolved_at: string | null;
   resolved_by: string | null;
+}
+
+export type ContentModerationAction = 'takedown' | 'suspended' | 'restricted' | 'cleared';
+
+export interface ContentModerationItem {
+  titleId: string;
+  title?: string;
+  action: Exclude<ContentModerationAction, 'cleared'>;
+  reason?: string;
+  note?: string;
+  updatedAt: string;
+  updatedBy?: string;
+}
+
+export interface ReviewItem {
+  id: string;
+  name: string;
+  role?: string;
+  quote: string;
+  rating?: number;
+  featured?: boolean;
+  approved?: boolean;
+  sourceId?: string; // feedback report id, if applicable
+  createdAt: string;
+}
+
+export interface TrafficSnapshot {
+  generatedAt: string;
+  users: { total: number; last7d: number; warning: string | null };
+  library: { total: number; byStatus: Record<string, number>; topTitles: { titleId: string; title: string; count: number }[] };
+  feedback: { totalOpen: number; byKind: Record<string, number>; byCategory: Record<string, number>; recent7d: number };
+  moderation: { usersWithNotes: number; contentActions: number; takedowns: number };
+  featured: number;
+  announcementActive: boolean;
+  maintenanceActive: boolean;
+  recentAudit: AuditEntry[];
+  notes: string[];
 }
 
 async function adminRequest<T>(
@@ -162,6 +201,7 @@ async function adminRequest<T>(
 export const adminApi = {
   me: () => adminRequest<{ isAdmin: boolean; email: string; userId: string; allowlist: string[] }>('/me'),
   stats: () => adminRequest<AdminStats>('/stats'),
+  traffic: () => adminRequest<TrafficSnapshot>('/traffic'),
 
   users: (params: { q?: string; page?: number; perPage?: number }) => {
     const search = new URLSearchParams();
@@ -172,6 +212,8 @@ export const adminApi = {
       `/users?${search.toString()}`
     );
   },
+  moderateUser: (input: { action: 'ban' | 'suspend' | 'unban'; userId: string; durationHours?: number; reason?: string }) =>
+    adminRequest<{ ok: boolean }>('/users', { method: 'POST', body: JSON.stringify(input) }),
   purgeUserLibrary: (userId: string) =>
     adminRequest<{ ok: boolean }>('/users', {
       method: 'POST',
@@ -207,8 +249,7 @@ export const adminApi = {
     coverImage?: string;
     note?: string;
     contentType?: string;
-  }) =>
-    adminRequest<{ ok: boolean }>('/featured', { method: 'POST', body: JSON.stringify(input) }),
+  }) => adminRequest<{ ok: boolean }>('/featured', { method: 'POST', body: JSON.stringify(input) }),
   removeFeatured: (id: string) =>
     adminRequest<{ ok: boolean }>(`/featured?id=${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
@@ -216,10 +257,11 @@ export const adminApi = {
   saveSetting: (key: string, value: unknown) =>
     adminRequest<{ ok: boolean }>('/settings', { method: 'PUT', body: JSON.stringify({ key, value }) }),
 
-  feedback: (params: { status?: string; kind?: string; q?: string; page?: number; perPage?: number }) => {
+  feedback: (params: { status?: string; kind?: string; q?: string; page?: number; perPage?: number; category?: string }) => {
     const search = new URLSearchParams();
     if (params.status) search.set('status', params.status);
     if (params.kind) search.set('kind', params.kind);
+    if (params.category) search.set('category', params.category);
     if (params.q) search.set('q', params.q);
     if (params.page) search.set('page', String(params.page));
     if (params.perPage) search.set('perPage', String(params.perPage));

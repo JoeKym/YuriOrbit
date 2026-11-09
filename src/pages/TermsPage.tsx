@@ -2,111 +2,133 @@ import { Link } from 'react-router-dom';
 import { usePageMeta } from '@/hooks/usePageMeta';
 
 export function TermsPage() {
-  usePageMeta({ title: 'Terms of Use', description: 'Read the terms of use for YuriOrbit.', path: '/terms' });
+  usePageMeta({
+    title: 'Terms of Use',
+    description: 'Read the terms of use, moderation, appeals, and takedown policies for YuriOrbit.',
+    path: '/terms',
+  });
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
-      <h1 className="font-display text-3xl font-semibold text-ink-50 mb-2">Terms of Use</h1>
-      <p className="text-sm text-ink-400 mb-8">Last updated: November 2026</p>
+      <h1 className="mb-2 font-display text-3xl font-semibold text-ink-50">Terms of Use</h1>
+      <p className="mb-8 text-sm text-ink-400">Last updated: November 2026</p>
 
-      <div className="space-y-6 text-ink-300 leading-relaxed">
+      <div className="space-y-6 leading-relaxed text-ink-300">
         <section>
-          <h2 className="text-lg font-semibold text-ink-100 mb-2">1. What YuriOrbit Is</h2>
+          <h2 className="mb-2 text-lg font-semibold text-ink-100">1. About YuriOrbit</h2>
           <p className="text-sm">
-            YuriOrbit is a dedicated search, catalog indexing, and metadata aggregation platform for Girls' Love (GL),
-            yuri, and sapphic romance entertainment. We catalog works across multiple formats including manga, manhwa,
-            manhua, webtoons, light novels, web novels, anime, films, and live-action television series (including Thai GL,
-            Japanese, Korean, Chinese Baihe, and international cinema).
+            YuriOrbit is a discovery, catalog, and tracking platform for Girls' Love (GL), yuri, and sapphic romance
+            content across formats including manga, manhwa, manhua, webtoons, novels, anime, films, and live-action
+            series/dramas.
           </p>
-          <p className="mt-2 text-sm text-rose-300/90 font-medium">
-            Important Content Disclaimer: YuriOrbit does not host, upload, store, or stream copyrighted video files,
-            manga page image archives, or novel texts on its own servers. All media streaming, chapter pages, and book
-            data are accessed directly through public, third-party APIs or official publisher links.
+          <p className="mt-2 text-sm font-medium text-rose-300/90">
+            YuriOrbit does not host, upload, or redistribute copyrighted video files, manga archives, or novel texts on
+            its own servers. Media access and reading/streaming experiences may rely on third-party providers and
+            official sources.
           </p>
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-ink-100 mb-2">2. Accounts and Guest Mode</h2>
+          <h2 className="mb-2 text-lg font-semibold text-ink-100">2. Accounts, local data, and controls</h2>
           <p className="text-sm">
-            Browsing, searching, and tracking your reading do not require an account. By default, YuriOrbit functions
-            fully offline in your browser using local storage.
+            You may use YuriOrbit without an account. Optional accounts enable supported cloud features. You are
+            responsible for your account credentials and activity under your account.
           </p>
           <p className="mt-2 text-sm">
-            Signing in with an optional cloud account allows you to securely sync your library, progress, custom lists,
-            and personal ratings across devices. You are responsible for safeguarding your login credentials. You may
-            request account deletion or export your data at any time through Settings.
+            You can manage settings, themes, maturity filters, local data, and (where available) account deletion in{' '}
+            <Link to="/settings" className="text-rose-300 hover:underline">Settings</Link>. Destructive actions in the
+            Danger Zone are intentional and may be irreversible.
           </p>
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-ink-100 mb-2">3. Your Library and Profiles</h2>
+          <h2 className="mb-2 text-lg font-semibold text-ink-100">3. Content filtering and maturity settings</h2>
           <p className="text-sm">
-            When you create a profile, you control its visibility. Public profiles display your chosen display name, avatar,
-            and public reading list. Personal notes, custom settings, and private library entries are never displayed publicly.
-            You can switch your profile to private at any time in Settings.
+            YuriOrbit provides content filtering and maturity controls (e.g., Safe, Suggestive, Erotica, and related
+            classifications where applicable). Adult/explicit content is not shown without the appropriate user
+            confirmation and filter selection. You are responsible for using maturity settings appropriately in your
+            jurisdiction and environment.
           </p>
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-ink-100 mb-2">4. Metadata and API Providers</h2>
+          <h2 className="mb-2 text-lg font-semibold text-ink-100">4. User submissions and reviews</h2>
           <p className="text-sm">
-            Catalogue information — including titles, alternate names, synopsis text, cover art, release schedules,
-            community ratings, and chapter metadata — is dynamically aggregated from respected third-party platforms:
-          </p>
-          <ul className="mt-2 list-disc list-inside space-y-1 text-sm text-ink-300">
-            <li><strong className="text-ink-100">AniList:</strong> Anime, manga, and creator metadata via GraphQL.</li>
-            <li><strong className="text-ink-100">MangaDex:</strong> Manga, manhwa, and scanlation chapter indexing via official REST endpoints.</li>
-            <li><strong className="text-ink-100">The Movie Database (TMDB):</strong> Live-action television series, GL dramas, and feature films.</li>
-          </ul>
-          <p className="mt-2 text-sm">
-            All trademarks, logos, covers, and promotional materials remain the intellectual property of their respective
-            original copyright holders and publishers.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-lg font-semibold text-ink-100 mb-2">5. Content Filtering and Maturity Standards</h2>
-          <p className="text-sm">
-            To provide a comfortable and tailored discovery environment, YuriOrbit categorizes works into four distinct
-            maturity levels: <span className="text-ink-100">Safe</span>, <span className="text-ink-100">Suggestive</span>,{' '}
-            <span className="text-ink-100">Erotica</span>, and <span className="text-ink-100">Pornographic</span>.
+            If you submit feedback, reports, contact messages, appeals, or reviews/testimonials, you represent that your
+            submission is accurate to the best of your knowledge and does not violate others’ rights. You must not
+            submit unlawful, abusive, harassing, deceptive, or spam content.
           </p>
           <p className="mt-2 text-sm">
-            The platform defaults to hiding explicit works. Displaying mature or adult ratings requires a voluntary age
-            confirmation (18+), which is stored locally on your device. We do not distribute adult media directly.
+            We may review, moderate, edit for formatting/safety, feature, hide, or remove submissions (including
+            reviews/testimonials) to maintain quality, safety, and policy compliance.
           </p>
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-ink-100 mb-2">6. In-Browser Reader and Proxies</h2>
+          <h2 className="mb-2 text-lg font-semibold text-ink-100">5. Moderation, suspension, bans, and content actions</h2>
           <p className="text-sm">
-            YuriOrbit includes a built-in reader for supported open platforms (such as MangaDex At-Home). The reader operates
-            as a client interface to upstream scanlation networks and image servers. Cover and API proxies deployed via
-            Cloudflare Pages Functions exist strictly for origin validation, CORS resolution, and network caching.
+            To protect users and the service, we may take moderation actions at our discretion, including warnings,
+            temporary suspension, permanent bans, feature restrictions, or removal/restriction of content listings and
+            related metadata displays. Actions may be taken for policy violations, abuse, security risks, fraudulent
+            activity, repeated harmful submissions, or valid legal/rights requests.
+          </p>
+          <p className="mt-2 text-sm">
+            Content moderation actions may include <strong>suspension</strong> (temporary restriction),{' '}
+            <strong>takedown</strong> (removal/restriction of a listing or display), or other limitations as needed.
+            We may preserve records related to moderation and safety where appropriate.
           </p>
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-ink-100 mb-2">7. Acceptable Use</h2>
+          <h2 className="mb-2 text-lg font-semibold text-ink-100">6. Appeals</h2>
           <p className="text-sm">
-            Users agree not to exploit YuriOrbit to conduct automated scraping attacks, DDoS upstream services, bypass
-            digital access restrictions, impersonate administrators, or harass community members. Violations may result
-            in immediate IP restriction or account termination.
+            If you believe a moderation decision (account or content-related) was made in error, you may submit an
+            appeal via the <Link to="/appeals" className="text-rose-300 hover:underline">Appeals page</Link>. Provide
+            relevant identifiers (username, title/URL, dates) and context. Submitting an appeal does not guarantee
+            reversal, but appeals are reviewed.
           </p>
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-ink-100 mb-2">8. Copyright, Fair Use, and Takedown Policy</h2>
+          <h2 className="mb-2 text-lg font-semibold text-ink-100">7. Copyright, rights requests, and takedowns</h2>
           <p className="text-sm">
-            YuriOrbit respects copyright laws and operates in compliance with standard DMCA notice-and-takedown principles.
-            If you are a copyright owner or licensing agent who believes that any index entry or cover thumbnail infringes
-            upon your rights, please submit a notice to our project maintainers at{' '}
-            <a href="mailto:mail.jkyme@gmail.com" className="text-rose-300 hover:underline">
-              mail.jkyme@gmail.com
-            </a>{' '}
-            or via the <Link to="/contact" className="text-rose-300 hover:underline">contact page</Link>, with
-            verification of ownership, the specific title or URL, and the requested action. Valid requests are reviewed
-            and addressed promptly.
+            YuriOrbit respects intellectual property rights. If you are a rights holder or authorized agent and believe
+            content listed/indexed or displayed on YuriOrbit infringes your rights, submit a request with: (1) proof of
+            authority/ownership, (2) the specific URL(s)/title(s), (3) the material at issue, and (4) the requested
+            action.
+          </p>
+          <p className="mt-2 text-sm">
+            Send requests via <Link to="/contact" className="text-rose-300 hover:underline">Contact</Link> or{' '}
+            <a href="mailto:mail.jkyme@gmail.com" className="text-rose-300 hover:underline">mail.jkyme@gmail.com</a>.
+            Valid requests are reviewed and addressed promptly, which may include metadata correction, restriction, or
+            takedown of the relevant listing/display.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-2 text-lg font-semibold text-ink-100">8. Acceptable use</h2>
+          <p className="text-sm">
+            You agree not to misuse the service, including attempting unauthorized access, scraping/abusing APIs or
+            infrastructure, bypassing access controls, interfering with operations, harassing others, or using the
+            platform for unlawful purposes.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-2 text-lg font-semibold text-ink-100">9. Third-party providers and availability</h2>
+          <p className="text-sm">
+            Metadata, images, and reading/watching availability may come from third-party providers and are subject to
+            their terms, availability, and accuracy. YuriOrbit may change, suspend, or discontinue features (including
+            during maintenance) without guarantee of uninterrupted availability.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-2 text-lg font-semibold text-ink-100">10. Contact</h2>
+          <p className="text-sm">
+            For questions, reports, takedowns, or appeals, use <Link to="/contact" className="text-rose-300 hover:underline">Contact</Link>,{' '}
+            <Link to="/feedback" className="text-rose-300 hover:underline">Feedback</Link>, or{' '}
+            <Link to="/appeals" className="text-rose-300 hover:underline">Appeals</Link>.
           </p>
         </section>
       </div>

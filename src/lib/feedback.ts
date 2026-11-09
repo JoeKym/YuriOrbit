@@ -7,17 +7,27 @@
  */
 import { supabase } from '@/lib/supabase';
 
-export type FeedbackKind = 'feedback' | 'report' | 'contact';
-export type FeedbackCategory = 'issue' | 'feature' | 'general' | 'metadata';
+export type FeedbackKind = 'feedback' | 'report' | 'contact' | 'appeal' | 'review';
+export type FeedbackCategory =
+  | 'issue'
+  | 'feature'
+  | 'general'
+  | 'metadata'
+  | 'appeal'
+  | 'appeal_account'
+  | 'appeal_content'
+  | 'review'
+  | 'testimonial'
+  | 'takedown';
 
 export interface FeedbackInput {
   kind: FeedbackKind;
   category: FeedbackCategory;
   message: string;
   contactEmail?: string;
-  /** Sender name, used by contact messages. */
+  /** Sender name, used by contact/appeal messages. */
   name?: string;
-  /** Subject line, used by contact messages. */
+  /** Subject line, used by contact/appeal messages. */
   subject?: string;
   pageUrl?: string;
   titleId?: string;
