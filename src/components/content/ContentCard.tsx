@@ -107,6 +107,9 @@ export function ContentCard({ title, className }: ContentCardProps) {
         {/* Resting Vignette Gradients */}
         <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/40 to-ink-950/20 pointer-events-none" />
 
+        {/* Extra fade behind the bottom text so it stays readable on busy covers */}
+        <div className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-ink-950 via-ink-950/75 to-transparent pointer-events-none" />
+
         {/* Top Badges Bar */}
         <div className="absolute top-2 left-2 right-2 flex items-center justify-between gap-1 pointer-events-none">
           {/* Format & Maturity Tag Group */}

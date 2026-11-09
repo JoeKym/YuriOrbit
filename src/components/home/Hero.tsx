@@ -204,7 +204,7 @@ export function Hero({ titles, loading }: { titles: ContentTitle[]; loading?: bo
 
           <div className="mt-5 flex flex-wrap items-center gap-2">
             {slide.genres.slice(0, 4).map((genre) => (
-              <span key={genre} className="rounded-full border border-ink-700/60 bg-ink-900/60 px-2.5 py-0.5 text-[11px] text-ink-300">
+              <span key={genre} className="rounded-full border border-ink-600/70 bg-ink-950/70 px-2.5 py-0.5 text-[11px] text-ink-200 backdrop-blur-sm">
                 {genre}
               </span>
             ))}
@@ -303,7 +303,7 @@ export function Hero({ titles, loading }: { titles: ContentTitle[]; loading?: bo
       </div>
 
       {/* Current level, so the filter is never a surprise */}
-      <div className="relative mx-auto max-w-[1600px] px-4 pb-4 md:px-6">
+      <div className="relative mx-auto max-w-[1600px] px-4 pb-6 md:px-6 md:pb-7">
         <p className="text-[10px] uppercase tracking-wider text-ink-500">
           Content filter: {level.toLowerCase()} · change it in{' '}
           <Link to="/settings" className="text-ink-400 underline decoration-dotted hover:text-ink-200">
