@@ -27,6 +27,7 @@ export function ContentModerationTab() {
   const [lookupId, setLookupId] = useState('');
   const [lookupBusy, setLookupBusy] = useState(false);
   const [draft, setDraft] = useState<Item>({ titleId: '', action: 'takedown', reason: '', note: '' });
+  const [durationHours, setDurationHours] = useState(24);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -69,9 +70,22 @@ export function ContentModerationTab() {
   const upsert = async () => {
     const titleId = draft.titleId.trim();
     if (!titleId) { setError('Title ID is required.'); return; }
-    const next: MapValue = { ...items, [titleId]: { ...draft, titleId, updatedAt: new Date().toISOString() } };
+    const reason = (draft.reason || '').trim();
+    if (draft.action !== 'restricted' && !reason) {
+      setError('A reason is required — it is shown to users on the restricted page.');
+      return;
+    }
+    const expiresAt = draft.action === 'suspended'
+      ? new Date(Date.now() + Math.max(1, Math.floor(durationHours)) * 3_600_000).toISOString()
+      : undefined;
+    const next: MapValue = {
+      ...items,
+      [titleId]: { ...draft, reason, expiresAt, titleId, updatedAt: new Date().toISOString() },
+    };
     await saveAll(next);
+    setError(null);
     setDraft({ titleId: '', action: 'takedown', reason: '', note: '' });
+    setDurationHours(24);
     setLookupId('');
   };
 
@@ -93,7 +107,7 @@ export function ContentModerationTab() {
     <div className="space-y-5">
       <div className="card-surface p-5">
         <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink-100"><ShieldAlert className="h-4 w-4 text-rose-400" /> Content moderation</h2>
-        <p className="mb-4 text-xs text-ink-400">Apply <strong>takedown</strong>, <strong>suspension</strong>, or <strong>restriction</strong> actions to content by title ID. Takedowns/suspensions are enforced in site browsing/detail views (best-effort; cached briefly).</p>
+        <p className="mb-4 text-xs text-ink-400">Apply <strong>takedown</strong>, <strong>suspension</strong>, or <strong>restriction</strong> actions to content by title ID. Takedowns and suspensions hide the title and show its reason and appeal link to visitors; suspensions restore automatically when their duration ends.</p>
         {error && <div className="mb-3 rounded-lg border border-error-500/30 bg-error-500/5 p-3 text-xs text-error-300">{error}</div>}
         <div className="grid gap-3 md:grid-cols-2">
           <div>
@@ -108,15 +122,24 @@ export function ContentModerationTab() {
             <select value={draft.action} onChange={(e) => setDraft({ ...draft, action: e.target.value as Action })} className="input-field text-xs">
               <option value="takedown">Takedown (hide/remove listing)</option>
               <option value="suspended">Suspended (temporarily hidden)</option>
-              <option value="restricted">Restricted (flagged; enforcement depends on UI)</option>
+              <option value="restricted">Restricted (flagged only; stays visible)</option>
             </select>
           </div>
+          {draft.action === 'suspended' && (
+            <div>
+              <label className="mb-1 block text-[11px] text-ink-400">Suspension duration (hours)</label>
+              <input type="number" min={1} value={durationHours} onChange={(e) => setDurationHours(Number(e.target.value || 1))} className="input-field text-xs" />
+              <div className="mt-1 text-[10px] text-ink-500">Common: 24 (1 day), 72 (3 days), 168 (7 days). Auto-restores on expiry.</div>
+            </div>
+          )}
           <div>
             <label className="mb-1 block text-[11px] text-ink-400">Title (optional)</label>
             <input value={draft.title || ''} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Auto-filled on lookup or enter manually" className="input-field text-xs" />
           </div>
           <div>
-            <label className="mb-1 block text-[11px] text-ink-400">Reason (shown internally; keep clear)</label>
+            <label className="mb-1 block text-[11px] text-ink-400">
+              Reason {draft.action !== 'restricted' && <span className="text-rose-300">(required — shown to users)</span>}
+            </label>
             <input value={draft.reason || ''} onChange={(e) => setDraft({ ...draft, reason: e.target.value })} placeholder="e.g. valid rights request, policy violation, incorrect/unsafe listing" className="input-field text-xs" />
           </div>
           <div className="md:col-span-2">
@@ -162,6 +185,13 @@ export function ContentModerationTab() {
                     </td>
                     <td className="px-4 py-2.5">
                       <span className={cn('rounded-md border px-1.5 py-0.5 text-[10px] font-medium uppercase', item.action === 'takedown' ? 'border-error-500/30 bg-error-500/10 text-error-400' : item.action === 'suspended' ? 'border-warning-500/30 bg-warning-500/10 text-warning-400' : 'border-ink-700 bg-ink-850 text-ink-300')}>{item.action}</span>
+                      {item.action === 'suspended' && item.expiresAt && (
+                        <div className="mt-1 text-[10px] text-ink-500">
+                          {Date.parse(item.expiresAt) > Date.now()
+                            ? `Until ${new Date(item.expiresAt).toLocaleString()}`
+                            : 'Expired'}
+                        </div>
+                      )}
                     </td>
                     <td className="max-w-[260px] truncate px-4 py-2.5 text-ink-400" title={item.reason}>{item.reason || '—'}</td>
                     <td className="whitespace-nowrap px-4 py-2.5 text-ink-500">{item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '—'}</td>
