@@ -342,6 +342,12 @@ export function AuthPage() {
       </aside>
 
       <div className="card-surface p-6 sm:p-8">
+        {searchParams.get('moderation') === 'lifted' && (
+          <div className="mb-5 flex items-start gap-2 rounded-lg border border-success-500/30 bg-success-500/5 p-3 text-xs text-success-300">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" />
+            <span>Your moderation has been lifted. Sign in again to continue.</span>
+          </div>
+        )}
         <div className="mb-6 flex items-start gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-lavender-600">
             {mode === 'signin' ? (
