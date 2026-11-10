@@ -178,8 +178,8 @@ export type LibraryStatus =
   | 'FAVOURITE';
 
 export const LIBRARY_STATUS_LABELS: Record<LibraryStatus, string> = {
-  CURRENT: 'Currently Reading',
-  PLANNED: 'Plan to Read',
+  CURRENT: 'In Progress',
+  PLANNED: 'Planned',
   COMPLETED: 'Completed',
   ON_HOLD: 'On Hold',
   DROPPED: 'Dropped',

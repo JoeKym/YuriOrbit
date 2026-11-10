@@ -118,8 +118,8 @@ export function TitleDetailPage() {
     );
   }
 
-  const isReadable = ['MANGA', 'MANHWA', 'MANHUA', 'WEBTOON'].includes(title.contentType);
   const isWatchable = ['MOVIE', 'TV', 'DRAMA'].includes(title.contentType);
+  const isReadable = !isWatchable && ['MANGA', 'MANHWA', 'MANHUA', 'WEBTOON'].includes(title.contentType);
   const maturity = maturityOf(title);
   const hiddenByFilter = !isWithinMaturity(title, level);
 
@@ -284,7 +284,7 @@ export function TitleDetailPage() {
               )}
               {isWatchable && (
                 <Link to={`/watch/${title.id}`} className="btn-primary">
-                  <Play className="h-4 w-4" /> Watch
+                  <Play className="h-4 w-4" /> {entry?.progress ? `Continue Watching · Ep. ${entry.progress}` : 'Watch'}
                 </Link>
               )}
 

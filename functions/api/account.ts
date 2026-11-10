@@ -105,18 +105,52 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   const key = serviceKey(env) as string;
 
   if (request.method === 'GET') {
+    // Two sources of truth, so a partial admin action still results in enforcement:
+    //   1. site_settings.user_moderation — carries the human-readable action/reason.
+    //   2. Supabase Auth banned_until — authoritative for whether the account is banned.
+    let moderation = null as ReturnType<typeof normalizeModeration>;
+    let degraded = false;
+
     try {
       const res = await fetch(`${env.SUPABASE_URL}/rest/v1/site_settings?select=value&key=eq.user_moderation`, {
         headers: { apikey: key, Authorization: `Bearer ${key}` },
       });
-      if (!res.ok) return json({ ok: true, moderation: null, degraded: true });
-      const rows = (await readJson<{ value?: unknown }[]>(res)) ?? [];
-      const map = rows[0]?.value && typeof rows[0].value === 'object' ? (rows[0].value as Record<string, ModerationEntry>) : {};
-      const moderation = normalizeModeration(map[user.id]);
-      return json({ ok: true, moderation });
+      if (res.ok) {
+        const rows = (await readJson<{ value?: unknown }[]>(res)) ?? [];
+        const map = rows[0]?.value && typeof rows[0].value === 'object' ? (rows[0].value as Record<string, ModerationEntry>) : {};
+        moderation = normalizeModeration(map[user.id]);
+      } else {
+        degraded = true;
+      }
     } catch {
-      return json({ ok: true, moderation: null, degraded: true });
+      degraded = true;
     }
+
+    // Check the Auth record even when the settings note is missing/stale.
+    try {
+      const res = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users/${user.id}`, {
+        headers: { apikey: key, Authorization: `Bearer ${key}` },
+      });
+      if (res.ok) {
+        const record = await readJson<{ banned_until?: string | null }>(res);
+        const bannedUntil = record?.banned_until ? Date.parse(record.banned_until) : NaN;
+        if (Number.isFinite(bannedUntil) && bannedUntil > Date.now()) {
+          const expiresAt = new Date(bannedUntil).toISOString();
+          // Auth says banned but settings has no/expired note — still enforce.
+          if (!moderation) {
+            moderation = { action: 'ban', reason: '', expiresAt, active: true };
+          } else if (!moderation.expiresAt) {
+            moderation = { ...moderation, expiresAt };
+          }
+        }
+      } else {
+        degraded = true;
+      }
+    } catch {
+      degraded = true;
+    }
+
+    return json({ ok: true, moderation, degraded });
   }
 
   if (request.method !== 'DELETE') {
