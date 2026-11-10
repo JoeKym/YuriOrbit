@@ -169,8 +169,9 @@ export function AccountSuspendedScreen({
             : 'Your account has been temporarily suspended and cannot use YuriOrbit right now.'}
         </p>
         {!isBan && block.expiresAt && (
-          <p className="mt-2 flex items-center gap-1.5 text-center text-sm text-ink-400">
-            Your suspension expires on <span className="font-medium text-ink-200">{formatDate(block.expiresAt)}</span>.
+          <p className="mt-2 text-center text-sm text-ink-400">
+            Your suspension expires on{' '}
+            <span className="font-medium text-ink-200">{formatDate(block.expiresAt)}</span>.
           </p>
         )}
 
