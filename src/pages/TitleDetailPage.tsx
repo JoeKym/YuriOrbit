@@ -18,6 +18,7 @@ import { submitFeedback } from '@/lib/feedback';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { useContentModeration } from '@/hooks/useContentModeration';
 import { ContentUnavailable } from '@/components/site/ContentUnavailable';
+import { RestrictedNotice } from '@/components/site/RestrictedNotice';
 
 const STATUSES: LibraryStatus[] = ['CURRENT', 'PLANNED', 'COMPLETED', 'ON_HOLD', 'DROPPED', 'FAVOURITE'];
 
@@ -176,6 +177,7 @@ export function TitleDetailPage() {
       )}
 
       <div className="mx-auto max-w-[1400px] px-4 py-6 md:px-6">
+        <RestrictedNotice moderation={moderation} />
         <Link to="/discover" className="mb-4 inline-flex items-center gap-1 text-sm text-ink-400 transition-colors hover:text-rose-400">
           <ChevronLeft className="h-4 w-4" /> Back
         </Link>

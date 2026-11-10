@@ -27,6 +27,12 @@ const MANGADEX_BASE = rawBase.replace(/\/+$/, '');
 const MANGADEX_COVERS_BASE = isBrowser
   ? `${MANGADEX_BASE}/covers`
   : 'https://uploads.mangadex.org/covers';
+
+/**
+ * Chapter pages go through our own image proxy. At-home URLs are short-lived
+ * and point at rotating nodes, so the browser must never hotlink them.
+ */
+const MANGADEX_PAGE_BASE = isBrowser ? `${MANGADEX_BASE}/page` : '/api/mangadex/page';
 const TIMEOUT = 15000;
 const REQUEST_DELAY = 300; // Be polite to MangaDex
 
@@ -502,8 +508,12 @@ export async function mangadexGetChapterPages(chapterId: string): Promise<string
       chapter: { hash: string; data: string[]; dataSaver: string[] };
     }>(`/at-home/server/${chapterId}`);
 
-    return resp.chapter.data.map(
-      (file) => `${resp.baseUrl}/data/${resp.chapter.hash}/${file}`
+    const files = resp.chapter.data?.length ? resp.chapter.data : resp.chapter.dataSaver ?? [];
+    return files.map(
+      (file) =>
+        `${MANGADEX_PAGE_BASE}?chapter=${encodeURIComponent(chapterId)}&hash=${encodeURIComponent(
+          resp.chapter.hash
+        )}&file=${encodeURIComponent(file)}`
     );
   } catch {
     return [];

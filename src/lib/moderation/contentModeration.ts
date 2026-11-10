@@ -100,12 +100,22 @@ export function getModerationFor(map: ModerationMap, titleId: string): ContentMo
   return normalizeItem(map[titleId]);
 }
 
+/** Takedowns and suspensions block the page itself. */
 export function isContentBlocked(map: ModerationMap, titleId: string): boolean {
   const item = getModerationFor(map, titleId);
   return item?.action === 'takedown' || item?.action === 'suspended';
 }
 
+/**
+ * Anything with an active action is kept out of browse/search. Restrictions
+ * differ from takedowns only in that a direct link still opens the page, with
+ * a warning shown there.
+ */
+export function isContentHidden(map: ModerationMap, titleId: string): boolean {
+  return getModerationFor(map, titleId) !== null;
+}
+
 export function filterModeratedTitles<T extends Pick<ContentTitle, 'id'>>(titles: T[], map: ModerationMap): T[] {
   if (!map || Object.keys(map).length === 0) return titles;
-  return titles.filter((t) => !isContentBlocked(map, t.id));
+  return titles.filter((t) => !isContentHidden(map, t.id));
 }

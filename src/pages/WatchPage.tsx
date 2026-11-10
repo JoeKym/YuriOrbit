@@ -8,6 +8,7 @@ import { cn, formatScore, getFallbackCover, getFallbackBanner, getStatusLabel, g
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { useContentModeration } from '@/hooks/useContentModeration';
 import { ContentUnavailable } from '@/components/site/ContentUnavailable';
+import { RestrictedNotice } from '@/components/site/RestrictedNotice';
 
 export function WatchPage() {
   const { id } = useParams<{ id: string }>();
@@ -87,6 +88,7 @@ export function WatchPage() {
       </div>
 
       <div className="mx-auto max-w-[1200px] px-4 py-6 md:px-6">
+        <RestrictedNotice moderation={moderation} />
         <Link to={`/title/${title.id}`} className="mb-4 inline-flex items-center gap-1 text-sm text-ink-400 hover:text-rose-400 transition-colors">
           <ChevronLeft className="h-4 w-4" /> Back to title
         </Link>
