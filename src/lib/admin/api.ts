@@ -137,6 +137,18 @@ export interface TrafficSnapshot {
   notes: string[];
 }
 
+export interface TrafficAnalytics {
+  pageviews: number;
+  visitors: number;
+  viewsPerVisit: number;
+  bounceRate: number;
+  series: { t: string; views: number }[];
+  topPages: { path: string; views: number }[];
+  sources: { source: string; visits: number }[];
+  devices: { device: string; visits: number }[];
+  live: { session: string; path: string; lastSeen: string }[];
+}
+
 async function adminRequest<T>(
   path: string,
   init: RequestInit = {}
@@ -202,6 +214,10 @@ export const adminApi = {
   me: () => adminRequest<{ isAdmin: boolean; email: string; userId: string; allowlist: string[] }>('/me'),
   stats: () => adminRequest<AdminStats>('/stats'),
   traffic: () => adminRequest<TrafficSnapshot>('/traffic'),
+  analytics: (params: { since: string; until: string; bucket: 'hour' | 'day'; tz: string }) => {
+    const search = new URLSearchParams(params);
+    return adminRequest<TrafficAnalytics>(`/analytics?${search.toString()}`);
+  },
 
   users: (params: { q?: string; page?: number; perPage?: number }) => {
     const search = new URLSearchParams();

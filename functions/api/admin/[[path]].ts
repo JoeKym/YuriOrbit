@@ -617,6 +617,47 @@ async function handleAudit(ctx: AdminContext): Promise<Response> {
 }
 
 
+async function handleAnalytics(ctx: AdminContext, url: URL): Promise<Response> {
+  const since = new Date(url.searchParams.get('since') || '');
+  const until = new Date(url.searchParams.get('until') || '');
+  const bucket = url.searchParams.get('bucket') === 'hour' ? 'hour' : 'day';
+  const requestedTz = (url.searchParams.get('tz') || 'UTC').slice(0, 64);
+  const tz = /^[A-Za-z_]+(?:\/[A-Za-z0-9_+\-]+)*$/.test(requestedTz) ? requestedTz : 'UTC';
+
+  if (!Number.isFinite(since.getTime()) || !Number.isFinite(until.getTime())) {
+    return fail('since and until must be valid ISO timestamps.', 400);
+  }
+  const spanMs = until.getTime() - since.getTime();
+  if (spanMs <= 0) return fail('until must be after since.', 400);
+  if (spanMs > 92 * 24 * 60 * 60 * 1000) return fail('Range cannot exceed 92 days.', 400);
+
+  const res = await fetch(`${ctx.env.SUPABASE_URL}/rest/v1/rpc/admin_traffic_stats`, {
+    method: 'POST',
+    headers: svcHeaders(ctx.env),
+    body: JSON.stringify({
+      p_since: since.toISOString(),
+      p_until: until.toISOString(),
+      p_bucket: bucket,
+      p_tz: tz,
+    }),
+  });
+
+  if (!res.ok) {
+    const detail = await readJson<{ message?: string; hint?: string }>(res);
+    const message = detail?.message || detail?.hint || '';
+    if (res.status === 404 || /find the function|does not exist|schema cache/i.test(message)) {
+      return fail(
+        'Traffic analytics is not installed yet. Apply the traffic analytics migration, then reload.',
+        501
+      );
+    }
+    return fail(message || `Could not load traffic analytics (HTTP ${res.status}).`, 502);
+  }
+
+  const data = await readJson<unknown>(res);
+  return json(data ?? { pageviews: 0, visitors: 0, viewsPerVisit: 0, bounceRate: 0, series: [], topPages: [], sources: [], devices: [], live: [] });
+}
+
 async function handleTraffic(ctx: AdminContext): Promise<Response> {
   const { env } = ctx;
   const [usersRes, entriesRes, featuredCount, settingsRes, feedbackRes, auditRes] = await Promise.all([
@@ -749,6 +790,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     if (route === 'me' && method === 'GET') return await handleMe(ctx);
     if (route === 'stats' && method === 'GET') return await handleStats(ctx);
     if (route === 'traffic' && method === 'GET') return await handleTraffic(ctx);
+    if (route === 'analytics' && method === 'GET') return await handleAnalytics(ctx, url);
     if (route === 'users' && method === 'GET') return await handleUsers(ctx, url);
     if (route === 'users' && method === 'POST') return await handleUserAction(ctx, request);
     if (route === 'library' && method === 'GET') return await handleLibrary(ctx, url);

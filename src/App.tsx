@@ -8,6 +8,7 @@ import { UserProfilePage } from '@/pages/UserProfilePage';
 import { AnnouncementBanner } from '@/components/site/AnnouncementBanner';
 import { MaintenanceGate } from '@/components/site/MaintenanceGate';
 import { AccountModerationGate } from '@/components/site/AccountModerationGate';
+import { TrafficTracker } from '@/components/site/TrafficTracker';
 import { DiscoverPage } from '@/pages/DiscoverPage';
 import { CategoryPage } from '@/pages/CategoryPage';
 import { TrendingPage } from '@/pages/TrendingPage';
@@ -36,6 +37,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <ScrollToTop />
+        <TrafficTracker />
         <div className="flex min-h-screen flex-col bg-ink-950">
           <AnnouncementBanner />
           <Navbar />
