@@ -71,8 +71,8 @@ export function ContentModerationTab() {
     const titleId = draft.titleId.trim();
     if (!titleId) { setError('Title ID is required.'); return; }
     const reason = (draft.reason || '').trim();
-    if (draft.action !== 'restricted' && !reason) {
-      setError('A reason is required — it is shown to users on the restricted page.');
+    if (!reason) {
+      setError('A reason is required — it is shown to users when they open the title.');
       return;
     }
     const expiresAt = draft.action === 'suspended'
@@ -107,7 +107,7 @@ export function ContentModerationTab() {
     <div className="space-y-5">
       <div className="card-surface p-5">
         <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink-100"><ShieldAlert className="h-4 w-4 text-rose-400" /> Content moderation</h2>
-        <p className="mb-4 text-xs text-ink-400">Apply <strong>takedown</strong>, <strong>suspension</strong>, or <strong>restriction</strong> actions to content by title ID. Takedowns and suspensions hide the title and show its reason and appeal link to visitors; suspensions restore automatically when their duration ends.</p>
+        <p className="mb-4 text-xs text-ink-400">Apply <strong>takedown</strong>, <strong>suspension</strong>, or <strong>restriction</strong> actions to content by title ID. All three hide the title from browse and search. Takedowns/suspensions also block direct links and show an appeal page; suspensions restore automatically. Restricted titles still open by direct link with a warning.</p>
         {error && <div className="mb-3 rounded-lg border border-error-500/30 bg-error-500/5 p-3 text-xs text-error-300">{error}</div>}
         <div className="grid gap-3 md:grid-cols-2">
           <div>
@@ -122,7 +122,7 @@ export function ContentModerationTab() {
             <select value={draft.action} onChange={(e) => setDraft({ ...draft, action: e.target.value as Action })} className="input-field text-xs">
               <option value="takedown">Takedown (hide/remove listing)</option>
               <option value="suspended">Suspended (temporarily hidden)</option>
-              <option value="restricted">Restricted (flagged only; stays visible)</option>
+              <option value="restricted">Restricted (hidden from browse; direct links show a warning)</option>
             </select>
           </div>
           {draft.action === 'suspended' && (
@@ -138,7 +138,7 @@ export function ContentModerationTab() {
           </div>
           <div>
             <label className="mb-1 block text-[11px] text-ink-400">
-              Reason {draft.action !== 'restricted' && <span className="text-rose-300">(required — shown to users)</span>}
+              Reason <span className="text-rose-300">(required — shown to users)</span>
             </label>
             <input value={draft.reason || ''} onChange={(e) => setDraft({ ...draft, reason: e.target.value })} placeholder="e.g. valid rights request, policy violation, incorrect/unsafe listing" className="input-field text-xs" />
           </div>

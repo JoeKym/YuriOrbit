@@ -12,6 +12,7 @@ import {
   RefreshCw,
   AlertCircle,
   CheckCircle2,
+  ImageOff,
 } from 'lucide-react';
 import type { ContentTitle, ChapterInfo } from '@/types/content';
 import {
@@ -25,6 +26,7 @@ import { useLibrary } from '@/hooks/useLibrary';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { useContentModeration } from '@/hooks/useContentModeration';
 import { ContentUnavailable } from '@/components/site/ContentUnavailable';
+import { RestrictedNotice } from '@/components/site/RestrictedNotice';
 
 export function ReaderPage() {
   const { id } = useParams<{ id: string }>();
@@ -54,6 +56,9 @@ export function ReaderPage() {
   const [pageUrls, setPageUrls] = useState<string[]>([]);
   const [loadingPages, setLoadingPages] = useState(false);
   const [pagesError, setPagesError] = useState<string | null>(null);
+  const [pagesReloadKey, setPagesReloadKey] = useState(0);
+  const [failedPages, setFailedPages] = useState<Set<number>>(new Set());
+  const [pageRetries, setPageRetries] = useState<Record<number, number>>({});
 
   // Reader display controls
   const [showTOC, setShowTOC] = useState(false);
@@ -175,6 +180,8 @@ export function ReaderPage() {
 
       setLoadingPages(true);
       setPagesError(null);
+      setFailedPages(new Set());
+      setPageRetries({});
 
       try {
         const urls = await mangadexGetChapterPages(activeChapter.id);
@@ -200,7 +207,23 @@ export function ReaderPage() {
 
     loadPages();
     return () => { cancelled = true; };
-  }, [activeChapter?.id]);
+  }, [activeChapter?.id, pagesReloadKey]);
+
+  const retryChapter = () => {
+    setPagesError(null);
+    setFailedPages(new Set());
+    setPageRetries({});
+    setPagesReloadKey((key) => key + 1);
+  };
+
+  const retryPage = (index: number) => {
+    setFailedPages((prev) => {
+      const next = new Set(prev);
+      next.delete(index);
+      return next;
+    });
+    setPageRetries((prev) => ({ ...prev, [index]: (prev[index] ?? 0) + 1 }));
+  };
 
   // Handle chapter switch
   const selectChapter = (index: number) => {
@@ -440,6 +463,7 @@ export function ReaderPage() {
 
       {/* Main Reader Content */}
       <div className={cn('mx-auto px-2 sm:px-4 py-6', widthClass)}>
+        <RestrictedNotice moderation={moderation} />
         {loadingChapters ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <RefreshCw className="h-8 w-8 text-rose-400 animate-spin mb-3" />
@@ -474,7 +498,7 @@ export function ReaderPage() {
                 <p className="text-xs opacity-80 max-w-md mx-auto mb-4">{pagesError}</p>
                 <div className="flex justify-center gap-3">
                   <button
-                    onClick={() => selectChapter(activeChapterIndex)}
+                    onClick={retryChapter}
                     className="btn-primary text-xs"
                   >
                     <RefreshCw className="h-3.5 w-3.5 mr-1" /> Retry Chapter
@@ -492,26 +516,50 @@ export function ReaderPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-1 sm:gap-2">
-                {pageUrls.map((url, idx) => (
-                  <div key={idx} className="relative w-full text-center">
-                    <img
-                      src={url}
-                      alt={`Page ${idx + 1}`}
-                      loading="lazy"
-                      className="mx-auto block max-w-full h-auto rounded shadow-sm"
-                      onError={(e) => {
-                        const target = e.currentTarget;
-                        target.onerror = null;
-                        target.style.opacity = '0.5';
-                      }}
-                    />
-                    <div className="py-1 text-[11px] opacity-40 select-none">
-                      {idx + 1} / {pageUrls.length}
-                    </div>
+              <>
+                {failedPages.size > 0 && (
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-warning-500/30 bg-warning-500/5 px-3 py-2 text-xs">
+                    <span>
+                      {failedPages.size} page{failedPages.size === 1 ? '' : 's'} failed to load. The chapter server may be busy.
+                    </span>
+                    <button onClick={retryChapter} className="btn-secondary text-xs">
+                      <RefreshCw className="h-3.5 w-3.5 mr-1" /> Reload chapter
+                    </button>
                   </div>
-                ))}
-              </div>
+                )}
+                <div className="flex flex-col items-center gap-1 sm:gap-2">
+                  {pageUrls.map((url, idx) => (
+                    <div key={idx} className="relative w-full text-center">
+                      {failedPages.has(idx) ? (
+                        <div className="my-2 flex flex-col items-center justify-center gap-2 rounded-lg border border-error-500/30 bg-error-500/5 px-4 py-10 text-xs">
+                          <ImageOff className="h-6 w-6 text-error-400" />
+                          <p className="opacity-80">Page {idx + 1} failed to load.</p>
+                          <button onClick={() => retryPage(idx)} className="btn-secondary text-xs">
+                            <RefreshCw className="h-3.5 w-3.5 mr-1" /> Retry page
+                          </button>
+                        </div>
+                      ) : (
+                        <img
+                          src={`${url}${url.includes('?') ? '&' : '?'}retry=${pageRetries[idx] ?? 0}`}
+                          alt={`Page ${idx + 1}`}
+                          loading="lazy"
+                          className="mx-auto block max-w-full h-auto rounded shadow-sm"
+                          onError={() =>
+                            setFailedPages((prev) => {
+                              const next = new Set(prev);
+                              next.add(idx);
+                              return next;
+                            })
+                          }
+                        />
+                      )}
+                      <div className="py-1 text-[11px] opacity-40 select-none">
+                        {idx + 1} / {pageUrls.length}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
 
             {/* Bottom Chapter Navigation */}
