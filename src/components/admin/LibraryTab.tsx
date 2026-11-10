@@ -3,7 +3,8 @@ import { ExternalLink, Loader2, Search, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { adminApi, type AdminEntry } from '@/lib/admin/api';
 import { useDebounce } from '@/hooks/useDebounce';
-import { LIBRARY_STATUS_LABELS, type LibraryStatus } from '@/types/content';
+import type { LibraryStatus } from '@/types/content';
+import { getLibraryStatusFilterLabel, getLibraryStatusLabel } from '@/lib/utils/status';
 import { getFallbackCover } from '@/lib/utils/format';
 
 const STATUS_FILTERS: (LibraryStatus | '')[] = [
@@ -77,7 +78,7 @@ export function LibraryTab() {
         >
           {STATUS_FILTERS.map((value) => (
             <option key={value || 'all'} value={value}>
-              {value ? LIBRARY_STATUS_LABELS[value] : 'All statuses'}
+              {value ? getLibraryStatusFilterLabel(value) : 'All statuses'}
             </option>
           ))}
         </select>
@@ -139,7 +140,7 @@ export function LibraryTab() {
                       </div>
                     </td>
                     <td className="whitespace-nowrap px-4 py-2.5 text-ink-300">
-                      {LIBRARY_STATUS_LABELS[entry.status as LibraryStatus] || entry.status}
+                      {getLibraryStatusLabel(entry.status as LibraryStatus, entry.content_type as string | undefined)}
                     </td>
                     <td className="px-4 py-2.5 text-ink-400">
                       {entry.progress}

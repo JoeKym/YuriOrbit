@@ -16,7 +16,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { useLibrary } from '@/hooks/useLibrary';
 import { fetchMyProfile, type Profile } from '@/lib/profiles';
 import { ProfileEditor } from '@/components/profile/ProfileEditor';
-import { LIBRARY_STATUS_LABELS } from '@/types/content';
+import { getLibraryStatusLabel } from '@/lib/utils/status';
 import { getFallbackCover } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
 
@@ -229,7 +229,7 @@ export function ProfilePage() {
                     }}
                   />
                   <span className="absolute bottom-1.5 left-1.5 rounded-md bg-ink-950/85 px-1.5 py-0.5 text-[10px] font-medium text-ink-200 backdrop-blur-sm">
-                    {LIBRARY_STATUS_LABELS[entry.status]}
+                    {getLibraryStatusLabel(entry.status, entry.contentType)}
                   </span>
                 </div>
                 <p className="mt-1.5 line-clamp-2 text-xs text-ink-200 group-hover:text-rose-300">{entry.title}</p>

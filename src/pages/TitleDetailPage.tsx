@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import type { ContentTitle, LibraryStatus } from '@/types/content';
 import { CONTENT_TYPE_LABELS, LIBRARY_STATUS_LABELS } from '@/types/content';
-import { getStatusDisplay } from '@/lib/utils/status';
+import { getStatusDisplay, getLibraryStatusLabel } from '@/lib/utils/status';
 import { getTitleById } from '@/lib/providers';
 import { useLibrary } from '@/hooks/useLibrary';
 import { cn, formatScore, getFallbackCover, getFallbackBanner, getStatusLabel, getStatusColor } from '@/lib/utils/format';
@@ -118,8 +118,8 @@ export function TitleDetailPage() {
     );
   }
 
-  const isReadable = ['MANGA', 'MANHWA', 'MANHUA', 'WEBTOON'].includes(title.contentType);
   const isWatchable = ['MOVIE', 'TV', 'DRAMA'].includes(title.contentType);
+  const isReadable = !isWatchable && ['MANGA', 'MANHWA', 'MANHUA', 'WEBTOON'].includes(title.contentType);
   const maturity = maturityOf(title);
   const hiddenByFilter = !isWithinMaturity(title, level);
 
@@ -284,7 +284,7 @@ export function TitleDetailPage() {
               )}
               {isWatchable && (
                 <Link to={`/watch/${title.id}`} className="btn-primary">
-                  <Play className="h-4 w-4" /> Watch
+                  <Play className="h-4 w-4" /> {entry?.progress ? `Continue Watching · Ep. ${entry.progress}` : 'Watch'}
                 </Link>
               )}
 
@@ -294,7 +294,7 @@ export function TitleDetailPage() {
                   className={cn(isSaved ? 'btn-secondary' : 'btn-secondary')}
                 >
                   <Heart className={cn('h-4 w-4', isSaved && 'fill-rose-500 text-rose-500')} />
-                  {isSaved ? LIBRARY_STATUS_LABELS[entry?.status || 'FAVOURITE'] : 'Add to Library'}
+                  {isSaved ? getLibraryStatusLabel(entry?.status || 'FAVOURITE', title.contentType) : 'Add to Library'}
                 </button>
                 {showStatusMenu && (
                   <div className="absolute top-full mt-1 left-0 z-20 w-48 rounded-lg border border-ink-700 bg-ink-850 py-1 shadow-card-hover animate-fade-in-fast">
@@ -307,7 +307,7 @@ export function TitleDetailPage() {
                           entry?.status === s ? 'text-rose-400' : 'text-ink-200'
                         )}
                       >
-                        {LIBRARY_STATUS_LABELS[s]}
+                        {getLibraryStatusLabel(s, title.contentType)}
                       </button>
                     ))}
                     {isSaved && (
