@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import {
   Heart, BookOpen, Play, Share2, Flag, ExternalLink, Star,
   ChevronLeft, Calendar, Globe, Layers, Hash, TrendingUp, Users,
-  CheckCircle, Loader2, ShieldAlert
+  CheckCircle, Loader2
 } from 'lucide-react';
 import type { ContentTitle, LibraryStatus } from '@/types/content';
 import { CONTENT_TYPE_LABELS, LIBRARY_STATUS_LABELS } from '@/types/content';
@@ -16,7 +16,8 @@ import { maturityOf, isWithinMaturity } from '@/lib/content/maturity';
 import { MATURITY_LABELS } from '@/types/content';
 import { submitFeedback } from '@/lib/feedback';
 import { usePageMeta } from '@/hooks/usePageMeta';
-import { fetchContentModeration, getModerationFor, type ContentModerationItem } from '@/lib/moderation/contentModeration';
+import { useContentModeration } from '@/hooks/useContentModeration';
+import { ContentUnavailable } from '@/components/site/ContentUnavailable';
 
 const STATUSES: LibraryStatus[] = ['CURRENT', 'PLANNED', 'COMPLETED', 'ON_HOLD', 'DROPPED', 'FAVOURITE'];
 
@@ -30,7 +31,7 @@ export function TitleDetailPage() {
   const [reportMessage, setReportMessage] = useState('');
   const [reportStatus, setReportStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [reportError, setReportError] = useState<string | null>(null);
-  const [moderation, setModeration] = useState<ContentModerationItem | null>(null);
+  const moderation = useContentModeration(id);
 
   const { isInLibrary, addToLibrary, removeFromLibrary, getEntry, updateProgress, updateRating, updateNotes } = useLibrary();
   const { level } = useMaturity();
@@ -53,10 +54,9 @@ export function TitleDetailPage() {
       setError(false);
       if (!id) return;
       try {
-        const [result, modMap] = await Promise.all([getTitleById(id), fetchContentModeration()]);
+        const result = await getTitleById(id);
         if (cancelled) return;
         setTitle(result);
-        setModeration(getModerationFor(modMap, id));
       } catch {
         if (!cancelled) setError(true);
       } finally {
@@ -97,25 +97,7 @@ export function TitleDetailPage() {
   }
 
   if (moderation && (moderation.action === 'takedown' || moderation.action === 'suspended')) {
-    return (
-      <div className="mx-auto flex max-w-xl flex-col items-center px-4 py-24 text-center md:px-6">
-        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-error-500/30 bg-error-500/10">
-          <ShieldAlert className="h-7 w-7 text-error-400" />
-        </div>
-        <p className="mb-1 text-[11px] uppercase tracking-wider text-error-300/90">
-          Content {moderation.action === 'takedown' ? 'takedown' : 'temporarily suspended'}
-        </p>
-        <h1 className="font-display text-2xl font-semibold text-ink-50">This title is unavailable</h1>
-        <p className="mt-3 max-w-md text-sm leading-relaxed text-ink-300">
-          This page is currently restricted due to a moderation action. If you believe this is a mistake, you can submit an appeal for review.
-        </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <Link to="/appeals" className="btn-primary">Submit an appeal</Link>
-          <Link to="/contact" className="btn-secondary">Contact</Link>
-          <Link to="/discover" className="btn-ghost">Back to Discover</Link>
-        </div>
-      </div>
-    );
+    return <ContentUnavailable moderation={moderation} />;
   }
 
   const isWatchable = ['MOVIE', 'TV', 'DRAMA'].includes(title.contentType);

@@ -9,6 +9,8 @@ export interface ContentModerationItem {
   action: ContentModerationAction;
   reason?: string;
   note?: string;
+  /** ISO timestamp; suspensions automatically stop blocking at this point. */
+  expiresAt?: string;
   updatedAt?: string;
   updatedBy?: string;
 }
@@ -17,35 +19,85 @@ type ModerationMap = Record<string, ContentModerationItem>;
 
 let cache: { at: number; map: ModerationMap } | null = null;
 let inFlight: Promise<ModerationMap> | null = null;
-const TTL_MS = 60_000;
+const TTL_MS = 15_000;
+// A missing RPC (migration not applied yet) is permanent for this page load.
+let rpcUnavailable = false;
+
+function normalizeItem(item: ContentModerationItem | null | undefined): ContentModerationItem | null {
+  if (!item || !item.action) return null;
+  if (item.action !== 'restricted' && item.expiresAt) {
+    const expires = Date.parse(item.expiresAt);
+    if (Number.isFinite(expires) && expires <= Date.now()) return null;
+  }
+  return item;
+}
+
+function normalizeMap(value: unknown): ModerationMap {
+  if (!value || typeof value !== 'object') return {};
+  const out: ModerationMap = {};
+  for (const [id, raw] of Object.entries(value as Record<string, ContentModerationItem>)) {
+    const item = normalizeItem(raw);
+    if (item) out[id] = { ...item, titleId: item.titleId || id };
+  }
+  return out;
+}
+
+async function readViaRpc(): Promise<ModerationMap | null> {
+  if (!supabase || rpcUnavailable) return null;
+  try {
+    const { data, error } = await supabase.rpc('get_content_moderation');
+    if (error) {
+      const text = `${error.code ?? ''} ${error.message ?? ''}`.toLowerCase();
+      if (
+        text.includes('pgrst202') ||
+        text.includes('could not find the function') ||
+        text.includes('schema cache')
+      ) {
+        rpcUnavailable = true;
+      }
+      return null;
+    }
+    return normalizeMap(data);
+  } catch {
+    return null;
+  }
+}
+
+async function readViaSettings(): Promise<ModerationMap | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('site_settings')
+    .select('value')
+    .eq('key', 'content_moderation')
+    .maybeSingle();
+  if (error) return null;
+  return normalizeMap(data?.value);
+}
 
 export async function fetchContentModeration(force = false): Promise<ModerationMap> {
   if (!force && cache && Date.now() - cache.at < TTL_MS) return cache.map;
-  if (!supabase) return cache?.map ?? {};
   if (inFlight) return inFlight;
+
   inFlight = (async () => {
     try {
-      const { data, error } = await supabase
-        .from('site_settings')
-        .select('value')
-        .eq('key', 'content_moderation')
-        .maybeSingle();
-      if (error || !data?.value || typeof data.value !== 'object') return {};
-      return data.value as ModerationMap;
+      const map = (await readViaRpc()) ?? (await readViaSettings());
+      if (!map) return cache?.map ?? {};
+      return map;
     } catch {
       return cache?.map ?? {};
     } finally {
       inFlight = null;
     }
   })();
+
   const map = await inFlight;
   cache = { at: Date.now(), map };
   return map;
 }
 
+/** Returns the active moderation entry for a title, or null when clean/expired. */
 export function getModerationFor(map: ModerationMap, titleId: string): ContentModerationItem | null {
-  const item = map[titleId];
-  return item && item.action ? item : null;
+  return normalizeItem(map[titleId]);
 }
 
 export function isContentBlocked(map: ModerationMap, titleId: string): boolean {
