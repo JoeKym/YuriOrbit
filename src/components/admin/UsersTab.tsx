@@ -22,6 +22,14 @@ export function UsersTab() {
   const [action, setAction] = useState<'ban' | 'suspend' | 'unban'>('suspend');
   const [durationHours, setDurationHours] = useState(24);
   const [reason, setReason] = useState('');
+  const [reasonError, setReasonError] = useState<string | null>(null);
+
+  const REASON_PRESETS = [
+    'Violation of community guidelines',
+    'Harassment or abusive behaviour',
+    'Spam or advertising',
+    'Hateful content',
+  ];
 
   const perPage = 25;
 
@@ -62,10 +70,16 @@ export function UsersTab() {
     setAction(nextAction);
     setDurationHours(nextAction === 'ban' ? 24 * 365 * 10 : 24);
     setReason('');
+    setReasonError(null);
   };
 
   const submitModeration = async () => {
     if (!moderateFor) return;
+    if (action !== 'unban' && !reason.trim()) {
+      setReasonError('Add a reason — it is shown on the user\u2019s ban or suspension page.');
+      return;
+    }
+    setReasonError(null);
     const label = action === 'unban' ? 'remove moderation restrictions from' : `${action}`;
     if (!window.confirm(`Confirm ${label} ${moderateFor.email ?? moderateFor.id}?`)) return;
     setBusyId(moderateFor.id);
@@ -129,8 +143,33 @@ export function UsersTab() {
               </div>
             )}
             <div className={action === 'unban' ? 'md:col-span-2' : ''}>
-              <label className="mb-1 block text-[11px] text-ink-400">Reason / note</label>
-              <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Optional reason (stored in moderation notes/audit)" className="input-field text-xs" />
+              <label className="mb-1 block text-[11px] text-ink-400">
+                Reason {action !== 'unban' && <span className="text-rose-300">(required — shown to the user)</span>}
+              </label>
+              <input
+                value={reason}
+                onChange={(e) => {
+                  setReason(e.target.value);
+                  if (reasonError) setReasonError(null);
+                }}
+                placeholder={action === 'unban' ? 'Optional note (audit only)' : 'e.g. Violation of community guidelines'}
+                className={cn('input-field text-xs', reasonError && 'border-error-500/60')}
+              />
+              {action !== 'unban' && (
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {REASON_PRESETS.map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => { setReason(preset); setReasonError(null); }}
+                      className="rounded border border-ink-700 px-1.5 py-0.5 text-[10px] text-ink-400 transition-colors hover:border-ink-600 hover:text-ink-200"
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {reasonError && <div className="mt-1 text-[10px] text-error-300">{reasonError}</div>}
             </div>
           </div>
           <div className="mt-3 flex items-center gap-2">

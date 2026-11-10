@@ -316,6 +316,10 @@ async function handleUserAction(ctx: AdminContext, request: Request): Promise<Re
 
   if (action === 'ban' || action === 'suspend' || action === 'unban') {
     if (userId === ctx.actorId) return fail('You cannot moderate your own admin account.', 400);
+    const reason = (body?.reason || '').trim();
+    if (action !== 'unban' && !reason) {
+      return fail('A reason is required for bans and suspensions; it is shown on the user\u2019s page.', 400);
+    }
     const hours = action === 'unban'
       ? 0
       : Math.max(1, Math.min(876000, Math.floor(body?.durationHours || (action === 'ban' ? 876000 : 24))));
@@ -338,14 +342,14 @@ async function handleUserAction(ctx: AdminContext, request: Request): Promise<Re
         if (rows[0]?.value && typeof rows[0].value === 'object') map = rows[0].value as Record<string, unknown>;
       }
       if (action === 'unban') delete map[userId];
-      else map[userId] = { action, durationHours: hours, reason: body?.reason || '', updatedAt: new Date().toISOString(), updatedBy: ctx.actorEmail };
+      else map[userId] = { action, durationHours: hours, reason, updatedAt: new Date().toISOString(), updatedBy: ctx.actorEmail };
       await rest(ctx.env, 'site_settings?on_conflict=key', {
         method: 'POST',
         headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
         body: JSON.stringify({ key: 'user_moderation', value: map, updated_at: new Date().toISOString(), updated_by: ctx.actorEmail }),
       });
     } catch {}
-    await audit(ctx, `user.${action}`, userId, { durationHours: hours, reason: body?.reason || '' });
+    await audit(ctx, `user.${action}`, userId, { durationHours: hours, reason });
     return json({ ok: true });
   }
 
