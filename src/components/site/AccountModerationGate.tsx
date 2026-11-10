@@ -10,34 +10,40 @@ import {
 } from '@/lib/moderation/accountModeration';
 import { AccountSuspendedScreen } from '@/components/site/AccountSuspendedScreen';
 
-/** Ban applied → visible quickly; while blocked we poll faster to notice lifts. */
-const POLL_MS_ACTIVE = 10_000;
-const POLL_MS_BLOCKED = 5_000;
+/**
+ * Frequent enough that a ban appears (and a lift is noticed) within a few
+ * seconds, like the admin console implies. The check is one small Supabase
+ * read, and it is skipped while the tab is hidden.
+ */
+const POLL_MS = 5_000;
 
 export function AccountModerationGate({ children }: { children: ReactNode }) {
-  const { session, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const [block, setBlock] = useState<StoredBlock | null>(() => readStoredBlock());
   const wasBlocked = useRef(Boolean(block));
 
   useEffect(() => {
-    if (!isAuthenticated || !session?.access_token) return;
+    if (!isAuthenticated || !user?.id) return;
 
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     async function check() {
+      if (document.visibilityState === 'hidden') {
+        timer = setTimeout(check, POLL_MS);
+        return;
+      }
       try {
-        const moderation = await fetchAccountModeration(session!.access_token);
+        const moderation = await fetchAccountModeration(user!.id);
         if (cancelled) return;
 
         if (moderation) {
-          const saved = writeStoredBlock(moderation);
           wasBlocked.current = true;
-          setBlock(saved);
+          setBlock(writeStoredBlock(moderation));
         } else if (wasBlocked.current) {
-          // Moderation was lifted: clear the block, end the session and ask the
-          // user to sign in again (matching the admin-side flow).
+          // Moderation was lifted: clear the block, end the session and send
+          // the user back to sign in again.
           wasBlocked.current = false;
           clearStoredBlock();
           setBlock(null);
@@ -47,25 +53,23 @@ export function AccountModerationGate({ children }: { children: ReactNode }) {
           navigate('/auth?moderation=lifted', { replace: true });
           return;
         } else {
-          // Verified clean and never blocked in this tab.
           if (readStoredBlock()) clearStoredBlock();
           setBlock(null);
         }
       } catch {
-        // Verification failed (network/function/env). Fail open for users with
-        // no prior block, but never silently lift a persisted ban.
+        // Could not read the state (offline, RLS, etc.). Never lift a block
+        // because of an error; for clean users just carry on.
         if (!cancelled && !wasBlocked.current) setBlock(readStoredBlock());
       } finally {
-        if (!cancelled) {
-          const delay = wasBlocked.current ? POLL_MS_BLOCKED : POLL_MS_ACTIVE;
-          timer = setTimeout(check, delay);
-        }
+        if (!cancelled) timer = setTimeout(check, POLL_MS);
       }
     }
 
     void check();
 
+    // Check immediately when the user comes back to the tab.
     const recheck = () => {
+      if (document.visibilityState === 'hidden') return;
       if (timer) clearTimeout(timer);
       void check();
     };
@@ -78,7 +82,7 @@ export function AccountModerationGate({ children }: { children: ReactNode }) {
       window.removeEventListener('focus', recheck);
       document.removeEventListener('visibilitychange', recheck);
     };
-  }, [isAuthenticated, session?.access_token, logout, navigate]);
+  }, [isAuthenticated, user?.id, logout, navigate]);
 
   if (block) {
     return (

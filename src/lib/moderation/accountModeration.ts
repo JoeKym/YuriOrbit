@@ -1,9 +1,9 @@
 /**
  * Shared account-moderation helpers.
  *
- * The app polls /api/account while signed in so a ban/suspension applied from
- * the admin console shows up within seconds — and so lifting it is detected
- * without a manual reload.
+ * The app polls site_settings.user_moderation while signed in so a ban or
+ * suspension applied from the admin console shows up within seconds — and so
+ * lifting it is detected without a manual reload.
  */
 
 export type AccountModeration = {
@@ -13,6 +13,8 @@ export type AccountModeration = {
 };
 
 export type StoredBlock = AccountModeration & { at: string };
+
+import { supabase } from '@/lib/supabase';
 
 export const ACCOUNT_BLOCK_KEY = 'yuriorbit_account_block';
 
@@ -51,22 +53,44 @@ export function clearStoredBlock() {
   } catch {}
 }
 
+type ModerationEntry = { action?: string; durationHours?: number; reason?: string; updatedAt?: string };
+
+function normalizeModeration(entry: ModerationEntry | null | undefined): AccountModeration | null {
+  if (!entry || !entry.action || entry.action === 'unban') return null;
+  const updatedAt = entry.updatedAt ? Date.parse(entry.updatedAt) : NaN;
+  const hours = Number(entry.durationHours) || 0;
+  const expiresAt =
+    Number.isFinite(updatedAt) && hours > 0 ? new Date(updatedAt + hours * 3600000).toISOString() : null;
+  if (expiresAt && Date.parse(expiresAt) <= Date.now()) return null;
+  return {
+    action: entry.action,
+    reason: typeof entry.reason === 'string' ? entry.reason : '',
+    expiresAt,
+  };
+}
+
 /**
- * Fetches the caller's live moderation state.
- * Returns `null` for a clean account, or throws when the check itself failed
- * (so callers can keep a previously persisted block instead of lifting it).
+ * Reads the caller's live moderation note straight from Supabase.
+ *
+ * This deliberately does NOT go through Supabase Auth: GoTrue rejects a banned
+ * user's existing access token (`/auth/v1/user` → 403/401), which made the
+ * previous /api/account check fail before it could ever report the ban. A
+ * PostgREST read still accepts the token until it expires, so this is the one
+ * check that keeps working the moment an admin applies a ban.
+ *
+ * Throws when the read itself fails, so callers never mistake an error for
+ * "account is clean".
  */
-export async function fetchAccountModeration(accessToken: string): Promise<AccountModeration | null> {
-  const res = await fetch('/api/account', {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`moderation check failed (HTTP ${res.status})`);
-  const data = (await res.json().catch(() => null)) as
-    | { moderation?: AccountModeration | null; degraded?: boolean }
-    | null;
-  // `degraded` means the server could not read moderation state. That is not
-  // proof the account is clean, so don't clear a block because of it.
-  if (data?.degraded) throw new Error('moderation state unavailable');
-  return data?.moderation ?? null;
+export async function fetchAccountModeration(userId: string): Promise<AccountModeration | null> {
+  if (!supabase) throw new Error('Supabase is not configured');
+  const { data, error } = await supabase
+    .from('site_settings')
+    .select('value')
+    .eq('key', 'user_moderation')
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  const value = data?.value;
+  if (!value || typeof value !== 'object') return null;
+  const map = value as Record<string, ModerationEntry>;
+  return normalizeModeration(map[userId]);
 }
