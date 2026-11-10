@@ -100,7 +100,13 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   } catch {
     user = null;
   }
-  if (!user) return request.method === 'GET' ? json({ ok: true, moderation: null }) : fail('Your session is invalid or has expired. Sign in again.', 401);
+  // For GET, report this as a failure (401) rather than "clean": an invalid
+  // session must not be treated as proof that the account is not moderated.
+  if (!user) {
+    return request.method === 'GET'
+      ? json({ ok: false, error: 'invalid_session', moderation: null }, 401)
+      : fail('Your session is invalid or has expired. Sign in again.', 401);
+  }
 
   const key = serviceKey(env) as string;
 
