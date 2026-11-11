@@ -205,7 +205,7 @@ export function SearchPage() {
                 {hits.length} title{hits.length === 1 ? '' : 's'}
                 {result?.creators.length ? ` · ${result.creators.length} creator match${result.creators.length === 1 ? '' : 'es'}` : ''}
               </p>
-              <ContentCardGrid titles={hits.map((hit) => hit.title)} />
+              <ContentCardGrid titles={hits.map((hit) => hit.title)} showAvailability />
 
               {(result?.creators.length ?? 0) > 0 && (
                 <div className="mt-8 space-y-3">

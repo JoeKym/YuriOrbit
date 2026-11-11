@@ -7,10 +7,13 @@ import { getStatusDisplay } from '@/lib/utils/status';
 import { useLibrary } from '@/hooks/useLibrary';
 import { titleKey } from '@/lib/catalog/identity';
 import { maturityOf } from '@/lib/content/maturity';
+import { AvailabilityBadge } from './AvailabilityBadge';
 
 interface ContentCardProps {
   title: ContentTitle;
   className?: string;
+  /** Loads TMDB availability once the card nears the viewport. */
+  showAvailability?: boolean;
 }
 
 function formatCount(num?: number): string | null {
@@ -22,7 +25,7 @@ function formatCount(num?: number): string | null {
 
 
 
-export function ContentCard({ title, className }: ContentCardProps) {
+export function ContentCard({ title, className, showAvailability = false }: ContentCardProps) {
   const { library, addToLibrary, removeFromLibrary } = useLibrary();
 
   const savedEntry =
@@ -43,6 +46,9 @@ export function ContentCard({ title, className }: ContentCardProps) {
   const primaryGenre = title.genres && title.genres.length > 0 ? title.genres[0] : null;
 
   const contentFormatLabel = CONTENT_TYPE_LABELS[title.contentType] || title.contentType;
+  const isWatchable = ['MOVIE', 'TV', 'DRAMA'].includes(title.contentType);
+  const canShowAvailability =
+    showAvailability && isWatchable && title.provider === 'TMDB' && !!title.providerId;
 
   // Chapter or episode label if available
   const countLabel = title.chapters
@@ -74,6 +80,8 @@ export function ContentCard({ title, className }: ContentCardProps) {
 
         {/* Resting Vignette Gradients */}
         <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/40 to-ink-950/20 pointer-events-none" />
+
+        {canShowAvailability && <AvailabilityBadge title={title} />}
 
         {/* Extra fade behind the bottom text so it stays readable on busy covers */}
         <div className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-ink-950 via-ink-950/75 to-transparent pointer-events-none" />
@@ -227,11 +235,24 @@ export function ContentCardSkeleton() {
   );
 }
 
-export function ContentCardGrid({ titles, className }: { titles: ContentTitle[]; className?: string }) {
+export function ContentCardGrid({
+  titles,
+  className,
+  showAvailability = false,
+}: {
+  titles: ContentTitle[];
+  className?: string;
+  showAvailability?: boolean;
+}) {
   return (
     <div className={cn('grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7', className)}>
       {titles.map((title) => (
-        <ContentCard key={title.id} title={title} className="w-full" />
+        <ContentCard
+          key={title.id}
+          title={title}
+          className="w-full"
+          showAvailability={showAvailability}
+        />
       ))}
     </div>
   );

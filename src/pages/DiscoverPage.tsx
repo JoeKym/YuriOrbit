@@ -520,7 +520,7 @@ export function DiscoverPage() {
           </div>
         ) : viewMode === 'grid' ? (
           <>
-            <ContentCardGrid titles={titles} />
+            <ContentCardGrid titles={titles} showAvailability />
             {hasNextPage && (
               <div className="mt-12 flex justify-center">
                 <button
