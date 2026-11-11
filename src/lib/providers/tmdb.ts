@@ -7,6 +7,7 @@ import type { ContentTitle, PaginatedResult, ContentFilter } from '@/types/conte
 import { classifyGL, GL_ALLOWED_CLASSIFICATIONS } from './classify';
 import { getMaturityLevel } from '@/lib/content/maturity-preference';
 import { filterByMaturity, inferMaturity, maturityRank } from '@/lib/content/maturity';
+import { applyGLOverrides, fetchGLOverrides } from '@/lib/moderation/glOverrides';
 
 const env = (import.meta as { env?: Record<string, string> }).env || {};
 const isBrowser = typeof window !== 'undefined';
@@ -337,6 +338,12 @@ function normalizeTMDB(m: TMDBMovie, isTV = false): ContentTitle {
   };
 }
 
+/** Manual moderator overrides are authoritative GL evidence for TMDB records. */
+async function withGLOverrides(items: ContentTitle[]): Promise<ContentTitle[]> {
+  const map = await fetchGLOverrides();
+  return applyGLOverrides(items, map);
+}
+
 function mapTMDBStatus(status?: string): ContentTitle['status'] {
   switch (status) {
     case 'Released': return 'FINISHED';
@@ -518,8 +525,10 @@ export async function tmdbSearchGL(
     // A direct title search is evidence of intent, but not proof of GL status.
     // Check the keywords of the titles the heuristic was unsure about instead of
     // assuming every name match belongs in the catalogue.
+    const overriddenBatches = await withGLOverrides(batches);
+
     const queryMatches = query
-      ? batches
+      ? overriddenBatches
           .filter((item) => item.glClassification === 'NEEDS_REVIEW')
           .filter((item) => {
             const needle = query.toLowerCase();
@@ -545,7 +554,7 @@ export async function tmdbSearchGL(
 
     // The index applies its own GL allow-list after every provider returns, so
     // a confirmed match has to be classified as GL here or it is dropped again.
-    const items = collectGL(batches, matchedQuery, onGlDropped).map((item) =>
+    const items = collectGL(overriddenBatches, matchedQuery, onGlDropped).map((item) =>
       matchedQuery?.has(item.id) ? { ...item, glClassification: 'GL_RELATED' as const } : item
     );
 
@@ -575,7 +584,7 @@ export async function tmdbGetGLMovies(page = 1): Promise<ContentTitle[]> {
     if (globalMovies.status === 'fulfilled') items.push(...globalMovies.value);
     if (searched.status === 'fulfilled') items.push(...searched.value);
 
-    return collectGL(items);
+    return collectGL(await withGLOverrides(items));
   } catch {
     return [];
   }
@@ -596,7 +605,7 @@ export async function tmdbGetGLDramas(page = 1): Promise<ContentTitle[]> {
     if (asianDramas.status === 'fulfilled') items.push(...asianDramas.value);
     if (globalTv.status === 'fulfilled') items.push(...globalTv.value);
 
-    return collectGL(items);
+    return collectGL(await withGLOverrides(items));
   } catch {
     return [];
   }
@@ -655,7 +664,8 @@ export async function tmdbGetById(id: string): Promise<ContentTitle | null> {
 
   try {
     const data = await tmdbFetch<TMDBMovie>(`/${mediaType}/${tmdbId}`, { language: 'en-US' });
-    return normalizeTMDB(data, isTV);
+    const [title] = await withGLOverrides([normalizeTMDB(data, isTV)]);
+    return title;
   } catch {
     return null;
   }
