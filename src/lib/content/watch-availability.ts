@@ -71,8 +71,15 @@ export function getWatchAvailability(
  * The TMDB record behind a card. Merged entries often use an AniList or
  * MangaDex title as their primary source but keep the TMDB source alongside.
  */
+/**
+ * Anything that carries a provider reference: a full catalog title or a saved
+ * library entry (which has no `sources` array).
+ */
+export type AvailabilityTitle = Pick<ContentTitle, 'provider' | 'contentType'> &
+  Partial<Pick<ContentTitle, 'providerId' | 'sources'>>;
+
 export function tmdbLookupFor(
-  title: ContentTitle
+  title: AvailabilityTitle
 ): { providerId: string; mediaType: 'movie' | 'tv' } | null {
   if (title.provider === 'TMDB' && title.providerId) {
     return {
@@ -93,7 +100,7 @@ export function tmdbLookupFor(
 
 /** Availability for a catalog entry, or null when nothing is streaming. */
 export async function getTitleAvailability(
-  title: ContentTitle
+  title: AvailabilityTitle
 ): Promise<TmdbWatchProviderResult | null> {
   const lookup = tmdbLookupFor(title);
   if (!lookup) return null;

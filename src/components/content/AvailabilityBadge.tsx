@@ -1,21 +1,32 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ContentTitle } from '@/types/content';
-import { getTitleAvailability, tmdbLookupFor } from '@/lib/content/watch-availability';
+import { getTitleAvailability, tmdbLookupFor, type AvailabilityTitle } from '@/lib/content/watch-availability';
 import { useWatchRegion } from '@/hooks/useWatchRegion';
 import type { TmdbWatchProviderResult } from '@/lib/providers/tmdb';
+import { cn } from '@/lib/utils/format';
+
+type AvailabilityVariant = 'overlay' | 'compact' | 'inline';
 
 /**
- * Provider logos for a card. The lookup only starts once the card is close to
- * the viewport, so offscreen rows in a large grid cost nothing.
+ * Provider logos for a card or list row. The lookup only starts once the badge
+ * is close to the viewport, so offscreen rows in a large grid cost nothing.
+ *
+ * - overlay: full-size poster cards
+ * - compact: small poster tiles (profile library grids)
+ * - inline: normal flow, for list rows
  */
-export function AvailabilityBadge({ title }: { title: ContentTitle }) {
+export function AvailabilityBadge({
+  title,
+  variant = 'overlay',
+}: {
+  title: AvailabilityTitle;
+  variant?: AvailabilityVariant;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   const [data, setData] = useState<TmdbWatchProviderResult | null>(null);
   const region = useWatchRegion();
   const lookup = tmdbLookupFor(title);
   const providerId = lookup?.providerId;
-  const mediaType = lookup?.mediaType;
 
   useEffect(() => {
     const element = ref.current;
@@ -59,12 +70,22 @@ export function AvailabilityBadge({ title }: { title: ContentTitle }) {
   const providers = data?.providers ?? [];
   const shown = providers.slice(0, 3);
   const remaining = providers.length - shown.length;
+  const inline = variant === 'inline';
+  const compact = variant === 'compact';
 
   return (
-    <div ref={ref} className="pointer-events-none absolute inset-0 z-10">
+    <div
+      ref={ref}
+      className={inline ? 'mt-1.5 flex flex-wrap items-center gap-1' : 'pointer-events-none absolute inset-0 z-10'}
+    >
       {shown.length > 0 && (
         <span
-          className="absolute right-2 top-[70px] flex items-center gap-1 rounded-md border border-white/10 bg-ink-950/85 px-1.5 py-1 shadow-sm backdrop-blur-md"
+          className={cn(
+            'flex items-center gap-1 rounded-md border border-white/10 bg-ink-950/85 px-1.5 py-1 shadow-sm backdrop-blur-md',
+            variant === 'overlay' && 'absolute right-2 top-[70px]',
+            compact && 'absolute right-1.5 top-1.5 gap-0.5 px-1 py-0.5',
+            inline && 'w-fit pointer-events-auto'
+          )}
           title={`Streaming via JustWatch (${data?.region}): ${providers
             .map((provider) => provider.name)
             .join(', ')}`}
@@ -76,16 +97,21 @@ export function AvailabilityBadge({ title }: { title: ContentTitle }) {
                 src={provider.logoUrl}
                 alt={provider.name}
                 loading="lazy"
-                className="h-4 w-4 rounded-sm object-cover"
+                className={cn('rounded-sm object-cover', compact ? 'h-3 w-3' : 'h-4 w-4')}
               />
             ) : (
-              <span key={provider.id} className="text-[9px] font-medium text-ink-200">
+              <span
+                key={provider.id}
+                className={cn('font-medium text-ink-200', compact ? 'text-[8px]' : 'text-[9px]')}
+              >
                 {provider.name}
               </span>
             )
           )}
           {remaining > 0 && (
-            <span className="text-[9px] font-semibold text-ink-300">+{remaining}</span>
+            <span className={cn('font-semibold text-ink-300', compact ? 'text-[8px]' : 'text-[9px]')}>
+              +{remaining}
+            </span>
           )}
         </span>
       )}

@@ -7,6 +7,7 @@ import { CONTENT_TYPE_LABELS, type LibraryStatus } from '@/types/content';
 import { getLibraryStatusLabel, getLibraryStatusFilterLabel } from '@/lib/utils/status';
 import { cn, getFallbackCover } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { AvailabilityBadge } from '@/components/content/AvailabilityBadge';
 
 const STATUS_FILTERS: (LibraryStatus | 'ALL')[] = ['ALL', 'CURRENT', 'PLANNED', 'COMPLETED', 'FAVOURITE', 'ON_HOLD', 'DROPPED'];
 
@@ -142,6 +143,9 @@ export function LibraryPage() {
                       <Icon className="h-3 w-3" /> {getLibraryStatusLabel(entry.status, entry.contentType)}
                     </span>
                   </div>
+                  {['MOVIE', 'TV', 'DRAMA'].includes(entry.contentType) && (
+                    <AvailabilityBadge title={entry} variant="inline" />
+                  )}
                   {entry.progress > 0 && (
                     <p className="mt-1 text-xs text-ink-400">Progress: {entry.progress}{entry.totalProgress ? `/${entry.totalProgress}` : ''}</p>
                   )}

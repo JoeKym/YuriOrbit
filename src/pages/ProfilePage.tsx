@@ -19,6 +19,7 @@ import { ProfileEditor } from '@/components/profile/ProfileEditor';
 import { getLibraryStatusLabel } from '@/lib/utils/status';
 import { getFallbackCover } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { AvailabilityBadge } from '@/components/content/AvailabilityBadge';
 
 function ProfileSkeleton() {
   return (
@@ -228,6 +229,9 @@ export function ProfilePage() {
                       (event.target as HTMLImageElement).src = getFallbackCover(entry.title);
                     }}
                   />
+                  {['MOVIE', 'TV', 'DRAMA'].includes(entry.contentType) && (
+                    <AvailabilityBadge title={entry} variant="compact" />
+                  )}
                   <span className="absolute bottom-1.5 left-1.5 rounded-md bg-ink-950/85 px-1.5 py-0.5 text-[10px] font-medium text-ink-200 backdrop-blur-sm">
                     {getLibraryStatusLabel(entry.status, entry.contentType)}
                   </span>
