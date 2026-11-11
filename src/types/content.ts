@@ -141,7 +141,7 @@ export interface ContentFilter {
   country?: string;
   status?: ReleaseStatus | 'ALL';
   source?: SourceProvider | 'ALL';
-  sort?: 'TITLE' | 'YEAR' | 'SCORE' | 'POPULARITY' | 'NEWEST' | 'TRENDING';
+  sort?: 'TITLE' | 'YEAR' | 'SCORE' | 'POPULARITY' | 'NEWEST' | 'TRENDING' | 'UPDATED_AT';
   classification?: GLClassification | 'ALL';
 }
 

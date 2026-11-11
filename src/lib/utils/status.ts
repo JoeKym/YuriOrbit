@@ -8,21 +8,63 @@ export function isVideoType(type?: ContentType | string | null): boolean {
   return isLiveActionType(type);
 }
 
-export function getReleaseStatusDisplay(status?: string | null, contentType?: ContentType | string | null): { label: string; color: string } {
+export interface ReleaseStatusDisplay {
+  label: string;
+  color: string;
+  /** Dot colour for compact status indicators. */
+  dotClass: string;
+  /** Chip background, border and text for overlay badges. */
+  bgClass: string;
+}
+
+export function getReleaseStatusDisplay(
+  status?: string | null,
+  contentType?: ContentType | string | null
+): ReleaseStatusDisplay {
   const live = isLiveActionType(contentType);
   switch (status) {
     case 'RELEASING':
-      return live ? { label: 'Airing', color: 'text-accent-400' } : { label: 'Ongoing', color: 'text-accent-400' };
+      return {
+        label: live ? 'Airing' : 'Ongoing',
+        color: 'text-accent-400',
+        dotClass: 'bg-accent-400',
+        bgClass: 'border-accent-500/30 bg-accent-500/10 text-accent-300',
+      };
     case 'FINISHED':
-      return live ? { label: 'Ended', color: 'text-ink-300' } : { label: 'Completed', color: 'text-ink-300' };
+      return {
+        label: live ? 'Ended' : 'Completed',
+        color: 'text-ink-300',
+        dotClass: 'bg-ink-400',
+        bgClass: 'border-ink-700 bg-ink-850 text-ink-300',
+      };
     case 'NOT_YET_RELEASED':
-      return live ? { label: 'Coming Soon', color: 'text-lavender-400' } : { label: 'Upcoming', color: 'text-lavender-400' };
+      return {
+        label: live ? 'Coming Soon' : 'Upcoming',
+        color: 'text-lavender-400',
+        dotClass: 'bg-lavender-400',
+        bgClass: 'border-lavender-500/30 bg-lavender-500/10 text-lavender-300',
+      };
     case 'HIATUS':
-      return { label: 'On Break', color: 'text-amber-400' };
+      return {
+        label: 'On Break',
+        color: 'text-amber-400',
+        dotClass: 'bg-amber-400',
+        bgClass: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+      };
     case 'CANCELLED':
-      return { label: 'Canceled', color: 'text-red-400' };
+      return {
+        label: 'Canceled',
+        color: 'text-red-400',
+        dotClass: 'bg-red-400',
+        bgClass: 'border-red-500/30 bg-red-500/10 text-red-300',
+      };
     default:
-      return { label: status ? String(status) : 'Unknown', color: 'text-ink-400' };
+      return {
+        label: status ? String(status) : 'Unknown',
+        color: 'text-ink-400',
+        dotClass: 'bg-ink-500',
+        bgClass: 'border-ink-700 bg-ink-850 text-ink-300',
+      };
   }
 }
 

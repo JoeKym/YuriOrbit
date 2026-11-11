@@ -46,6 +46,7 @@ const SORT_MAP: Record<string, string> = {
   YEAR: 'START_DATE_DESC',
   TITLE: 'TITLE_ROMAJI',
   TRENDING: 'TRENDING_DESC',
+  UPDATED_AT: 'UPDATED_AT_DESC',
 };
 
 const FORMAT_MAP: Partial<Record<ContentType, string[]>> = {

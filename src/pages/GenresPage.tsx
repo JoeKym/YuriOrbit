@@ -113,7 +113,7 @@ export function GenresPage() {
       if (formatFilter !== 'ALL' && t.contentType !== formatFilter) return false;
       if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
       if (q) {
-        const hay = `${t.title} ${t.alternativeTitles?.join(' ') || ''} ${t.genres.join(' ')}`.toLowerCase();
+        const hay = `${t.title} ${t.altTitles?.join(' ') || ''} ${t.genres.join(' ')}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;

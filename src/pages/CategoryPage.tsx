@@ -53,7 +53,7 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
     const q = query.trim().toLowerCase();
     if (!q) return feed.titles;
     return feed.titles.filter((t) => {
-      const hay = `${t.title} ${t.alternativeTitles?.join(' ') || ''} ${t.genres?.join(' ') || ''}`.toLowerCase();
+      const hay = `${t.title} ${t.altTitles?.join(' ') || ''} ${t.genres?.join(' ') || ''}`.toLowerCase();
       return hay.includes(q);
     });
   }, [feed.titles, query]);
