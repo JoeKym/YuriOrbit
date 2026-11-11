@@ -129,6 +129,30 @@ async function run() {
     assert(Array.isArray(classify.GL_ALLOWED_CLASSIFICATIONS));
   });
 
+  await test('classifier ignores weak/spoiler Yuri tags and keeps explicit BL out', () => {
+    const reZero = classify.classifyGL({
+      genres: ['Action', 'Adventure', 'Drama', 'Fantasy', 'Romance'],
+      tags: [{ name: 'Time Loop', rank: 90 }, { name: 'Yuri', rank: 40 }],
+      description: 'Subaru is pulled back into another world and faces a cruel fate.',
+    });
+    assert.notEqual(reZero, 'CONFIRMED_GL', 'A low-ranked spoiler Yuri tag must not confirm GL');
+    assert.notEqual(reZero, 'GL_RELATED', 'A low-ranked spoiler Yuri tag must not make Re:Zero GL-related');
+
+    const robber = classify.classifyGL({
+      genres: ['Comedy', 'Romance'],
+      tags: [{ name: "Boys' Love", rank: 91 }, { name: 'Yuri', rank: 20 }],
+      description: 'A university student takes in a robber who likes his stories.',
+    });
+    assert.equal(robber, 'EXCLUDED', 'A strongly tagged BL work must stay excluded');
+
+    const genuine = classify.classifyGL({
+      genres: ['Romance'],
+      tags: [{ name: 'Yuri', rank: 90 }],
+      description: 'Two women fall in love.',
+    });
+    assert.equal(genuine, 'CONFIRMED_GL', 'A strongly tagged GL work must still be confirmed');
+  });
+
   await test('index.ts re-exports unified provider functions', async () => {
     index = await jiti.import('../src/lib/providers/index.ts');
     const required = [

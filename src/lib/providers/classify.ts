@@ -69,6 +69,14 @@ const GL_KEYWORDS = [
   'thai gl',
 ];
 
+/**
+ * AniList tags are user-ranked and include spoiler tags. A "Yuri" tag at rank
+ * 20–40 is usually a subtext/one-scene spoiler tag (e.g. Re:Zero), not evidence
+ * that the work belongs in a GL catalogue. MangaDex tags carry no rank, so the
+ * default of 100 keeps them authoritative.
+ */
+const MIN_CONFIRMED_TAG_RANK = 50;
+
 const BL_KEYWORDS = [
   'yaoi',
   'boys love',
@@ -88,19 +96,27 @@ export function classifyGL(title: {
   altTitles?: string[];
 }): GLClassification {
   const genres = (title.genres || []).map((g) => g.toLowerCase().trim());
-  const tagNames = (title.tags || []).map((t) => t.name.toLowerCase().trim());
+  const tags = title.tags || [];
   const descText = `${title.title || ''} ${(title.altTitles || []).join(' ')} ${title.description || ''}`.toLowerCase();
 
+  const tagMatches = (name: string, set: Set<string>) => {
+    const lower = name.toLowerCase().trim();
+    const normalized = normalizeStr(lower);
+    return set.has(lower) || set.has(normalized) || normalized === 'girls love' || normalized === 'shoujo ai';
+  };
+  const strongTag = (set: Set<string>) =>
+    tags.some((tag) => (tag.rank ?? 100) >= MIN_CONFIRMED_TAG_RANK && tagMatches(tag.name, set));
+
   const isGLGenre = genres.some((g) => GL_GENRES.has(g) || normalizeStr(g) === 'girls love' || normalizeStr(g) === 'shoujo ai');
-  const isGLTag = tagNames.some((t) => GL_TAGS.has(t) || normalizeStr(t) === 'girls love' || normalizeStr(t) === 'shoujo ai');
+  const isGLTag = strongTag(GL_TAGS);
 
   const isBLGenre = genres.some((g) => BL_GENRES.has(g) || normalizeStr(g) === 'boys love');
-  const isBLTag = tagNames.some((t) => BL_TAGS.has(t) || normalizeStr(t) === 'boys love');
+  const isBLTag = strongTag(BL_TAGS);
 
   if (isBLGenre || isBLTag) {
-    if (!isGLGenre && !isGLTag) {
-      return 'EXCLUDED';
-    }
+    // Explicit BL stays out unless a GL genre is also declared; a weak or
+    // spoiler-tagged "Yuri" tag must not pull a BL title into the catalogue.
+    if (!isGLGenre) return 'EXCLUDED';
   }
 
   if (isGLGenre || isGLTag) {
@@ -120,12 +136,13 @@ export function classifyGL(title: {
     return 'GL_RELATED';
   }
 
-  const glTagsOrGenres = [...tagNames, ...genres].filter((t) => {
-    const clean = normalizeStr(t);
-    return clean.includes('yuri') || clean.includes('girls love') || clean.includes('shoujo ai') || clean.includes('lesbian') || clean.includes('sapphic') || clean.includes('baihe');
-  });
+  const strongGLSignal = (value: string) => {
+    const clean = normalizeStr(value);
+    return ['yuri', 'girls love', 'shoujo ai', 'lesbian', 'sapphic', 'baihe'].some((word) => clean.includes(word));
+  };
+  const hasStrongGLTag = tags.some((tag) => (tag.rank ?? 100) >= MIN_CONFIRMED_TAG_RANK && strongGLSignal(tag.name));
 
-  if (glTagsOrGenres.length > 0) {
+  if (hasStrongGLTag || genres.some(strongGLSignal)) {
     return 'CONFIRMED_GL';
   }
 
