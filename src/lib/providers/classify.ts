@@ -88,12 +88,30 @@ const BL_KEYWORDS = [
   'boy x boy',
 ];
 
+export interface GLRelationEvidence {
+  relationType?: string;
+  genres?: string[];
+  tags?: { name: string; rank?: number }[];
+}
+
+/** Franchise relations that make a related work part of a GL series. */
+const GL_RELATION_TYPES = new Set([
+  'PARENT',
+  'SPIN_OFF',
+  'SIDE_STORY',
+  'SEQUEL',
+  'PREQUEL',
+  'ALTERNATIVE',
+  'ADAPTATION',
+]);
+
 export function classifyGL(title: {
   genres?: string[];
   tags?: { name: string; rank?: number }[];
   description?: string;
   title?: string;
   altTitles?: string[];
+  relations?: GLRelationEvidence[];
 }): GLClassification {
   const genres = (title.genres || []).map((g) => g.toLowerCase().trim());
   const tags = title.tags || [];
@@ -113,6 +131,27 @@ export function classifyGL(title: {
   const isBLGenre = genres.some((g) => BL_GENRES.has(g) || normalizeStr(g) === 'boys love');
   const isBLTag = strongTag(BL_TAGS);
 
+  // Side stories, sequels and adaptations often carry no usable tags of their
+  // own. A strong GL signal on a related franchise entry is independent
+  // evidence, but only yields the weaker GL_RELATED classification.
+  const hasRelatedGLEvidence = (title.relations || []).some((relation) => {
+    if (!relation.relationType || !GL_RELATION_TYPES.has(relation.relationType)) return false;
+    const relationGenres = (relation.genres || []).map((genre) => genre.toLowerCase().trim());
+    if (
+      relationGenres.some(
+        (genre) =>
+          GL_GENRES.has(genre) ||
+          normalizeStr(genre) === 'girls love' ||
+          normalizeStr(genre) === 'shoujo ai'
+      )
+    ) {
+      return true;
+    }
+    return (relation.tags || []).some(
+      (tag) => (tag.rank ?? 100) >= MIN_CONFIRMED_TAG_RANK && tagMatches(tag.name, GL_TAGS)
+    );
+  });
+
   if (isBLGenre || isBLTag) {
     // Explicit BL stays out unless a GL genre is also declared; a weak or
     // spoiler-tagged "Yuri" tag must not pull a BL title into the catalogue.
@@ -126,6 +165,10 @@ export function classifyGL(title: {
   const hasBLKeyword = BL_KEYWORDS.some((kw) => descText.includes(kw));
   if (hasBLKeyword) {
     return 'EXCLUDED';
+  }
+
+  if (hasRelatedGLEvidence) {
+    return 'GL_RELATED';
   }
 
   const glKeywordHits = GL_KEYWORDS.filter((kw) => descText.includes(kw));

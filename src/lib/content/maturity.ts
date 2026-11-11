@@ -148,6 +148,11 @@ export function isWithinMaturity(
 
 export function filterByMaturity<
   T extends Pick<ContentTitle, 'maturityRating' | 'isAdult' | 'tags' | 'genres' | 'description'>
->(titles: T[], max: MaturityLevel): T[] {
-  return titles.filter((title) => isWithinMaturity(title, max));
+>(titles: T[], max: MaturityLevel, onDropped?: (title: T) => void): T[] {
+  const visible: T[] = [];
+  for (const title of titles) {
+    if (isWithinMaturity(title, max)) visible.push(title);
+    else onDropped?.(title);
+  }
+  return visible;
 }

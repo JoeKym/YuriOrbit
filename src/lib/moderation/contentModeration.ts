@@ -115,7 +115,16 @@ export function isContentHidden(map: ModerationMap, titleId: string): boolean {
   return getModerationFor(map, titleId) !== null;
 }
 
-export function filterModeratedTitles<T extends Pick<ContentTitle, 'id'>>(titles: T[], map: ModerationMap): T[] {
+export function filterModeratedTitles<T extends Pick<ContentTitle, 'id'>>(
+  titles: T[],
+  map: ModerationMap,
+  onHidden?: (title: T) => void
+): T[] {
   if (!map || Object.keys(map).length === 0) return titles;
-  return titles.filter((t) => !isContentHidden(map, t.id));
+  const visible: T[] = [];
+  for (const title of titles) {
+    if (isContentHidden(map, title.id)) onHidden?.(title);
+    else visible.push(title);
+  }
+  return visible;
 }

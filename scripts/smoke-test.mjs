@@ -114,6 +114,69 @@ async function run() {
   });
 
 
+  await test('MangaDex text search filters by GL tag and reports filtered totals', async () => {
+    const originalFetch = globalThis.fetch;
+    let requested = '';
+    globalThis.fetch = async (input) => {
+      requested = String(input);
+      return new Response(
+        JSON.stringify({
+          result: 'ok',
+          data: [
+            {
+              id: '11111111-2222-3333-4444-555555555555',
+              type: 'manga',
+              attributes: {
+                title: { en: 'Bloom Into You' },
+                altTitles: [],
+                description: { en: 'Two girls fall in love at school.' },
+                status: 'completed',
+                year: 2015,
+                contentRating: 'safe',
+                originalLanguage: 'ja',
+                tags: [
+                  {
+                    id: 'a3c67850-4684-404e-9b7f-c69850ee5da6',
+                    attributes: { name: { en: "Girls' Love" }, group: 'genre' },
+                  },
+                ],
+                links: {},
+              },
+              relationships: [],
+            },
+          ],
+          limit: 24,
+          offset: 24,
+          total: 53,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    };
+
+    try {
+      const result = await mangadex.mangadexSearchGL({ query: 'bloom' }, 2, 24);
+      const url = new URL(requested);
+      assert.equal(
+        url.searchParams.get('includedTags[]'),
+        'a3c67850-4684-404e-9b7f-c69850ee5da6',
+        'Text search must constrain MangaDex to the GL tag'
+      );
+      assert.equal(
+        url.searchParams.get('excludedTags[]'),
+        '5920b825-4181-4a17-beeb-9baec0c9d5cc',
+        'BL must stay excluded upstream'
+      );
+      assert.equal(url.searchParams.get('offset'), '24');
+      assert.equal(url.searchParams.get('limit'), '24');
+      assert.equal(result.total, 53, 'total must come from the GL-filtered query');
+      assert.equal(result.hasNextPage, true);
+      assert.equal(result.items.length, 1);
+      assert.equal(result.items[0].title, 'Bloom Into You');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   await test('tmdb.ts exports movies, dramas, search, and byId helpers', async () => {
     tmdb = await jiti.import('../src/lib/providers/tmdb.ts');
     assert.equal(typeof tmdb.tmdbSearchGL, 'function');
@@ -127,6 +190,65 @@ async function run() {
     assert.equal(typeof classify.classifyGL, 'function');
     assert.equal(typeof classify.filterGL, 'function');
     assert(Array.isArray(classify.GL_ALLOWED_CLASSIFICATIONS));
+  });
+
+  await test('classifier uses strong GL evidence from a related franchise title', () => {
+    const relatedGL = classify.classifyGL({
+      genres: ['Comedy', 'Fantasy'],
+      tags: [{ name: 'Yuri', rank: 20 }],
+      description: 'A 4-koma side project by the manga adaptation artist.',
+      relations: [
+        {
+          relationType: 'PARENT',
+          genres: ['Fantasy', 'Romance'],
+          tags: [{ name: 'Yuri', rank: 96 }],
+        },
+      ],
+    });
+    assert.equal(relatedGL, 'GL_RELATED', 'A GL parent must admit its weak-tagged spin-off');
+
+    const withoutEvidence = classify.classifyGL({
+      genres: ['Comedy', 'Fantasy'],
+      tags: [{ name: 'Yuri', rank: 20 }],
+      description: 'A 4-koma side project by the manga adaptation artist.',
+    });
+    assert.equal(withoutEvidence, 'NEEDS_REVIEW', 'Weak tags alone must still need review');
+
+    const blRelated = classify.classifyGL({
+      genres: ['Comedy', 'Fantasy'],
+      description: 'A side project.',
+      relations: [
+        {
+          relationType: 'PARENT',
+          genres: ['Romance'],
+          tags: [{ name: "Boys' Love", rank: 96 }],
+        },
+      ],
+    });
+    assert.notEqual(blRelated, 'GL_RELATED', 'Related BL works must not be inherited as GL');
+  });
+
+  await test('audit filters report maturity and moderation drops', async () => {
+    const maturity = await jiti.import('../src/lib/content/maturity.ts');
+    const moderation = await jiti.import('../src/lib/moderation/contentModeration.ts');
+
+    const matureDropped = [];
+    const matureKept = maturity.filterByMaturity(
+      [{ id: 'x', maturityRating: 'PORNOGRAPHIC' }],
+      'SAFE',
+      (title) => matureDropped.push(title)
+    );
+    assert.equal(matureKept.length, 0);
+    assert.equal(matureDropped.length, 1);
+
+    const hiddenDropped = [];
+    const moderationKept = moderation.filterModeratedTitles(
+      [{ id: 'ANILIST-1' }, { id: 'ANILIST-2' }],
+      { 'ANILIST-1': { titleId: 'ANILIST-1', action: 'takedown' } },
+      (title) => hiddenDropped.push(title)
+    );
+    assert.deepEqual(moderationKept.map((title) => title.id), ['ANILIST-2']);
+    assert.deepEqual(hiddenDropped.map((title) => title.id), ['ANILIST-1']);
   });
 
   await test('classifier ignores weak/spoiler Yuri tags and keeps explicit BL out', () => {

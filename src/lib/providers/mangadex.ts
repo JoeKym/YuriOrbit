@@ -298,7 +298,8 @@ export async function mangadexSearchGL(
   perPage = 24,
   onGlDropped?: (title: ContentTitle) => void
 ): Promise<PaginatedResult> {
-  const offset = (page - 1) * perPage;
+  const limit = Math.min(perPage, 100);
+  const offset = (page - 1) * limit;
 
   const isTextSearch = Boolean(filter.query && filter.query.trim());
   const [orderField, orderDir] = mapMDSort(filter.sort || (isTextSearch ? 'RELEVANCE' : undefined)).split(':');
@@ -306,16 +307,17 @@ export async function mangadexSearchGL(
   const params: Record<string, string | string[]> = {
     excludedTags: EXCLUDE_TAG_IDS,
     includes: ['cover_art', 'author', 'artist'],
-    limit: String(Math.min(perPage, 100)),
+    limit: String(limit),
     offset: String(offset),
     contentRating: mangadexContentRatings(getMaturityLevel()),
     [`order[${orderField || (isTextSearch ? 'relevance' : 'followedCount')}]`]: orderDir || 'desc',
   };
 
-  if (!isTextSearch) {
-    params.includedTags = GL_TAG_IDS;
-    params.availableTranslatedLanguage = ['en'];
-  }
+  // Apply the GL filter upstream, including for text searches. Filtering the
+  // page locally afterwards made `total` and `hasNextPage` count results that
+  // were then discarded, and filled pages with unrelated title matches.
+  params.includedTags = GL_TAG_IDS;
+  if (!isTextSearch) params.availableTranslatedLanguage = ['en'];
 
   if (filter.query) {
     params.title = filter.query.trim();
@@ -337,21 +339,13 @@ export async function mangadexSearchGL(
   try {
     let resp = await mdFetch<MDListResponse<MDManga>>('/manga', params);
 
-    // If query contains 'unni' and returned few matches, also query 'unnie'
-    if (isTextSearch && filter.query && /\bunni\b/i.test(filter.query) && (resp.data || []).length < 2) {
+    // MangaDex does not always stem "unni" to "unnie". Retry the spelling only
+    // when the first query is empty, replacing the response so the reported
+    // total still describes exactly the query whose rows are shown.
+    if (isTextSearch && filter.query && /\bunni\b/i.test(filter.query) && (resp.data || []).length === 0) {
       const altParams = { ...params, title: filter.query.replace(/\bunni\b/gi, 'unnie') };
       const altResp = await mdFetch<MDListResponse<MDManga>>('/manga', altParams).catch(() => null);
-      if (altResp && altResp.data && altResp.data.length > 0) {
-        const existingIds = new Set((resp.data || []).map((m) => m.id));
-        const combined = [...(resp.data || [])];
-        for (const item of altResp.data) {
-          if (!existingIds.has(item.id)) {
-            existingIds.add(item.id);
-            combined.push(item);
-          }
-        }
-        resp = { ...resp, data: combined, total: Math.max(resp.total, altResp.total) };
-      }
+      if (altResp) resp = altResp;
     }
 
     const normalized = resp.data.map(normalizeMangaDex);
@@ -381,7 +375,7 @@ export async function mangadexSearchGL(
     return {
       items,
       page,
-      perPage,
+      perPage: limit,
       total: resp.total,
       hasNextPage: offset + resp.limit < resp.total,
     };

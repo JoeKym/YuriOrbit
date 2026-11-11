@@ -83,7 +83,7 @@ const MEDIA_FIELDS = `
   siteUrl
   isAdult
   externalLinks { url site type icon color }
-  relations { edges { relationType node { id title { romaji english } coverImage { large } format type } } }
+  relations { edges { relationType node { id title { romaji english } coverImage { large } format type genres tags { name rank } } } }
   trailer { id site }
 `;
 
