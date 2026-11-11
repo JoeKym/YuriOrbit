@@ -567,12 +567,15 @@ export async function mangadexGetChapterPages(chapterId: string): Promise<string
       chapter: { hash: string; data: string[]; dataSaver: string[] };
     }>(`/at-home/server/${chapterId}`);
 
-    const files = resp.chapter.data?.length ? resp.chapter.data : resp.chapter.dataSaver ?? [];
+    // Data-saver pages are much smaller and load considerably faster; fall
+    // back to the original files only when the chapter has no saver variant.
+    const useSaver = (resp.chapter.dataSaver?.length ?? 0) > 0;
+    const files = useSaver ? resp.chapter.dataSaver : resp.chapter.data ?? [];
     const urls = files.map(
       (file) =>
         `${MANGADEX_PAGE_BASE}?chapter=${encodeURIComponent(chapterId)}&hash=${encodeURIComponent(
           resp.chapter.hash
-        )}&file=${encodeURIComponent(file)}`
+        )}&file=${encodeURIComponent(file)}${useSaver ? '&saver=1' : ''}`
     );
     if (urls.length > 0) pageUrlCache.set(chapterId, { at: Date.now(), urls });
     return urls;
