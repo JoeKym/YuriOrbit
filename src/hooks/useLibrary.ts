@@ -10,6 +10,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { rememberSavedRef, rememberSavedRefs } from '@/lib/content/saved-refs';
 import { getTitleById } from '@/lib/providers';
+import { slugifyTitle } from '@/lib/catalog/identity';
+import { getCachedCanonicalSlug } from '@/lib/catalog/slug-redirects';
 
 const DB_NAME = 'yuriorbit';
 const DB_VERSION = 1;
@@ -297,7 +299,14 @@ export function useLibrary(options: { backfillProviderRefs?: boolean } = {}) {
   useEffect(() => {
     if (!backfillProviderRefs || !loaded) return;
 
-    const pending = Object.values(libraryRef.current).filter((entry) => !entry.providerId);
+    const pending = Object.values(libraryRef.current).filter(
+      (entry) =>
+        !entry.providerId ||
+        // Renamed titles can leave a saved entry on an old slug even though its
+        // provider reference is already stored; resolving it seeds the alias.
+        (getCachedCanonicalSlug(entry.titleId) === entry.titleId &&
+          slugifyTitle(entry.title) !== entry.titleId)
+    );
     if (pending.length === 0) return;
 
     let cancelled = false;
@@ -310,6 +319,12 @@ export function useLibrary(options: { backfillProviderRefs?: boolean } = {}) {
         try {
           const title = await getTitleById(entry.titleId);
           if (cancelled || !title?.providerId) continue;
+
+          if (entry.providerId) {
+            // getTitleById has already published any old-slug → canonical alias
+            // while resolving this entry; nothing else needs persisting.
+            continue;
+          }
 
           const updated: LibraryEntry = {
             ...entry,

@@ -118,6 +118,49 @@ const CORE_GL_KEYWORD_IDS = [
 
 const ASIAN_GL_COUNTRIES = 'TH|JP|KR|CN|TW';
 
+interface TMDBKeyword {
+  id: number;
+  name: string;
+}
+
+const GL_KEYWORD_ID_SET = new Set(CORE_GL_KEYWORD_IDS);
+const GL_KEYWORD_NAME_PATTERN = /(yuri|girls?'? ?love|lesbian|sapphic|baihe|wlw|female[- ]female)/i;
+const keywordCache = new Map<string, { at: number; value: boolean }>();
+const KEYWORD_CACHE_TTL = 10 * 60 * 1000;
+/** Bound the extra requests a single search can make while confirming matches. */
+const MAX_KEYWORD_CHECKS = 10;
+
+/**
+ * A title matching the query is intent, not proof of GL status. Confirm with
+ * TMDB's own keywords before keeping an otherwise ambiguous search result.
+ * Results are cached by title so repeated searches do not pay for it again.
+ */
+async function hasConfirmedGLKeywords(
+  mediaType: 'movie' | 'tv',
+  providerId: string
+): Promise<boolean> {
+  const key = `${mediaType}:${providerId}`;
+  const cached = keywordCache.get(key);
+  if (cached && Date.now() - cached.at < KEYWORD_CACHE_TTL) return cached.value;
+
+  try {
+    // Movies return `keywords`; TV returns `results`.
+    const data = await tmdbFetch<{ keywords?: TMDBKeyword[]; results?: TMDBKeyword[] }>(
+      `/${mediaType}/${providerId}/keywords`,
+      { language: 'en-US' }
+    );
+    const keywords = data.keywords ?? data.results ?? [];
+    const value = keywords.some(
+      (keyword) =>
+        GL_KEYWORD_ID_SET.has(String(keyword.id)) || GL_KEYWORD_NAME_PATTERN.test(keyword.name)
+    );
+    keywordCache.set(key, { at: Date.now(), value });
+    return value;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Mainstream series, soap operas, or BL series that have minor LGBT tags but
  * are NOT centered on Girls' Love / Yuri romance.
@@ -310,11 +353,21 @@ function isGL(title: ContentTitle): boolean {
   return GL_ALLOWED_CLASSIFICATIONS.includes(title.glClassification);
 }
 
-function collectGL(items: ContentTitle[], allow?: Set<string>): ContentTitle[] {
+type GLDropReporter = (title: ContentTitle) => void;
+
+function collectGL(
+  items: ContentTitle[],
+  allow?: Set<string>,
+  onDropped?: GLDropReporter
+): ContentTitle[] {
   const seen = new Set<string>();
   const out: ContentTitle[] = [];
   for (const item of items) {
-    if (seen.has(item.id) || (!isGL(item) && !allow?.has(item.id))) continue;
+    if (seen.has(item.id)) continue;
+    if (!isGL(item) && !allow?.has(item.id)) {
+      onDropped?.(item);
+      continue;
+    }
     seen.add(item.id);
     out.push(item);
   }
@@ -410,7 +463,11 @@ async function tmdbTextSearch(mediaType: 'movie' | 'tv', queries: string[], page
 /**
  * Search TMDB for GL movies and dramas across all countries.
  */
-export async function tmdbSearchGL(filter: ContentFilter, page = 1): Promise<PaginatedResult> {
+export async function tmdbSearchGL(
+  filter: ContentFilter,
+  page = 1,
+  onGlDropped?: GLDropReporter
+): Promise<PaginatedResult> {
   const query = filter.query?.trim();
   const wantsMovie = !filter.contentType || filter.contentType === 'ALL' || filter.contentType === 'MOVIE';
   const wantsTV =
@@ -458,28 +515,37 @@ export async function tmdbSearchGL(filter: ContentFilter, page = 1): Promise<Pag
       }
     }
 
-    // A direct title search is strong evidence of intent. Keep TMDB titles the
-    // heuristic classifier is unsure about when they match the query, so works
-    // like "Apple My Love" are findable instead of being silently dropped.
-    const matchedQuery = query
-      ? new Set(
-          batches
-            .filter((item) => item.glClassification === 'NEEDS_REVIEW')
-            .filter((item) => {
-              const needle = query.toLowerCase();
-              const hay = `${item.title} ${item.altTitles.join(' ')}`.toLowerCase();
-              return needle
-                .split(/\s+/)
-                .filter(Boolean)
-                .every((word) => hay.includes(word));
-            })
-            .map((item) => item.id)
-        )
-      : undefined;
+    // A direct title search is evidence of intent, but not proof of GL status.
+    // Check the keywords of the titles the heuristic was unsure about instead of
+    // assuming every name match belongs in the catalogue.
+    const queryMatches = query
+      ? batches
+          .filter((item) => item.glClassification === 'NEEDS_REVIEW')
+          .filter((item) => {
+            const needle = query.toLowerCase();
+            const hay = `${item.title} ${item.altTitles.join(' ')}`.toLowerCase();
+            return needle
+              .split(/\s+/)
+              .filter(Boolean)
+              .every((word) => hay.includes(word));
+          })
+      : [];
+
+    const confirmedMatches = new Set<string>();
+    await Promise.all(
+      queryMatches.slice(0, MAX_KEYWORD_CHECKS).map(async (item) => {
+        const mediaType = item.contentType === 'MOVIE' ? 'movie' : 'tv';
+        if (await hasConfirmedGLKeywords(mediaType, item.providerId)) {
+          confirmedMatches.add(item.id);
+        }
+      })
+    );
+
+    const matchedQuery = confirmedMatches.size > 0 ? confirmedMatches : undefined;
 
     // The index applies its own GL allow-list after every provider returns, so
-    // a query match has to be classified as GL here or it is dropped again.
-    const items = collectGL(batches, matchedQuery).map((item) =>
+    // a confirmed match has to be classified as GL here or it is dropped again.
+    const items = collectGL(batches, matchedQuery, onGlDropped).map((item) =>
       matchedQuery?.has(item.id) ? { ...item, glClassification: 'GL_RELATED' as const } : item
     );
 

@@ -16,6 +16,25 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 
 // The app uses the `@/` alias, so the runner must resolve it the same way.
+// Node has no usable localStorage by default, but the saved-ref and slug
+// redirect stores need one for resolution tests.
+{
+  const store = new Map();
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key) => (store.has(key) ? store.get(key) : null),
+      setItem: (key, value) => store.set(key, String(value)),
+      removeItem: (key) => store.delete(key),
+      clear: () => store.clear(),
+      key: (index) => [...store.keys()][index] ?? null,
+      get length() {
+        return store.size;
+      },
+    },
+  });
+}
+
 const jiti = createJiti(import.meta.url, {
   alias: { '@': fileURLToPath(new URL('../src', import.meta.url)) },
 });
@@ -110,6 +129,30 @@ async function run() {
     assert(Array.isArray(classify.GL_ALLOWED_CLASSIFICATIONS));
   });
 
+  await test('classifier ignores weak/spoiler Yuri tags and keeps explicit BL out', () => {
+    const reZero = classify.classifyGL({
+      genres: ['Action', 'Adventure', 'Drama', 'Fantasy', 'Romance'],
+      tags: [{ name: 'Time Loop', rank: 90 }, { name: 'Yuri', rank: 40 }],
+      description: 'Subaru is pulled back into another world and faces a cruel fate.',
+    });
+    assert.notEqual(reZero, 'CONFIRMED_GL', 'A low-ranked spoiler Yuri tag must not confirm GL');
+    assert.notEqual(reZero, 'GL_RELATED', 'A low-ranked spoiler Yuri tag must not make Re:Zero GL-related');
+
+    const robber = classify.classifyGL({
+      genres: ['Comedy', 'Romance'],
+      tags: [{ name: "Boys' Love", rank: 91 }, { name: 'Yuri', rank: 20 }],
+      description: 'A university student takes in a robber who likes his stories.',
+    });
+    assert.equal(robber, 'EXCLUDED', 'A strongly tagged BL work must stay excluded');
+
+    const genuine = classify.classifyGL({
+      genres: ['Romance'],
+      tags: [{ name: 'Yuri', rank: 90 }],
+      description: 'Two women fall in love.',
+    });
+    assert.equal(genuine, 'CONFIRMED_GL', 'A strongly tagged GL work must still be confirmed');
+  });
+
   await test('index.ts re-exports unified provider functions', async () => {
     index = await jiti.import('../src/lib/providers/index.ts');
     const required = [
@@ -194,7 +237,7 @@ async function run() {
       provider: overrides.provider,
       title: overrides.title,
       altTitles: overrides.altTitles || [],
-      contentType: 'MANGA',
+      contentType: overrides.contentType || 'MANGA',
       genres: ['Romance'],
       tags: [],
       status: 'FINISHED',
@@ -234,6 +277,32 @@ async function run() {
     ],
   });
 
+  // A live-action TMDB movie and an AniList screen record with different
+  // titles. Only their shared TMDB identity link can prove they are one work.
+  const tmdbLink = 'https://www.themoviedb.org/movie/290098';
+  const handmaidenTmdb = searchFixture({
+    provider: 'TMDB',
+    providerId: '290098',
+    title: 'Ah-ga-ssi',
+    altTitles: ['The Handmaiden', 'Lady'],
+    contentType: 'MOVIE',
+    externalLinks: [{ url: tmdbLink, site: 'TMDB', type: 'METADATA' }],
+    description: 'A young woman is hired as a handmaiden to a Japanese heiress.',
+  });
+  const handmaidenAnilist = searchFixture({
+    provider: 'ANILIST',
+    providerId: '101921',
+    title: 'The Handmaiden',
+    altTitles: ['Ah-ga-ssi'],
+    contentType: 'MOVIE',
+    coverImage: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/example.jpg',
+    description: 'A con man schemes to defraud a Japanese heiress with the help of a thief.',
+    externalLinks: [
+      { url: tmdbLink, site: 'TMDB', type: 'DATABASE' },
+      { url: 'https://anilist.co/anime/101921', site: 'AniList', type: 'DATABASE' },
+    ],
+  });
+
   const namesOf = (entry) =>
     [entry.title, ...entry.altTitles].map((name) => name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim());
 
@@ -256,6 +325,23 @@ async function run() {
     const forward = canonical.canonicalizeTitles([anilistRecord, mangadexRecord])[0];
     const reversed = canonical.canonicalizeTitles([mangadexRecord, anilistRecord])[0];
     assert.equal(reversed.id, forward.id, 'One story must keep one URL regardless of result order');
+  });
+
+  await test('search merge: a TMDB live-action movie joins AniList through its TMDB link', () => {
+    const merged = canonical.canonicalizeTitles([handmaidenTmdb, handmaidenAnilist]);
+    assert.equal(merged.length, 1, `Expected one merged entry, got ${merged.length}`);
+
+    const entry = merged[0];
+    const providers = (entry.sources || []).map((source) => source.provider);
+    assert(providers.includes('TMDB'), 'Merged entry must keep the TMDB source');
+    assert(providers.includes('ANILIST'), 'Merged entry must keep the AniList source');
+    assert.equal(entry.contentType, 'MOVIE', 'Screen titles must stay in the screen family');
+    assert(!/^(ANILIST|TMDB)-/.test(entry.id), `Merged id must be a YuriOrbit slug, got ${entry.id}`);
+
+    const names = namesOf(entry);
+    assert(names.includes('the handmaiden'), `Missing AniList title; got ${names.join(' | ')}`);
+    assert(names.includes('ah ga ssi'), `Missing TMDB title; got ${names.join(' | ')}`);
+    assert.equal(entry.id, 'the-handmaiden', `Unexpected canonical slug: ${entry.id}`);
   });
 
   await test('search merge leaves unrelated works separate', () => {
@@ -286,6 +372,9 @@ async function run() {
     globalThis.fetch = async (input) => {
       const url = typeof input === 'string' ? input : input.url;
 
+      if (url.includes('/movie/990001/keywords')) {
+        return json({ id: 990001, keywords: [{ id: 9833, name: 'lesbian relationship' }] });
+      }
       if (url.includes('/search/movie')) {
         return json({
           page: 1,
@@ -339,6 +428,126 @@ async function run() {
       const resolved = await index.getTitleById('when-we-met-2024');
       assert(resolved !== null, 'A search-produced slug must resolve instead of showing "not found"');
       assert.equal(resolved.title, 'When We Met');
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  await test('search does not assume a TMDB query match is GL without keywords', async () => {
+    const realFetch = globalThis.fetch;
+    const json = (body) =>
+      new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+
+    globalThis.fetch = async (input) => {
+      const url = typeof input === 'string' ? input : input.url;
+
+      if (url.includes('/movie/990002/keywords')) {
+        return json({ id: 990002, keywords: [{ id: 10349, name: 'based on novel' }] });
+      }
+      if (url.includes('/search/movie')) {
+        return json({
+          page: 1,
+          total_pages: 1,
+          total_results: 1,
+          results: [
+            {
+              id: 990002,
+              title: 'When We Met Again',
+              original_title: 'When We Met Again',
+              overview: 'Two former classmates reconnect at a reunion and compare their lives.',
+              release_date: '2025-01-01',
+              vote_average: 6.9,
+              vote_count: 40,
+              poster_path: null,
+              adult: false,
+              media_type: 'movie',
+            },
+          ],
+        });
+      }
+      if (url.includes('/search/tv')) {
+        return json({ page: 1, total_pages: 1, total_results: 0, results: [] });
+      }
+      if (url.includes('graphql')) {
+        return json({ data: { Page: { media: [], pageInfo: { hasNextPage: false, total: 0 } } } });
+      }
+      if (url.includes('/manga')) {
+        return json({ result: 'ok', data: [], limit: 0, offset: 0, total: 0 });
+      }
+      return json({ results: [] });
+    };
+
+    try {
+      const dropped = [];
+      const direct = await tmdb.tmdbSearchGL({ query: 'When We Met Again' }, 1, (title) =>
+        dropped.push(title.title)
+      );
+      assert.equal(direct.items.length, 0, 'A name match without GL keywords must not be kept');
+      assert(
+        dropped.includes('When We Met Again'),
+        'The audit reporter must receive titles dropped by the GL allow-list'
+      );
+
+      const searched = await index.searchGLTitles({ query: 'When We Met Again' }, 1, 10);
+      assert(
+        !searched.items.some((item) => item.title === 'When We Met Again'),
+        'Unified search must not return an unconfirmed TMDB name match'
+      );
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  await test('a saved old slug seeds a canonical redirect', async () => {
+    const { rememberSavedRef } = await jiti.import('../src/lib/content/saved-refs.ts');
+    const { getCachedCanonicalSlug } = await jiti.import('../src/lib/catalog/slug-redirects.ts');
+    const realFetch = globalThis.fetch;
+    const json = (body) =>
+      new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+
+    rememberSavedRef({
+      titleId: 'old-when-we-met',
+      provider: 'TMDB',
+      providerId: '990001',
+      contentType: 'MOVIE',
+      updatedAt: new Date().toISOString(),
+    });
+
+    globalThis.fetch = async (input) => {
+      const url = typeof input === 'string' ? input : input.url;
+      if (url.includes('/movie/990001')) {
+        return json({
+          id: 990001,
+          title: 'When We Met',
+          original_title: 'When We Met',
+          overview: 'Two former classmates meet again at a wedding.',
+          release_date: '2024-02-14',
+          vote_average: 7.4,
+          vote_count: 120,
+          poster_path: null,
+          adult: false,
+          genres: [],
+          original_language: 'en',
+        });
+      }
+      return json({ results: [] });
+    };
+
+    try {
+      const resolved = await index.getTitleById('old-when-we-met');
+      assert(resolved !== null, 'The saved provider reference must resolve');
+      assert.equal(resolved.title, 'When We Met');
+      assert.equal(
+        getCachedCanonicalSlug('old-when-we-met'),
+        'when-we-met',
+        'Resolving a saved old slug must publish the canonical alias'
+      );
     } finally {
       globalThis.fetch = realFetch;
     }

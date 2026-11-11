@@ -56,6 +56,15 @@ export interface AdminEntry {
   updated_at: string;
 }
 
+export interface SlugRedirect {
+  alias_slug: string;
+  canonical_slug: string;
+  provider: string | null;
+  provider_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface FeaturedTitle {
   id: string;
   title_id: string;
@@ -261,6 +270,24 @@ export const adminApi = {
       `/library?id=${encodeURIComponent(id)}&userId=${encodeURIComponent(userId)}`,
       { method: 'DELETE' }
     ),
+
+  slugRedirects: (params: { q?: string; page?: number; perPage?: number }) => {
+    const search = new URLSearchParams();
+    if (params.q) search.set('q', params.q);
+    if (params.page) search.set('page', String(params.page));
+    if (params.perPage) search.set('perPage', String(params.perPage));
+    return adminRequest<{ redirects: SlugRedirect[]; total: number; page: number; perPage: number }>(
+      `/slug-redirects?${search.toString()}`
+    );
+  },
+  saveSlugRedirect: (input: {
+    aliasSlug: string;
+    canonicalSlug: string;
+    provider?: string;
+    providerId?: string;
+  }) => adminRequest<{ ok: boolean }>('/slug-redirects', { method: 'PUT', body: JSON.stringify(input) }),
+  deleteSlugRedirect: (alias: string) =>
+    adminRequest<{ ok: boolean }>(`/slug-redirects?alias=${encodeURIComponent(alias)}`, { method: 'DELETE' }),
 
   featured: () => adminRequest<{ featured: FeaturedTitle[] }>('/featured'),
   addFeatured: (input: {

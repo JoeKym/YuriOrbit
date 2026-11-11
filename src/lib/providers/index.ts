@@ -192,7 +192,8 @@ export async function getGLByContentType(
 export async function searchGLTitles(
   filter: ContentFilter,
   page = 1,
-  perPage = 20
+  perPage = 20,
+  onGlDropped?: (title: ContentTitle) => void
 ): Promise<PaginatedResult> {
   const contentType = filter.contentType;
   const isScreen = contentType === 'MOVIE' || contentType === 'TV' || contentType === 'DRAMA';
@@ -201,11 +202,11 @@ export async function searchGLTitles(
   const useMangaDex = !isScreen && contentType !== 'LIGHT_NOVEL';
   const promises: Promise<PaginatedResult>[] = [anilistSearch(filter, page, perPage)];
   if (useMangaDex) {
-    promises.push(mangadexSearchGL(filter, page, perPage));
+    promises.push(mangadexSearchGL(filter, page, perPage, onGlDropped));
   }
 
   if (isScreen || !contentType || contentType === 'ALL') {
-    promises.push(tmdbSearchGL(filter, page));
+    promises.push(tmdbSearchGL(filter, page, onGlDropped));
   }
 
   const results = await Promise.allSettled(promises);
@@ -222,8 +223,14 @@ export async function searchGLTitles(
     }
   }
 
+  const glItems = items.filter((title) => {
+    if (isGL(title)) return true;
+    onGlDropped?.(title);
+    return false;
+  });
+
   // Cross-provider duplicates collapse into one canonical entry here.
-  const deduped = await withoutBlocked(visible(canonicalizeTitles(items.filter(isGL))));
+  const deduped = await withoutBlocked(visible(canonicalizeTitles(glItems)));
 
   return {
     items: deduped,
@@ -434,6 +441,12 @@ export async function getTitleById(id: string): Promise<ContentTitle | null> {
   const saved = await fetchSavedProviderTitle(trimmed);
   if (saved) {
     const canonical = canonicalizeTitle(saved);
+    // The saved entry may still use the title's pre-rename slug. Publish the
+    // mapping so other devices follow it too, then keep serving the requested
+    // id for this render (the page redirects once the alias is known).
+    if (canonical.id !== trimmed) {
+      rememberSlugAlias(trimmed, canonical.id, canonical.provider, canonical.providerId);
+    }
     const resolved = { ...canonical, id: trimmed };
     registerTitles([resolved]);
     return resolved;
