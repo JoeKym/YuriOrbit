@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Globe, Play } from 'lucide-react';
 import { tmdbGetWatchProviders, tmdbPreferredRegion } from '@/lib/providers';
 import type { TmdbWatchProviderResult } from '@/lib/providers/tmdb';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { fetchMyProfile, saveWatchRegion } from '@/lib/profiles';
 
 export type StreamingProvidersStatus = 'loading' | 'available' | 'unavailable';
 
@@ -108,10 +110,39 @@ export function StreamingProviders({
   className,
   onStatusChange,
 }: StreamingProvidersProps) {
+  const { user } = useAuth();
+  const touchedRef = useRef(false);
   const [region, setRegion] = useState(() => readStoredRegion() || tmdbPreferredRegion());
   const [manual, setManual] = useState(() => !!readStoredRegion());
   const [data, setData] = useState<TmdbWatchProviderResult | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Signed-in visitors keep their region on their profile, across devices. The
+  // local value is only a cache and must not override a fresh choice.
+  useEffect(() => {
+    const userId = user?.id;
+    if (!userId) return;
+
+    let cancelled = false;
+    fetchMyProfile(userId)
+      .then(({ data: profile }) => {
+        if (cancelled || touchedRef.current) return;
+        const stored = profile?.watchRegion;
+        if (!stored || !/^[A-Z]{2}$/.test(stored)) return;
+        setRegion(stored);
+        setManual(true);
+        try {
+          localStorage.setItem(REGION_STORAGE_KEY, stored);
+        } catch {
+          /* Storage unavailable: the profile value still applies. */
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -149,6 +180,8 @@ export function StreamingProviders({
   if (!manual && !data) return null;
 
   const handleRegionChange = (value: string) => {
+    touchedRef.current = true;
+
     if (value === 'auto') {
       try {
         localStorage.removeItem(REGION_STORAGE_KEY);
@@ -157,6 +190,7 @@ export function StreamingProviders({
       }
       setManual(false);
       setRegion(tmdbPreferredRegion());
+      if (user?.id) void saveWatchRegion(user.id, null);
       return;
     }
 
@@ -167,6 +201,7 @@ export function StreamingProviders({
     }
     setManual(true);
     setRegion(value);
+    if (user?.id) void saveWatchRegion(user.id, value);
   };
 
   return (
