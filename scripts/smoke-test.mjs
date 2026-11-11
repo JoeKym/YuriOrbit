@@ -372,6 +372,9 @@ async function run() {
     globalThis.fetch = async (input) => {
       const url = typeof input === 'string' ? input : input.url;
 
+      if (url.includes('/movie/990001/keywords')) {
+        return json({ id: 990001, keywords: [{ id: 9833, name: 'lesbian relationship' }] });
+      }
       if (url.includes('/search/movie')) {
         return json({
           page: 1,
@@ -425,6 +428,67 @@ async function run() {
       const resolved = await index.getTitleById('when-we-met-2024');
       assert(resolved !== null, 'A search-produced slug must resolve instead of showing "not found"');
       assert.equal(resolved.title, 'When We Met');
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  await test('search does not assume a TMDB query match is GL without keywords', async () => {
+    const realFetch = globalThis.fetch;
+    const json = (body) =>
+      new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+
+    globalThis.fetch = async (input) => {
+      const url = typeof input === 'string' ? input : input.url;
+
+      if (url.includes('/movie/990002/keywords')) {
+        return json({ id: 990002, keywords: [{ id: 10349, name: 'based on novel' }] });
+      }
+      if (url.includes('/search/movie')) {
+        return json({
+          page: 1,
+          total_pages: 1,
+          total_results: 1,
+          results: [
+            {
+              id: 990002,
+              title: 'When We Met Again',
+              original_title: 'When We Met Again',
+              overview: 'Two former classmates reconnect at a reunion and compare their lives.',
+              release_date: '2025-01-01',
+              vote_average: 6.9,
+              vote_count: 40,
+              poster_path: null,
+              adult: false,
+              media_type: 'movie',
+            },
+          ],
+        });
+      }
+      if (url.includes('/search/tv')) {
+        return json({ page: 1, total_pages: 1, total_results: 0, results: [] });
+      }
+      if (url.includes('graphql')) {
+        return json({ data: { Page: { media: [], pageInfo: { hasNextPage: false, total: 0 } } } });
+      }
+      if (url.includes('/manga')) {
+        return json({ result: 'ok', data: [], limit: 0, offset: 0, total: 0 });
+      }
+      return json({ results: [] });
+    };
+
+    try {
+      const direct = await tmdb.tmdbSearchGL({ query: 'When We Met Again' });
+      assert.equal(direct.items.length, 0, 'A name match without GL keywords must not be kept');
+
+      const searched = await index.searchGLTitles({ query: 'When We Met Again' }, 1, 10);
+      assert(
+        !searched.items.some((item) => item.title === 'When We Met Again'),
+        'Unified search must not return an unconfirmed TMDB name match'
+      );
     } finally {
       globalThis.fetch = realFetch;
     }
