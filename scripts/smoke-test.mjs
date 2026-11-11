@@ -228,6 +228,29 @@ async function run() {
     assert.notEqual(blRelated, 'GL_RELATED', 'Related BL works must not be inherited as GL');
   });
 
+  await test('audit filters report maturity and moderation drops', async () => {
+    const maturity = await jiti.import('../src/lib/content/maturity.ts');
+    const moderation = await jiti.import('../src/lib/moderation/contentModeration.ts');
+
+    const matureDropped = [];
+    const matureKept = maturity.filterByMaturity(
+      [{ id: 'x', maturityRating: 'PORNOGRAPHIC' }],
+      'SAFE',
+      (title) => matureDropped.push(title)
+    );
+    assert.equal(matureKept.length, 0);
+    assert.equal(matureDropped.length, 1);
+
+    const hiddenDropped = [];
+    const moderationKept = moderation.filterModeratedTitles(
+      [{ id: 'ANILIST-1' }, { id: 'ANILIST-2' }],
+      { 'ANILIST-1': { titleId: 'ANILIST-1', action: 'takedown' } },
+      (title) => hiddenDropped.push(title)
+    );
+    assert.deepEqual(moderationKept.map((title) => title.id), ['ANILIST-2']);
+    assert.deepEqual(hiddenDropped.map((title) => title.id), ['ANILIST-1']);
+  });
+
   await test('classifier ignores weak/spoiler Yuri tags and keeps explicit BL out', () => {
     const reZero = classify.classifyGL({
       genres: ['Action', 'Adventure', 'Drama', 'Fantasy', 'Romance'],

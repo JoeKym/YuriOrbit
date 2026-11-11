@@ -67,8 +67,11 @@ function isGL(title: ContentTitle): boolean {
  * Everything that leaves this module goes through the visitor's maturity
  * filter, so no page has to remember to apply it.
  */
-function visible(titles: ContentTitle[]): ContentTitle[] {
-  return filterByMaturity(titles, getMaturityLevel());
+function visible(
+  titles: ContentTitle[],
+  onDropped?: (title: ContentTitle) => void
+): ContentTitle[] {
+  return filterByMaturity(titles, getMaturityLevel(), onDropped);
 }
 
 /** Cache keys carry the maturity level: queries differ per level (adult flags). */
@@ -76,10 +79,13 @@ function levelKey(): string {
   return getMaturityLevel();
 }
 
-async function withoutBlocked<T extends ContentTitle>(titles: T[]): Promise<T[]> {
+async function withoutBlocked<T extends ContentTitle>(
+  titles: T[],
+  onHidden?: (title: T) => void
+): Promise<T[]> {
   try {
     const map = await fetchContentModeration();
-    return filterModeratedTitles(titles, map) as T[];
+    return filterModeratedTitles(titles, map, onHidden) as T[];
   } catch {
     return titles;
   }
@@ -189,11 +195,15 @@ export async function getGLByContentType(
 
 // ─── Search (unified across providers) ────────────────────────────────────────
 
+export type SearchFilterDropReason = 'MATURITY' | 'MODERATION';
+export type SearchFilterDropReporter = (title: ContentTitle, reason: SearchFilterDropReason) => void;
+
 export async function searchGLTitles(
   filter: ContentFilter,
   page = 1,
   perPage = 20,
-  onGlDropped?: (title: ContentTitle) => void
+  onGlDropped?: (title: ContentTitle) => void,
+  onFilterDropped?: SearchFilterDropReporter
 ): Promise<PaginatedResult> {
   const contentType = filter.contentType;
   const isScreen = contentType === 'MOVIE' || contentType === 'TV' || contentType === 'DRAMA';
@@ -206,7 +216,11 @@ export async function searchGLTitles(
   }
 
   if (isScreen || !contentType || contentType === 'ALL') {
-    promises.push(tmdbSearchGL(filter, page, onGlDropped));
+    promises.push(
+      tmdbSearchGL(filter, page, onGlDropped, (title) =>
+        onFilterDropped?.(title, 'MATURITY')
+      )
+    );
   }
 
   const results = await Promise.allSettled(promises);
@@ -230,7 +244,12 @@ export async function searchGLTitles(
   });
 
   // Cross-provider duplicates collapse into one canonical entry here.
-  const deduped = await withoutBlocked(visible(canonicalizeTitles(glItems)));
+  const mature = visible(canonicalizeTitles(glItems), (title) =>
+    onFilterDropped?.(title, 'MATURITY')
+  );
+  const deduped = await withoutBlocked(mature, (title) =>
+    onFilterDropped?.(title, 'MODERATION')
+  );
 
   return {
     items: deduped,

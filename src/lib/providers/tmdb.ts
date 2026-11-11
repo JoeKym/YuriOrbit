@@ -361,11 +361,13 @@ function isGL(title: ContentTitle): boolean {
 }
 
 type GLDropReporter = (title: ContentTitle) => void;
+type MaturityDropReporter = (title: ContentTitle) => void;
 
 function collectGL(
   items: ContentTitle[],
   allow?: Set<string>,
-  onDropped?: GLDropReporter
+  onDropped?: GLDropReporter,
+  onMaturityDropped?: MaturityDropReporter
 ): ContentTitle[] {
   const seen = new Set<string>();
   const out: ContentTitle[] = [];
@@ -378,7 +380,7 @@ function collectGL(
     seen.add(item.id);
     out.push(item);
   }
-  return filterByMaturity(out, getMaturityLevel());
+  return filterByMaturity(out, getMaturityLevel(), onMaturityDropped);
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -473,7 +475,8 @@ async function tmdbTextSearch(mediaType: 'movie' | 'tv', queries: string[], page
 export async function tmdbSearchGL(
   filter: ContentFilter,
   page = 1,
-  onGlDropped?: GLDropReporter
+  onGlDropped?: GLDropReporter,
+  onMaturityDropped?: MaturityDropReporter
 ): Promise<PaginatedResult> {
   const query = filter.query?.trim();
   const wantsMovie = !filter.contentType || filter.contentType === 'ALL' || filter.contentType === 'MOVIE';
@@ -554,7 +557,12 @@ export async function tmdbSearchGL(
 
     // The index applies its own GL allow-list after every provider returns, so
     // a confirmed match has to be classified as GL here or it is dropped again.
-    const items = collectGL(overriddenBatches, matchedQuery, onGlDropped).map((item) =>
+    const items = collectGL(
+      overriddenBatches,
+      matchedQuery,
+      onGlDropped,
+      onMaturityDropped
+    ).map((item) =>
       matchedQuery?.has(item.id) ? { ...item, glClassification: 'GL_RELATED' as const } : item
     );
 
