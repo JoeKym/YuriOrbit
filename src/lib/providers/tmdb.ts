@@ -626,18 +626,25 @@ export function tmdbPreferredRegion(): string {
  * falling back to US data when that region has no entry. TMDB requires a
  * JustWatch attribution wherever this data is shown, so callers get the link.
  */
+export interface TmdbWatchProviderOptions {
+  /** Fall back to US availability when the requested region has none. */
+  fallbackToUS?: boolean;
+}
+
 export async function tmdbGetWatchProviders(
   providerId: string,
   mediaType: 'movie' | 'tv',
-  region = 'US'
+  region = 'US',
+  options: TmdbWatchProviderOptions = {}
 ): Promise<TmdbWatchProviderResult | null> {
+  const { fallbackToUS = true } = options;
   try {
     const resp = await tmdbFetch<{ results?: Record<string, TmdbRegionProviders> }>(
       `/${mediaType}/${providerId}/watch/providers`
     );
     const results = resp.results || {};
     const local = results[region];
-    const fallback = results.US;
+    const fallback = fallbackToUS ? results.US : undefined;
 
     const chosen = local?.flatrate?.length
       ? { region, entry: local }
