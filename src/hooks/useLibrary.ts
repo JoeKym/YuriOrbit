@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState, useRef } from 'react';
 import type { LibraryEntry, LibraryStatus, ContentTitle } from '@/types/content';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { rememberSavedRef, rememberSavedRefs } from '@/lib/content/saved-refs';
 
 const DB_NAME = 'yuriorbit';
 const DB_VERSION = 1;
@@ -113,6 +114,7 @@ interface DbRow {
   rating: number | null;
   notes: string | null;
   provider: string;
+  provider_id: string | null;
   added_at: string;
   updated_at: string;
 }
@@ -132,7 +134,17 @@ function rowToEntry(row: DbRow): LibraryEntry {
     addedAt: row.added_at,
     updatedAt: row.updated_at,
     provider: row.provider as LibraryEntry['provider'],
+    providerId: row.provider_id ?? undefined,
   };
+}
+
+/**
+ * Older deployments may not have applied the provider_id migration yet. Keep
+ * saving working there rather than failing the whole write.
+ */
+function isMissingProviderIdColumn(error: { code?: string; message?: string }): boolean {
+  const message = error.message ?? '';
+  return /provider_id/i.test(message) && (error.code === '42703' || error.code === 'PGRST204');
 }
 
 function entryToRow(entry: LibraryEntry, userId?: string) {
@@ -148,6 +160,7 @@ function entryToRow(entry: LibraryEntry, userId?: string) {
     rating: entry.rating ?? null,
     notes: entry.notes ?? null,
     provider: entry.provider,
+    provider_id: entry.providerId ?? null,
   };
 }
 
@@ -206,6 +219,7 @@ export function useLibrary() {
               const entry = rowToEntry(row);
               map[entry.id] = entry;
             });
+          rememberSavedRefs(Object.values(map));
           setLibrary(map);
           setLoaded(true);
           return;
@@ -215,6 +229,7 @@ export function useLibrary() {
           // Fall back to local data on error
           const local = await loadLocal();
           if (cancelled) return;
+          rememberSavedRefs(Object.values(local));
           setLibrary(local);
           setLoaded(true);
           return;
@@ -224,6 +239,7 @@ export function useLibrary() {
       // Not authenticated — local only
       const local = await loadLocal();
       if (cancelled) return;
+      rememberSavedRefs(Object.values(local));
       setLibrary(local);
       setLoaded(true);
     }
@@ -256,9 +272,18 @@ export function useLibrary() {
   const upsertCloud = useCallback(async (entry: LibraryEntry) => {
     if (!supabase) throw new Error('Cloud sync is not configured.');
     if (!userId) throw new Error('Not signed in.');
+    const row = entryToRow(entry, userId);
     const { error } = await supabase
       .from('library_entries')
-      .upsert(entryToRow(entry, userId), { onConflict: 'user_id,title_id' });
+      .upsert(row, { onConflict: 'user_id,title_id' });
+    if (error && isMissingProviderIdColumn(error)) {
+      const { provider_id: _unused, ...legacyRow } = row;
+      const retry = await supabase
+        .from('library_entries')
+        .upsert(legacyRow, { onConflict: 'user_id,title_id' });
+      if (retry.error) throw retry.error;
+      return;
+    }
     if (error) throw error;
   }, [userId]);
 
@@ -279,7 +304,13 @@ export function useLibrary() {
     setLibrary((prev) => {
       const existing = prev[title.id];
       const entry: LibraryEntry = existing
-        ? { ...existing, status, updatedAt: new Date().toISOString() }
+        ? {
+            ...existing,
+            status,
+            provider: title.provider,
+            providerId: title.providerId,
+            updatedAt: new Date().toISOString(),
+          }
         : {
             id: title.id,
             titleId: title.id,
@@ -292,7 +323,9 @@ export function useLibrary() {
             addedAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             provider: title.provider,
+            providerId: title.providerId,
           };
+      rememberSavedRef(entry);
       if (isAuthenticated) {
         upsertCloud(entry).catch((e) => setCloudError(e instanceof Error ? e.message : 'Sync failed'));
       } else {
@@ -416,9 +449,17 @@ export async function migrateLocalToCloud(): Promise<{ imported: number; error: 
   if (localEntries.length === 0) return { imported: 0, error: null };
 
   const rows = localEntries.map((entry) => entryToRow(entry));
-  const { error } = await supabase
+  let { error } = await supabase
     .from('library_entries')
     .upsert(rows, { onConflict: 'user_id,title_id' });
+
+  if (error && isMissingProviderIdColumn(error)) {
+    const legacyRows = rows.map(({ provider_id: _unused, ...row }) => row);
+    const retry = await supabase
+      .from('library_entries')
+      .upsert(legacyRows, { onConflict: 'user_id,title_id' });
+    error = retry.error;
+  }
 
   if (error) return { imported: 0, error: error.message };
 

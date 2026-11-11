@@ -36,6 +36,7 @@ import { canonicalizeTitle, canonicalizeTitles } from '@/lib/catalog/canonical';
 import { findRegisteredBySlug, getRegisteredTitle, registerTitles } from '@/lib/catalog/registry';
 import { fetchContentModeration, filterModeratedTitles } from '@/lib/moderation/contentModeration';
 import { isLegacyProviderId, slugToQuery, slugifyTitle, titleKey } from '@/lib/catalog/identity';
+import { getSavedRef } from '@/lib/content/saved-refs';
 
 export { classifyGL, filterGL, glConfidence, GL_ALLOWED_CLASSIFICATIONS } from './classify';
 export { normalizeAniList } from './normalize';
@@ -301,6 +302,33 @@ async function fetchProviderTitle(id: string): Promise<ContentTitle | null> {
   return anilistById(id);
 }
 
+/**
+ * Fetch the exact upstream record behind a saved title. The library stores the
+ * provider and its id, so a renamed or re-merged title still opens instead of
+ * falling through to a name search that may no longer match.
+ */
+async function fetchSavedProviderTitle(slug: string): Promise<ContentTitle | null> {
+  const ref = getSavedRef(slug);
+  if (!ref?.providerId) return null;
+
+  const id = ref.providerId;
+  try {
+    if (ref.provider === 'ANILIST') {
+      return await anilistById(`ANILIST-${id.replace('ANILIST-', '')}`);
+    }
+    if (ref.provider === 'MANGADEX') {
+      return await mangadexGetById(`MANGADEX-${id.replace('MANGADEX-', '')}`);
+    }
+    if (ref.provider === 'TMDB') {
+      const mediaType = ref.contentType === 'MOVIE' ? 'movie' : 'tv';
+      return await tmdbGetById(`TMDB-${mediaType}-${id.replace(/^TMDB-(movie|tv)-/, '')}`);
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 /** Re-resolve a slug id against the providers (used for direct/deep links). */
 async function resolveSlug(slug: string): Promise<ContentTitle | null> {
   const withYear = /^(.*)-(\d{4})$/.exec(slug);
@@ -360,6 +388,16 @@ export async function getTitleById(id: string): Promise<ContentTitle | null> {
     const canonical = canonicalizeTitle(raw);
     registerTitles([canonical]);
     return canonical;
+  }
+
+  // Saved titles carry the upstream reference, so resolve them exactly before
+  // falling back to a slug/name search.
+  const saved = await fetchSavedProviderTitle(trimmed);
+  if (saved) {
+    const canonical = canonicalizeTitle(saved);
+    const resolved = { ...canonical, id: trimmed };
+    registerTitles([resolved]);
+    return resolved;
   }
 
   return resolveSlug(trimmed);

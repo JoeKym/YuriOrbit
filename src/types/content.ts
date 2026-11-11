@@ -167,6 +167,8 @@ export interface LibraryEntry {
   addedAt: string;
   updatedAt: string;
   provider: SourceProvider;
+  /** Upstream record behind the slug, so saved titles resolve exactly. */
+  providerId?: string;
 }
 
 export type LibraryStatus =
