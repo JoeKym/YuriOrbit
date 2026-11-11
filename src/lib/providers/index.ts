@@ -312,7 +312,11 @@ async function resolveSlug(slug: string): Promise<ContentTitle | null> {
 
   const result = await searchGLTitles({ query }, 1, 30);
 
-  const matchingTitle = result.items.filter((item) => slugifyTitle(item.title) === baseSlug);
+  const matchesSlug = (item: ContentTitle) =>
+    slugifyTitle(item.title) === baseSlug ||
+    item.altTitles.some((alt) => slugifyTitle(alt) === baseSlug);
+
+  const matchingTitle = result.items.filter(matchesSlug);
   const match =
     (wantedYear ? matchingTitle.find((item) => item.releaseYear === wantedYear) : undefined) ??
     matchingTitle[0] ??
@@ -325,7 +329,11 @@ async function resolveSlug(slug: string): Promise<ContentTitle | null> {
   }
 
   const wantedKey = titleKey(query);
-  const loose = result.items.find((item) => titleKey(item.title) === wantedKey);
+  const loose = result.items.find(
+    (item) =>
+      titleKey(item.title) === wantedKey ||
+      item.altTitles.some((alt) => titleKey(alt) === wantedKey)
+  );
   if (loose) {
     const resolved = { ...loose, id: slug };
     registerTitles([resolved]);

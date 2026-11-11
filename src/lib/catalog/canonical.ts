@@ -7,7 +7,7 @@
  */
 import type { ContentTitle, ExternalLink, Tag, TitleRelation } from '@/types/content';
 import { familyOf, slugifyTitle, titleKey } from './identity';
-import { registerTitles } from './registry';
+import { findRegisteredSlugFor, registerTitles } from './registry';
 
 const PROVIDER_WEIGHT: Record<ContentTitle['provider'], number> = {
   ANILIST: 30,
@@ -154,6 +154,33 @@ function keysFor(title: ContentTitle): string[] {
   return [...keys];
 }
 
+/**
+ * Stable external ids shared by providers. AniList and MangaDex rarely agree on
+ * a title, but they do link the same MyAnimeList entry — that is what proves
+ * "Zhi Nu Xianjing" and "Straight Girl Trap" are one work.
+ */
+function identityKeys(title: ContentTitle): string[] {
+  const family = familyOf(title.contentType);
+  const keys: string[] = [];
+
+  for (const link of title.externalLinks) {
+    const url = link.url;
+    let match = /myanimelist\.net\/(manga|anime)\/(\d+)/i.exec(url);
+    if (match) keys.push(`${family}:mal:${match[1].toLowerCase()}:${match[2]}`);
+
+    match = /anilist\.co\/(manga|anime)\/(\d+)/i.exec(url);
+    if (match) keys.push(`${family}:anilist:${match[1].toLowerCase()}:${match[2]}`);
+
+    match = /mangadex\.org\/title\/([0-9a-f-]{36})/i.exec(url);
+    if (match) keys.push(`${family}:mangadex:${match[1].toLowerCase()}`);
+
+    match = /themoviedb\.org\/(movie|tv)\/(\d+)/i.exec(url);
+    if (match) keys.push(`${family}:tmdb:${match[1].toLowerCase()}:${match[2]}`);
+  }
+
+  return keys;
+}
+
 function uniqueSlug(base: string, year: number | undefined, used: Set<string>): string {
   if (!used.has(base)) return base;
 
@@ -196,7 +223,7 @@ export function canonicalizeTitles(titles: ContentTitle[]): ContentTitle[] {
 
   const firstOwner = new Map<string, number>();
   entries.forEach((entry, index) => {
-    for (const key of keysFor(entry)) {
+    for (const key of [...keysFor(entry), ...identityKeys(entry)]) {
       const owner = firstOwner.get(key);
       if (owner === undefined) firstOwner.set(key, index);
       else union(owner, index);
@@ -219,19 +246,35 @@ export function canonicalizeTitles(titles: ContentTitle[]): ContentTitle[] {
 
   const used = new Set<string>();
   const result: ContentTitle[] = [];
+  const aliases: ContentTitle[] = [];
 
   for (const root of order) {
     const group = groups.get(root);
     if (!group || group.length === 0) continue;
 
     const merged = mergeGroup(group);
-    const slug = uniqueSlug(slugifyTitle(merged.title), merged.releaseYear, used);
+
+    // Reuse a slug this work already had so the same story keeps one URL even
+    // when a different provider supplies the primary title in another list.
+    const existingSlugs = group
+      .map((member) => findRegisteredSlugFor(member))
+      .filter((value): value is string => Boolean(value));
+    const preferred = existingSlugs.find((candidate) => !used.has(candidate));
+    const base = slugifyTitle(merged.title);
+    const slug = preferred ?? uniqueSlug(base, merged.releaseYear, used);
+
     merged.id = slug;
     used.add(slug);
     result.push(merged);
+
+    // Old links keep working: each previous slug now points at the merged entry.
+    for (const alias of new Set(existingSlugs)) {
+      if (alias !== slug) aliases.push({ ...merged, id: alias });
+    }
   }
 
   registerTitles(result);
+  if (aliases.length > 0) registerTitles(aliases);
   return result;
 }
 

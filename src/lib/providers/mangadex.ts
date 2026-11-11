@@ -118,6 +118,8 @@ interface MDMangaAttributes {
   lastVolume?: string;
   lastChapter?: string;
   latestUploadedChapter?: string;
+  /** Cross-catalogue URLs MangaDex knows for this work (MAL, AniList, official). */
+  links?: Record<string, string>;
 }
 
 interface MDManga {
@@ -253,6 +255,14 @@ function normalizeMangaDex(m: MDManga): ContentTitle {
     .map((r) => r.attributes!.name!)
     .filter((name, index, all) => all.indexOf(name) === index);
 
+  // MangaDex links back to MAL, AniList and official sources. Keeping them lets
+  // the catalog recognise the same work under another provider's title.
+  const providerLinks = Object.entries(attrs.links ?? {}).flatMap(([site, url]) =>
+    typeof url === 'string' && /^https?:\/\//i.test(url)
+      ? [{ url, site, type: 'METADATA' as const }]
+      : []
+  );
+
   return {
     id: `MANGADEX-${m.id}`,
     providerId: m.id,
@@ -270,6 +280,7 @@ function normalizeMangaDex(m: MDManga): ContentTitle {
     releaseYear: attrs.year,
     externalLinks: [
       { url: `https://mangadex.org/title/${m.id}`, site: 'MangaDex', type: 'METADATA' },
+      ...providerLinks,
     ],
     relations: [],
     glClassification,
