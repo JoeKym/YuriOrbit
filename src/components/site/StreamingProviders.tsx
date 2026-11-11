@@ -4,10 +4,9 @@ import { tmdbGetWatchProviders, tmdbPreferredRegion } from '@/lib/providers';
 import type { TmdbWatchProviderResult } from '@/lib/providers/tmdb';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { fetchMyProfile, saveWatchRegion } from '@/lib/profiles';
+import { readStoredWatchRegion, writeStoredWatchRegion } from '@/lib/content/watch-region';
 
 export type StreamingProvidersStatus = 'loading' | 'available' | 'unavailable';
-
-const REGION_STORAGE_KEY = 'yuriorbit_watch_region';
 
 /** Common TMDB availability regions; the detected region is added if absent. */
 const REGION_OPTIONS: { code: string; name: string }[] = [
@@ -77,15 +76,6 @@ function regionName(code: string): string {
   }
 }
 
-function readStoredRegion(): string | null {
-  try {
-    const value = localStorage.getItem(REGION_STORAGE_KEY);
-    return value && /^[A-Z]{2}$/.test(value) ? value : null;
-  } catch {
-    return null;
-  }
-}
-
 interface StreamingProvidersProps {
   providerId: string;
   mediaType: 'movie' | 'tv';
@@ -112,8 +102,8 @@ export function StreamingProviders({
 }: StreamingProvidersProps) {
   const { user } = useAuth();
   const touchedRef = useRef(false);
-  const [region, setRegion] = useState(() => readStoredRegion() || tmdbPreferredRegion());
-  const [manual, setManual] = useState(() => !!readStoredRegion());
+  const [region, setRegion] = useState(() => readStoredWatchRegion() || tmdbPreferredRegion());
+  const [manual, setManual] = useState(() => !!readStoredWatchRegion());
   const [data, setData] = useState<TmdbWatchProviderResult | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -131,11 +121,7 @@ export function StreamingProviders({
         if (!stored || !/^[A-Z]{2}$/.test(stored)) return;
         setRegion(stored);
         setManual(true);
-        try {
-          localStorage.setItem(REGION_STORAGE_KEY, stored);
-        } catch {
-          /* Storage unavailable: the profile value still applies. */
-        }
+        writeStoredWatchRegion(stored);
       })
       .catch(() => undefined);
 
@@ -183,22 +169,14 @@ export function StreamingProviders({
     touchedRef.current = true;
 
     if (value === 'auto') {
-      try {
-        localStorage.removeItem(REGION_STORAGE_KEY);
-      } catch {
-        /* Storage unavailable: the choice just won't persist. */
-      }
+      writeStoredWatchRegion(null);
       setManual(false);
       setRegion(tmdbPreferredRegion());
       if (user?.id) void saveWatchRegion(user.id, null);
       return;
     }
 
-    try {
-      localStorage.setItem(REGION_STORAGE_KEY, value);
-    } catch {
-      /* Storage unavailable: the choice just won't persist. */
-    }
+    writeStoredWatchRegion(value);
     setManual(true);
     setRegion(value);
     if (user?.id) void saveWatchRegion(user.id, value);
