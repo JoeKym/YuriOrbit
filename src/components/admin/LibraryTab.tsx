@@ -95,6 +95,7 @@ export function LibraryTab() {
             <thead className="border-b border-ink-800 bg-ink-850/60 text-ink-400">
               <tr>
                 <th className="px-4 py-2.5 font-medium">Title</th>
+                <th className="px-4 py-2.5 font-medium">Provider ref</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
                 <th className="px-4 py-2.5 font-medium">Progress</th>
                 <th className="px-4 py-2.5 font-medium">Rating</th>
@@ -105,13 +106,13 @@ export function LibraryTab() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-ink-400">
+                  <td colSpan={7} className="px-4 py-8 text-center text-ink-400">
                     <Loader2 className="mx-auto mb-2 h-4 w-4 animate-spin" /> Loading entries…
                   </td>
                 </tr>
               ) : entries.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-ink-400">
+                  <td colSpan={7} className="px-4 py-8 text-center text-ink-400">
                     No library entries match these filters.
                   </td>
                 </tr>
@@ -138,6 +139,26 @@ export function LibraryTab() {
                           <p className="text-[10px] text-ink-500">{entry.title_id}</p>
                         </div>
                       </div>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2.5">
+                      {entry.provider ? (
+                        <div className="flex flex-col">
+                          <span className="font-medium text-ink-300">{entry.provider}</span>
+                          <span
+                            className="font-mono text-[10px] text-ink-500"
+                            title={entry.provider_id || 'No provider id stored'}
+                          >
+                            {entry.provider_id || 'no id'}
+                          </span>
+                        </div>
+                      ) : (
+                        <span
+                          className="text-[10px] text-amber-400"
+                          title="Saved before provider references were recorded"
+                        >
+                          legacy
+                        </span>
+                      )}
                     </td>
                     <td className="whitespace-nowrap px-4 py-2.5 text-ink-300">
                       {getLibraryStatusLabel(entry.status as LibraryStatus, entry.content_type as string | undefined)}
