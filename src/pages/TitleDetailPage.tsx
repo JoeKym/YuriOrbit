@@ -19,6 +19,7 @@ import { usePageMeta } from '@/hooks/usePageMeta';
 import { useContentModeration } from '@/hooks/useContentModeration';
 import { ContentUnavailable } from '@/components/site/ContentUnavailable';
 import { RestrictedNotice } from '@/components/site/RestrictedNotice';
+import { StreamingProviders } from '@/components/site/StreamingProviders';
 
 const STATUSES: LibraryStatus[] = ['CURRENT', 'PLANNED', 'COMPLETED', 'ON_HOLD', 'DROPPED', 'FAVOURITE'];
 
@@ -376,6 +377,16 @@ export function TitleDetailPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {isWatchable && title.provider === 'TMDB' && title.providerId && (
+          <StreamingProviders
+            providerId={title.providerId}
+            mediaType={title.contentType === 'MOVIE' ? 'movie' : 'tv'}
+            fallbackHref={title.sourceUrl}
+            heading="Where to Watch"
+            className="mt-8 max-w-3xl"
+          />
         )}
 
         {title.externalLinks.length > 0 && (
