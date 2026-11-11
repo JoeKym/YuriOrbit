@@ -20,6 +20,8 @@ import {
   mangadexGetChapters,
   mangadexGetChapterPages,
   mangadexFindMangaId,
+  getCachedChapterPages,
+  prefetchChapterPages,
 } from '@/lib/providers';
 import { getFallbackCover, cn } from '@/lib/utils/format';
 import { useLibrary } from '@/hooks/useLibrary';
@@ -183,6 +185,16 @@ export function ReaderPage() {
       setFailedPages(new Set());
       setPageRetries({});
 
+      // A prefetched chapter is already in the browser cache: show it at once.
+      const cached = getCachedChapterPages(activeChapter.id);
+      if (cached && cached.length > 0) {
+        setPageUrls(cached);
+        if (id && activeChapter.number) updateProgress(id, activeChapter.number);
+        setLoadingPages(false);
+        return;
+      }
+      setPageUrls([]);
+
       try {
         const urls = await mangadexGetChapterPages(activeChapter.id);
         if (cancelled) return;
@@ -208,6 +220,15 @@ export function ReaderPage() {
     loadPages();
     return () => { cancelled = true; };
   }, [activeChapter?.id, pagesReloadKey]);
+
+  // Warm the next chapter as soon as the current one is on screen. Pages are
+  // fetched in order, so the first pages of the next chapter are ready first.
+  useEffect(() => {
+    if (!activeChapter || loadingPages || pagesError || pageUrls.length === 0) return;
+    const next = readableChapters[activeChapterIndex + 1];
+    if (!next) return;
+    void prefetchChapterPages(next.id);
+  }, [activeChapter?.id, activeChapterIndex, loadingPages, pagesError, pageUrls.length, readableChapters]);
 
   const retryChapter = () => {
     setPagesError(null);
@@ -540,7 +561,11 @@ export function ReaderPage() {
                         </div>
                       ) : (
                         <img
-                          src={`${url}${url.includes('?') ? '&' : '?'}retry=${pageRetries[idx] ?? 0}`}
+                          src={
+                            pageRetries[idx]
+                              ? `${url}${url.includes('?') ? '&' : '?'}retry=${pageRetries[idx]}`
+                              : url
+                          }
                           alt={`Page ${idx + 1}`}
                           loading="lazy"
                           className="mx-auto block max-w-full h-auto rounded shadow-sm"

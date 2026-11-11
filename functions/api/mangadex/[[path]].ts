@@ -67,23 +67,78 @@ async function fetchAtHome(chapterId: string, env: Env, force = false): Promise<
   return request;
 }
 
+const MD_REPORT_URL = 'https://api.mangadex.network/report';
+
+type ExecContext = { waitUntil(promise: Promise<unknown>): void };
+
+type FetchAttempt = {
+  url: string;
+  response: Response | null;
+  bytes: number;
+  duration: number;
+};
+
 async function fetchPageImage(
   target: string,
   env: Env,
   method: string
-): Promise<Response | null> {
+): Promise<FetchAttempt> {
+  const started = Date.now();
   try {
-    return await fetch(target, {
+    const response = await fetch(target, {
       method,
       headers: upstreamHeaders(env, 'image/avif,image/webp,image/jpeg,image/png,image/*'),
       cf: { cacheTtl: 86400, cacheEverything: true },
     });
+    const length = Number(response.headers.get('Content-Length') || 0);
+    return {
+      url: target,
+      response,
+      bytes: Number.isFinite(length) && length > 0 ? length : 0,
+      duration: Date.now() - started,
+    };
   } catch {
-    return null;
+    return { url: target, response: null, bytes: 0, duration: Date.now() - started };
   }
 }
 
-async function handlePageImage(url: URL, env: Env, request: Request): Promise<Response> {
+/**
+ * MangaDex asks every client of the @Home network to report per-image outcomes
+ * so nodes can be scored. uploads.mangadex.org is not a node, so it is skipped.
+ * Reporting is fire-and-forget and must never delay or fail the image response.
+ */
+function reportNodeAttempt(exec: ExecContext, attempt: FetchAttempt): void {
+  let host: string;
+  try {
+    host = new URL(attempt.url).hostname;
+  } catch {
+    return;
+  }
+  if (host === 'mangadex.org' || host.endsWith('.mangadex.org')) return;
+
+  const body = JSON.stringify({
+    url: attempt.url,
+    success: !!attempt.response?.ok,
+    bytes: attempt.bytes,
+    duration: attempt.duration,
+    cached: false,
+  });
+
+  exec.waitUntil(
+    fetch(MD_REPORT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'User-Agent': MD_USER_AGENT },
+      body,
+    }).catch(() => undefined)
+  );
+}
+
+async function handlePageImage(
+  url: URL,
+  env: Env,
+  request: Request,
+  exec: ExecContext
+): Promise<Response> {
   const chapterId = (url.searchParams.get('chapter') || '').trim();
   const file = (url.searchParams.get('file') || '').trim();
   const hashParam = (url.searchParams.get('hash') || '').trim();
@@ -105,10 +160,17 @@ async function handlePageImage(url: URL, env: Env, request: Request): Promise<Re
   const home = await fetchAtHome(chapterId, env);
   const hash = home?.hash || (/^[0-9a-f]{16,64}$/i.test(hashParam) ? hashParam : null);
 
+  const attempts: FetchAttempt[] = [];
   let upstream: Response | null = null;
 
   if (home) {
-    upstream = await fetchPageImage(`${home.baseUrl}/data/${home.hash}/${encodeURIComponent(file)}`, env, method);
+    const attempt = await fetchPageImage(
+      `${home.baseUrl}/data/${home.hash}/${encodeURIComponent(file)}`,
+      env,
+      method
+    );
+    attempts.push(attempt);
+    upstream = attempt.response;
   }
 
   // A dead node or expired URL falls back to MangaDex's canonical uploads host.
@@ -118,7 +180,7 @@ async function handlePageImage(url: URL, env: Env, request: Request): Promise<Re
       env,
       method
     );
-    if (fallback?.ok || !upstream) upstream = fallback;
+    if (fallback.response?.ok || !upstream) upstream = fallback.response;
   }
 
   // Last attempt: the node may have changed since the cached at-home response.
@@ -130,9 +192,12 @@ async function handlePageImage(url: URL, env: Env, request: Request): Promise<Re
         env,
         method
       );
-      if (retry?.ok) upstream = retry;
+      attempts.push(retry);
+      if (retry.response?.ok) upstream = retry.response;
     }
   }
+
+  for (const attempt of attempts) reportNodeAttempt(exec, attempt);
 
   if (!upstream || !upstream.ok) return notFound();
 
@@ -167,7 +232,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   // Chapter pages are proxied through this origin: the upstream node URL is
   // short-lived and MangaDex serves hotlinked images incorrectly.
   if (targetPath === '/page') {
-    return handlePageImage(url, env, request);
+    return handlePageImage(url, env, request, context);
   }
 
   // Covers live on uploads.mangadex.org. Proxying them keeps the browser on our
