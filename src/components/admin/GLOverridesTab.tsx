@@ -101,8 +101,9 @@ export function GLOverridesTab() {
         </h2>
         <p className="mb-4 text-xs text-ink-400">
           Search confirms ambiguous TMDB matches with keywords, so a real GL title with incomplete keywords can be
-          hidden. Add its numeric TMDB id here to treat it as confirmed GL-related everywhere TMDB is searched or
-          browsed. Changes reach visitors after their override cache refreshes (about 15 seconds) or on reload.
+          hidden. Add its numeric TMDB id here to treat it as confirmed GL-related in TMDB search, discovery,
+          creator credits and direct lookups. Changes reach visitors after the override cache refreshes (about 15
+          seconds) or on reload.
         </p>
 
         {error && (

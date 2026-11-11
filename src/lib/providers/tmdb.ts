@@ -629,20 +629,22 @@ export async function tmdbSearchGLByCreator(query: string): Promise<{ name: stri
     for (const person of (people.results || []).slice(0, 2)) {
       const credits = await tmdbFetch<TMDBCredits>(`/person/${person.id}/combined_credits`, { language: 'en-US' });
       const titles = collectGL(
-        [...(credits.cast || []), ...(credits.crew || [])]
-          .filter((credit) => credit.media_type === 'movie' || credit.media_type === 'tv')
-          .map((credit) =>
-            normalizeTMDB(
-              {
-                id: credit.id,
-                title: credit.title,
-                name: credit.name,
-                adult: credit.adult,
-                media_type: credit.media_type as 'movie' | 'tv',
-              },
-              credit.media_type === 'tv'
+        await withGLOverrides(
+          [...(credits.cast || []), ...(credits.crew || [])]
+            .filter((credit) => credit.media_type === 'movie' || credit.media_type === 'tv')
+            .map((credit) =>
+              normalizeTMDB(
+                {
+                  id: credit.id,
+                  title: credit.title,
+                  name: credit.name,
+                  adult: credit.adult,
+                  media_type: credit.media_type as 'movie' | 'tv',
+                },
+                credit.media_type === 'tv'
+              )
             )
-          )
+        )
       );
       if (titles.length > 0) {
         matches.push({ name: person.name, titles: titles.slice(0, 12) });
