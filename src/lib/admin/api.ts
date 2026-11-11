@@ -270,6 +270,14 @@ export const adminApi = {
       `/library?id=${encodeURIComponent(id)}&userId=${encodeURIComponent(userId)}`,
       { method: 'DELETE' }
     ),
+  backfillLibraryRefs: (input: {
+    userId: string;
+    refs: { titleId: string; provider: string; providerId: string }[];
+  }) =>
+    adminRequest<{ ok: boolean; updated: number; failed: number }>('/library-refs', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
 
   slugRedirects: (params: { q?: string; page?: number; perPage?: number }) => {
     const search = new URLSearchParams();

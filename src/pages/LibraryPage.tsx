@@ -23,7 +23,7 @@ const STATUS_ICONS: Record<LibraryStatus, typeof Heart> = {
 export function LibraryPage() {
   usePageMeta({ title: 'My Library', description: 'Track and manage your Girls\' Love reading and watching list on YuriOrbit.', path: '/library', noIndex: true });
 
-  const { library, removeFromLibrary, clearLibrary, isAuthenticated } = useLibrary({ backfillProviderRefs: true });
+  const { library, removeFromLibrary, clearLibrary, isAuthenticated } = useLibrary();
   const { isLoading } = useAuth();
   const [filter, setFilter] = useState<LibraryStatus | 'ALL'>('ALL');
   const [sort, setSort] = useState<'recent' | 'title' | 'rating'>('recent');

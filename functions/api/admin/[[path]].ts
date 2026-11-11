@@ -11,6 +11,7 @@
  *   GET    /api/admin/users?q=&page=&perPage=
  *   POST   /api/admin/users            { action: 'purge-library' | 'delete', userId }
  *   GET    /api/admin/library?q=&status=&userId=&page=&perPage=
+ *   POST   /api/admin/library-refs    { userId, refs: [{ titleId, provider, providerId }] }
  *   DELETE /api/admin/library?id=&userId=
  *   GET    /api/admin/featured
  *   POST   /api/admin/featured         { titleId, title, coverImage?, note? }
@@ -102,7 +103,7 @@ async function rest(
   });
 }
 
-async function readJson<T>(res: Response): Promise<T | null> {
+async function readJson<T>(res: Request | Response): Promise<T | null> {
   try {
     const text = await res.text();
     return text ? (JSON.parse(text) as T) : null;
@@ -417,6 +418,111 @@ async function handleLibraryDelete(ctx: AdminContext, url: URL): Promise<Respons
   if (!res.ok) return fail(`Could not delete entry (HTTP ${res.status}).`, 502);
   await audit(ctx, 'library.delete_entry', `${userId}:${id}`, {});
   return json({ ok: true });
+}
+
+const PROVIDER_REF_MAX = 500;
+const PROVIDER_NAMES = new Set(['ANILIST', 'MANGADEX', 'TMDB']);
+
+function isMissingProviderIdColumn(detail: { code?: string; message?: string } | null): boolean {
+  const text = `${detail?.code ?? ''} ${detail?.message ?? ''}`.toLowerCase();
+  return (
+    text.includes('provider_id') &&
+    (text.includes('42703') || text.includes('pgrst204') || text.includes('column') || text.includes('schema cache'))
+  );
+}
+
+/**
+ * Persist provider references resolved by the admin's browser. The browser has
+ * the provider clients; the server validates the batch and writes with the
+ * service role, without touching status, progress or timestamps.
+ */
+async function handleLibraryRefs(ctx: AdminContext, request: Request): Promise<Response> {
+  const body = await readJson<{
+    userId?: string;
+    refs?: { titleId?: string; provider?: string; providerId?: string }[];
+  }>(request);
+  const userId = (body?.userId || '').trim();
+  if (!userId) return fail('userId is required.', 400);
+  if (!Array.isArray(body?.refs) || body.refs.length === 0) {
+    return fail('At least one provider reference is required.', 400);
+  }
+  if (body.refs.length > PROVIDER_REF_MAX) {
+    return fail(`A maximum of ${PROVIDER_REF_MAX} references can be updated at once.`, 400);
+  }
+
+  const seen = new Set<string>();
+  const refs: { titleId: string; provider: string; providerId: string }[] = [];
+  for (const raw of body.refs) {
+    const titleId = String(raw?.titleId || '').trim();
+    const provider = String(raw?.provider || '').trim().toUpperCase();
+    const providerId = String(raw?.providerId || '').trim();
+    if (!titleId || titleId.length > 256 || !PROVIDER_NAMES.has(provider) || !providerId || providerId.length > 256) {
+      continue;
+    }
+    if (seen.has(titleId)) continue;
+    seen.add(titleId);
+    refs.push({ titleId, provider, providerId });
+  }
+  if (refs.length === 0) {
+    return fail('No valid provider references were supplied.', 400);
+  }
+
+  let updated = 0;
+  let failed = 0;
+
+  // Small batches keep the request comfortably inside platform limits while
+  // avoiding one round-trip per row for large libraries.
+  for (let start = 0; start < refs.length; start += 10) {
+    const chunk = refs.slice(start, start + 10);
+    const results = await Promise.all(
+      chunk.map(async (ref) => {
+        const res = await rest(
+          ctx.env,
+          `library_entries?user_id=eq.${encodeURIComponent(userId)}&title_id=eq.${encodeURIComponent(ref.titleId)}`,
+          {
+            method: 'PATCH',
+            headers: { Prefer: 'return=minimal' },
+            body: JSON.stringify({ provider: ref.provider, provider_id: ref.providerId }),
+          }
+        );
+        if (res.ok) return { ok: true, needsMigration: false };
+        const detail = await readJson<{ code?: string; message?: string }>(res);
+        return {
+          ok: false,
+          needsMigration: isMissingProviderIdColumn(detail),
+          error: detail?.message || `HTTP ${res.status}`,
+        };
+      })
+    );
+
+    for (const result of results) {
+      if (result.ok) {
+        updated += 1;
+        continue;
+      }
+      if (result.needsMigration) {
+        await audit(ctx, 'library.backfill_refs', userId, {
+          requested: refs.length,
+          updated,
+          failed,
+          needsMigration: true,
+        });
+        return fail(
+          'The library_entries.provider_id column is missing. Apply the provider reference migration and try again.',
+          409,
+          { needsMigration: true, updated, failed }
+        );
+      }
+      failed += 1;
+    }
+  }
+
+  await audit(ctx, 'library.backfill_refs', userId, {
+    requested: refs.length,
+    updated,
+    failed,
+  });
+  return json({ ok: true, updated, failed });
 }
 
 async function handleFeatured(ctx: AdminContext, request: Request): Promise<Response> {
@@ -898,6 +1004,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     if (route === 'users' && method === 'GET') return await handleUsers(ctx, url);
     if (route === 'users' && method === 'POST') return await handleUserAction(ctx, request);
     if (route === 'library' && method === 'GET') return await handleLibrary(ctx, url);
+    if (route === 'library-refs' && method === 'POST') return await handleLibraryRefs(ctx, request);
     if (route === 'library' && method === 'DELETE') return await handleLibraryDelete(ctx, url);
     if (route === 'featured' && (method === 'GET' || method === 'POST' || method === 'DELETE')) {
       return await handleFeatured(ctx, request);

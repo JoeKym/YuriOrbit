@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Ban, Clock3, Loader2, Search, ShieldCheck, Trash2, UserMinus } from 'lucide-react';
-import { adminApi, type AdminUser } from '@/lib/admin/api';
+import { Ban, Clock3, Loader2, RefreshCw, Search, ShieldCheck, Trash2, UserMinus } from 'lucide-react';
+import { adminApi, type AdminEntry, type AdminUser } from '@/lib/admin/api';
+import { getTitleById } from '@/lib/providers';
 import { useDebounce } from '@/hooks/useDebounce';
 import { cn } from '@/lib/utils/format';
 
@@ -63,6 +64,79 @@ export function UsersTab() {
     const result = await adminApi.deleteUser(user.id);
     setBusyId(null);
     if (result.ok) load(); else window.alert(result.error);
+  };
+
+  const handleBackfillRefs = async (user: AdminUser) => {
+    if (!window.confirm(`Backfill provider references for ${user.email ?? user.id}?\n\nThis resolves only entries that do not store an upstream reference yet.`)) {
+      return;
+    }
+
+    setBusyId(user.id);
+    try {
+      const all: AdminEntry[] = [];
+      for (let nextPage = 1; nextPage <= 100; nextPage += 1) {
+        const result = await adminApi.library({ userId: user.id, page: nextPage, perPage: 100 });
+        if (!result.ok || !result.data) {
+          throw new Error(result.error || 'Could not load this library.');
+        }
+        all.push(...result.data.entries);
+        if (all.length >= result.data.total || result.data.entries.length === 0) break;
+      }
+
+      const missing = all.filter((entry) => !entry.provider_id);
+      if (missing.length === 0) {
+        window.alert('All saved titles for this account already have provider references.');
+        return;
+      }
+
+      const queue = [...missing];
+      const refs: { titleId: string; provider: string; providerId: string }[] = [];
+      let unresolved = 0;
+
+      const worker = async () => {
+        while (queue.length > 0) {
+          const entry = queue.shift();
+          if (!entry) continue;
+          try {
+            const title = await getTitleById(entry.title_id);
+            if (title?.providerId) {
+              refs.push({
+                titleId: entry.title_id,
+                provider: title.provider,
+                providerId: title.providerId,
+              });
+            } else {
+              unresolved += 1;
+            }
+          } catch {
+            unresolved += 1;
+          }
+        }
+      };
+
+      await Promise.all(Array.from({ length: Math.min(4, queue.length) }, worker));
+
+      if (refs.length === 0) {
+        window.alert(`Could not resolve a provider reference for any of ${missing.length} entries.`);
+        return;
+      }
+
+      const result = await adminApi.backfillLibraryRefs({ userId: user.id, refs });
+      if (!result.ok || !result.data) {
+        window.alert(result.error || 'Could not save provider references.');
+        return;
+      }
+
+      const parts = [`Updated ${result.data.updated} of ${refs.length} resolved references.`];
+      if (result.data.failed > 0) parts.push(`${result.data.failed} failed.`);
+      if (unresolved > 0) parts.push(`${unresolved} could not be resolved.`);
+      window.alert(parts.join(' '));
+      load();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Could not backfill provider references.');
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const openModeration = (user: AdminUser, nextAction: 'ban' | 'suspend' | 'unban') => {
@@ -230,6 +304,7 @@ export function UsersTab() {
                           <button onClick={() => openModeration(user, 'suspend')} disabled={busyId === user.id} title="Suspend user" className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-warning-400 disabled:opacity-40"><Clock3 className="h-3.5 w-3.5" /></button>
                           <button onClick={() => openModeration(user, 'ban')} disabled={busyId === user.id} title="Ban user" className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-error-400 disabled:opacity-40"><Ban className="h-3.5 w-3.5" /></button>
                           {banned && <button onClick={() => openModeration(user, 'unban')} disabled={busyId === user.id} title="Unban/remove restriction" className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-success-400 disabled:opacity-40"><ShieldCheck className="h-3.5 w-3.5" /></button>}
+                          <button onClick={() => handleBackfillRefs(user)} disabled={busyId === user.id} title="Backfill this user's provider references" className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-rose-400 disabled:opacity-40">{busyId === user.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}</button>
                           <button onClick={() => handlePurge(user)} disabled={busyId === user.id} title="Delete this user's library entries" className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-warning-400 disabled:opacity-40"><Trash2 className="h-3.5 w-3.5" /></button>
                           <button onClick={() => handleDelete(user)} disabled={busyId === user.id} title="Delete this account" className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-error-400 disabled:opacity-40"><UserMinus className="h-3.5 w-3.5" /></button>
                         </div>

@@ -18,6 +18,27 @@ const DB_VERSION = 1;
 const STORE_NAME = 'library';
 const LS_KEY = 'yuriorbit:library';
 const MIGRATION_FLAG_KEY = 'yuriorbit:library_migrated';
+const REF_BACKFILL_SESSION_PREFIX = 'yuriorbit:ref-backfill:';
+
+// sessionStorage normally carries the once-per-session claim; the in-memory
+// set keeps private browsing/storage-disabled sessions from repeating it.
+const claimedRefBackfills = new Set<string>();
+
+function claimRefBackfillSession(userId: string | null): boolean {
+  const key = `${REF_BACKFILL_SESSION_PREFIX}${userId ?? 'local'}`;
+  if (claimedRefBackfills.has(key)) return false;
+  try {
+    if (sessionStorage.getItem(key) === '1') {
+      claimedRefBackfills.add(key);
+      return false;
+    }
+    sessionStorage.setItem(key, '1');
+  } catch {
+    // Storage disabled: fall back to the in-memory claim below.
+  }
+  claimedRefBackfills.add(key);
+  return true;
+}
 
 // ─── IndexedDB helpers ────────────────────────────────────────────────────────
 
@@ -294,8 +315,9 @@ export function useLibrary(options: { backfillProviderRefs?: boolean } = {}) {
   }, [isAuthenticated, userId]);
 
   // Resolve references for entries saved before `provider_id` was recorded.
-  // useLibrary is called by every content card, so this only runs where a caller
-  // opts in (the library page); otherwise each card would repeat the lookups.
+  // useLibrary is called by every content card, so only the app-level runner
+  // opts in. A session claim makes that runner do the work once per signed-in
+  // account, regardless of which page first loaded.
   useEffect(() => {
     if (!backfillProviderRefs || !loaded) return;
 
@@ -308,17 +330,17 @@ export function useLibrary(options: { backfillProviderRefs?: boolean } = {}) {
           slugifyTitle(entry.title) !== entry.titleId)
     );
     if (pending.length === 0) return;
+    if (!claimRefBackfillSession(userId)) return;
 
-    let cancelled = false;
     const queue = [...pending];
 
     const worker = async () => {
-      while (!cancelled && queue.length > 0) {
+      while (queue.length > 0) {
         const entry = queue.shift();
         if (!entry) continue;
         try {
           const title = await getTitleById(entry.titleId);
-          if (cancelled || !title?.providerId) continue;
+          if (!title?.providerId) continue;
 
           if (entry.providerId) {
             // getTitleById has already published any old-slug → canonical alias
@@ -347,10 +369,9 @@ export function useLibrary(options: { backfillProviderRefs?: boolean } = {}) {
       }
     };
 
+    // Deliberately not cancelled on unmount: the claim is already recorded for
+    // this session, so aborting would leave the batch unfinished with no retry.
     void Promise.all(Array.from({ length: Math.min(3, queue.length) }, worker));
-    return () => {
-      cancelled = true;
-    };
   }, [backfillProviderRefs, loaded, isAuthenticated, userId]);
 
   // ─── Local persistence helpers ──────────────────────────────────────────────
