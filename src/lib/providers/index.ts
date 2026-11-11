@@ -40,6 +40,12 @@ import { isLegacyProviderId, slugToQuery, slugifyTitle, titleKey } from '@/lib/c
 export { classifyGL, filterGL, glConfidence, GL_ALLOWED_CLASSIFICATIONS } from './classify';
 export { normalizeAniList } from './normalize';
 export { getCached, setCached, clearProviderCache } from './cache';
+export {
+  tmdbGetWatchProviders,
+  tmdbGetTrailerKey,
+  tmdbPreferredRegion,
+} from './tmdb';
+export type { TmdbWatchProvider } from './tmdb';
 
 // Re-export chapter helpers from MangaDex
 export {
