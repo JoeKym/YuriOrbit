@@ -21,6 +21,9 @@
  *   PUT    /api/admin/feedback         { id, status: 'open' | 'resolved' | 'dismissed' }
  *   DELETE /api/admin/feedback?id=
  *   GET    /api/admin/audit
+ *   GET    /api/admin/slug-redirects?q=&page=&perPage=
+ *   PUT    /api/admin/slug-redirects   { aliasSlug, canonicalSlug, provider?, providerId? }
+ *   DELETE /api/admin/slug-redirects?alias=
  *
  * Security model:
  *   1. The caller's Supabase access token is verified against /auth/v1/user.
@@ -605,6 +608,107 @@ async function handleFeedbackDelete(ctx: AdminContext, url: URL): Promise<Respon
   return json({ ok: true });
 }
 
+
+const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+async function handleSlugRedirects(ctx: AdminContext, request: Request, url: URL): Promise<Response> {
+  const { env } = ctx;
+  const method = request.method.toUpperCase();
+
+  if (method === 'GET') {
+    const q = (url.searchParams.get('q') || '').replace(/[,()*]/g, ' ').trim();
+    const page = Math.max(1, Number.parseInt(url.searchParams.get('page') || '1', 10) || 1);
+    const perPage = Math.min(100, Math.max(1, Number.parseInt(url.searchParams.get('perPage') || '25', 10) || 25));
+
+    const filters: string[] = ['select=*', 'order=updated_at.desc'];
+    if (q) {
+      const term = encodeURIComponent(q);
+      filters.push(`or=(alias_slug.ilike.*${term}*,canonical_slug.ilike.*${term}*)`);
+    }
+
+    const from = (page - 1) * perPage;
+    const res = await rest(env, `slug_redirects?${filters.join('&')}`, {
+      headers: { Prefer: 'count=exact', Range: `${from}-${from + perPage - 1}` },
+    });
+
+    if (!res.ok) {
+      const detail = await readJson<{ message?: string }>(res);
+      if (res.status === 404 || /find the table|does not exist|PGRST205/i.test(detail?.message || '')) {
+        return fail('Slug redirects are not installed yet. Apply the slug redirects migration, then reload.', 501);
+      }
+      return fail(`Could not load slug redirects (HTTP ${res.status}).`, 502);
+    }
+
+    const rows = (await readJson<Record<string, unknown>[]>(res)) ?? [];
+    const range = res.headers.get('content-range') || '';
+    const total = Number.parseInt(range.split('/')[1] || '', 10);
+
+    return json({ page, perPage, total: Number.isFinite(total) ? total : rows.length, redirects: rows });
+  }
+
+  if (method === 'DELETE') {
+    const alias = (url.searchParams.get('alias') || '').trim();
+    if (!SLUG_PATTERN.test(alias)) return fail('alias must be a valid slug.', 400);
+
+    const res = await rest(env, `slug_redirects?alias_slug=eq.${encodeURIComponent(alias)}`, {
+      method: 'DELETE',
+      headers: { Prefer: 'return=minimal' },
+    });
+    if (!res.ok) return fail(`Could not delete redirect (HTTP ${res.status}).`, 502);
+    await audit(ctx, 'slug_redirect.delete', alias, {});
+    return json({ ok: true });
+  }
+
+  const body = await readJson<{
+    aliasSlug?: string;
+    canonicalSlug?: string;
+    provider?: string;
+    providerId?: string;
+  }>(request);
+  const alias = (body?.aliasSlug || '').trim();
+  const canonical = (body?.canonicalSlug || '').trim();
+  if (!SLUG_PATTERN.test(alias) || !SLUG_PATTERN.test(canonical)) {
+    return fail('Both slugs must use lowercase letters, numbers and single hyphens.', 400);
+  }
+  if (alias === canonical) return fail('An alias cannot point at itself.', 400);
+
+  // Refuse a correction that would loop: walk the existing chain from the new
+  // canonical and reject if it ever reaches this alias.
+  const existingRes = await rest(env, 'slug_redirects?select=alias_slug,canonical_slug&limit=5000');
+  if (!existingRes.ok) {
+    return fail('Slug redirects are not installed yet. Apply the slug redirects migration, then reload.', 501);
+  }
+  const existing = (await readJson<{ alias_slug: string; canonical_slug: string }[]>(existingRes)) ?? [];
+  const chain = new Map(existing.map((row) => [row.alias_slug, row.canonical_slug]));
+  let current = canonical;
+  for (let depth = 0; depth < 20; depth += 1) {
+    if (current === alias) return fail('That mapping would create a redirect cycle.', 400);
+    const next = chain.get(current);
+    if (!next) break;
+    current = next;
+  }
+
+  const res = await rest(env, 'slug_redirects?on_conflict=alias_slug', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({
+      alias_slug: alias,
+      canonical_slug: canonical,
+      provider: (body?.provider || '').trim() || null,
+      provider_id: (body?.providerId || '').trim() || null,
+      updated_at: new Date().toISOString(),
+    }),
+  });
+
+  if (!res.ok) {
+    const detail = await readJson<{ message?: string }>(res);
+    return fail(detail?.message || `Could not save redirect (HTTP ${res.status}).`, 502);
+  }
+
+  await audit(ctx, 'slug_redirect.save', alias, { canonicalSlug: canonical });
+  return json({ ok: true });
+}
+
 async function handleAudit(ctx: AdminContext): Promise<Response> {
   const res = await rest(
     ctx.env,
@@ -805,6 +909,9 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     if (route === 'feedback' && method === 'PUT') return await handleFeedbackUpdate(ctx, request);
     if (route === 'feedback' && method === 'DELETE') return await handleFeedbackDelete(ctx, url);
     if (route === 'audit' && method === 'GET') return await handleAudit(ctx);
+    if (route === 'slug-redirects' && (method === 'GET' || method === 'PUT' || method === 'DELETE')) {
+      return await handleSlugRedirects(ctx, request, url);
+    }
 
     return fail(`Unknown admin route: ${method} /${route}`, 404);
   } catch (err) {
