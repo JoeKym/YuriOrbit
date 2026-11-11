@@ -652,6 +652,7 @@ export async function mangadexGetChapterPages(
 function mapMDSort(sort?: string): string {
   switch (sort) {
     case 'NEWEST': return 'latestUploadedChapter:desc';
+    case 'UPDATED_AT': return 'updatedAt:desc';
     case 'YEAR': return 'year:desc';
     case 'TITLE': return 'title:asc';
     case 'SCORE': return 'rating:desc';

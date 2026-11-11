@@ -34,8 +34,8 @@ export function WatchPage() {
   const moderation = useContentModeration(id);
   usePageMeta({
     title: title ? `Watch ${title.title}` : (loading ? 'Loading…' : 'Watch'),
-    description: title?.synopsis
-      ? title.synopsis.replace(/\s+/g, ' ').slice(0, 160)
+    description: title?.description
+      ? title.description.replace(/\s+/g, ' ').slice(0, 160)
       : title?.title
         ? `Watch information and details for ${title.title} on YuriOrbit.`
         : 'Watch Girls\' Love titles on YuriOrbit.',

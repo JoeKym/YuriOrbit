@@ -39,8 +39,8 @@ export function TitleDetailPage() {
   const { level } = useMaturity();
   usePageMeta({
     title: title?.title || (loading ? 'Loading…' : 'Title'),
-    description: title?.synopsis
-      ? title.synopsis.replace(/\s+/g, ' ').slice(0, 160)
+    description: title?.description
+      ? title.description.replace(/\s+/g, ' ').slice(0, 160)
       : title?.title
         ? `Discover ${title.title} on YuriOrbit.`
         : 'View Girls\' Love title details on YuriOrbit.',
