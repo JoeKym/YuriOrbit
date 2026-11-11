@@ -15,6 +15,7 @@ import {
   Lock,
   AlertTriangle,
   RotateCcw,
+  Globe,
   Palette,
   UserX,
   Loader2,
@@ -22,6 +23,14 @@ import {
 import { useLibrary } from '@/hooks/useLibrary';
 import { useMaturity } from '@/hooks/useMaturity';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { fetchMyProfile, saveWatchRegion } from '@/lib/profiles';
+import {
+  REGION_OPTIONS,
+  readStoredWatchRegion,
+  regionName,
+  writeStoredWatchRegion,
+} from '@/lib/content/watch-region';
+import { tmdbPreferredRegion } from '@/lib/providers';
 import { supabase } from '@/lib/supabase';
 import type { MaturityLevel } from '@/types/content';
 import { MATURITY_DESCRIPTIONS, MATURITY_LABELS, MATURITY_LEVELS } from '@/types/content';
@@ -41,7 +50,7 @@ export function SettingsPage() {
   const navigate = useNavigate();
   const { library, clearLibrary } = useLibrary();
   const { level: maturityLevel, adultAcknowledged, setLevel, acknowledge } = useMaturity();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const [pendingLevel, setPendingLevel] = useState<MaturityLevel | null>(null);
   const [theme, setTheme] = useState<ThemeId>(() => getStoredTheme());
   const [deletingAccount, setDeletingAccount] = useState(false);
@@ -78,6 +87,8 @@ export function SettingsPage() {
       return false;
     }
   });
+
+  const [watchRegion, setWatchRegion] = useState<string | null>(() => readStoredWatchRegion());
 
   const [feedback, setFeedback] = useState<string | null>(null);
   const [feedbackTone, setFeedbackTone] = useState<'success' | 'error'>('success');
@@ -119,9 +130,40 @@ export function SettingsPage() {
     } catch {}
   }, [dataSaver]);
 
+  // Match the region the rest of the site is using, including profile sync.
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) return;
+    let cancelled = false;
+
+    fetchMyProfile(user.id)
+      .then(({ data }) => {
+        if (cancelled) return;
+        const stored = data?.watchRegion;
+        if (!stored || !/^[A-Z]{2}$/.test(stored)) return;
+        setWatchRegion(stored);
+        writeStoredWatchRegion(stored);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, user?.id]);
+
   const handleThemeChange = (id: ThemeId) => {
     setTheme(id);
     applyTheme(id);
+  };
+
+  const handleWatchRegionChange = (value: string) => {
+    const next = value === 'auto' ? null : value;
+    setWatchRegion(next);
+    writeStoredWatchRegion(next);
+
+    if (!isAuthenticated || !user?.id) return;
+    saveWatchRegion(user.id, next).then((result) => {
+      if (result.error) showFeedback(result.error, 'error');
+    });
   };
 
   // Export JSON backup
@@ -524,6 +566,50 @@ export function SettingsPage() {
                 <span className="text-xs text-ink-400">Request compressed chapter images from MangaDex for faster loading</span>
               </div>
             </label>
+          </div>
+        </section>
+
+        {/* Streaming availability */}
+        <section className="card-surface p-5">
+          <div className="mb-1 flex items-center gap-2">
+            <Globe className="h-4 w-4 text-rose-400" />
+            <h2 className="text-lg font-semibold text-ink-50">Streaming availability</h2>
+          </div>
+          <p className="mb-4 text-xs text-ink-400">
+            Which country's streaming services appear under Where to Watch and on Discover and
+            Search cards.
+            {isAuthenticated
+              ? ' Synced to your profile.'
+              : ' Saved in this browser until you sign in.'}
+          </p>
+
+          <div className="max-w-md">
+            <label
+              className="mb-1.5 block text-xs font-medium text-ink-300"
+              htmlFor="settings-watch-region"
+            >
+              Region
+            </label>
+            <select
+              id="settings-watch-region"
+              value={watchRegion ?? 'auto'}
+              onChange={(e) => handleWatchRegionChange(e.target.value)}
+              className="input-field text-xs"
+            >
+              <option value="auto">Detect automatically ({regionName(tmdbPreferredRegion())})</option>
+              {(watchRegion && !REGION_OPTIONS.some((option) => option.code === watchRegion)
+                ? [{ code: watchRegion, name: regionName(watchRegion) }, ...REGION_OPTIONS]
+                : REGION_OPTIONS
+              ).map((option) => (
+                <option key={option.code} value={option.code}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-2 text-[11px] text-ink-500">
+              Availability comes from TMDB's watch-provider data. Choosing a region turns off the
+              US fallback, so an empty list means nothing is streaming there.
+            </p>
           </div>
         </section>
 
