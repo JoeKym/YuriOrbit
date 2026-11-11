@@ -481,8 +481,15 @@ async function run() {
     };
 
     try {
-      const direct = await tmdb.tmdbSearchGL({ query: 'When We Met Again' });
+      const dropped = [];
+      const direct = await tmdb.tmdbSearchGL({ query: 'When We Met Again' }, 1, (title) =>
+        dropped.push(title.title)
+      );
       assert.equal(direct.items.length, 0, 'A name match without GL keywords must not be kept');
+      assert(
+        dropped.includes('When We Met Again'),
+        'The audit reporter must receive titles dropped by the GL allow-list'
+      );
 
       const searched = await index.searchGLTitles({ query: 'When We Met Again' }, 1, 10);
       assert(

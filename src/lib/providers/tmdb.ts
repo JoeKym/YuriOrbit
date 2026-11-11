@@ -353,11 +353,21 @@ function isGL(title: ContentTitle): boolean {
   return GL_ALLOWED_CLASSIFICATIONS.includes(title.glClassification);
 }
 
-function collectGL(items: ContentTitle[], allow?: Set<string>): ContentTitle[] {
+type GLDropReporter = (title: ContentTitle) => void;
+
+function collectGL(
+  items: ContentTitle[],
+  allow?: Set<string>,
+  onDropped?: GLDropReporter
+): ContentTitle[] {
   const seen = new Set<string>();
   const out: ContentTitle[] = [];
   for (const item of items) {
-    if (seen.has(item.id) || (!isGL(item) && !allow?.has(item.id))) continue;
+    if (seen.has(item.id)) continue;
+    if (!isGL(item) && !allow?.has(item.id)) {
+      onDropped?.(item);
+      continue;
+    }
     seen.add(item.id);
     out.push(item);
   }
@@ -453,7 +463,11 @@ async function tmdbTextSearch(mediaType: 'movie' | 'tv', queries: string[], page
 /**
  * Search TMDB for GL movies and dramas across all countries.
  */
-export async function tmdbSearchGL(filter: ContentFilter, page = 1): Promise<PaginatedResult> {
+export async function tmdbSearchGL(
+  filter: ContentFilter,
+  page = 1,
+  onGlDropped?: GLDropReporter
+): Promise<PaginatedResult> {
   const query = filter.query?.trim();
   const wantsMovie = !filter.contentType || filter.contentType === 'ALL' || filter.contentType === 'MOVIE';
   const wantsTV =
@@ -531,7 +545,7 @@ export async function tmdbSearchGL(filter: ContentFilter, page = 1): Promise<Pag
 
     // The index applies its own GL allow-list after every provider returns, so
     // a confirmed match has to be classified as GL here or it is dropped again.
-    const items = collectGL(batches, matchedQuery).map((item) =>
+    const items = collectGL(batches, matchedQuery, onGlDropped).map((item) =>
       matchedQuery?.has(item.id) ? { ...item, glClassification: 'GL_RELATED' as const } : item
     );
 

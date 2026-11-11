@@ -292,7 +292,12 @@ function normalizeMangaDex(m: MDManga): ContentTitle {
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /** Search GL manga/manhwa on MangaDex. */
-export async function mangadexSearchGL(filter: ContentFilter, page = 1, perPage = 24): Promise<PaginatedResult> {
+export async function mangadexSearchGL(
+  filter: ContentFilter,
+  page = 1,
+  perPage = 24,
+  onGlDropped?: (title: ContentTitle) => void
+): Promise<PaginatedResult> {
   const offset = (page - 1) * perPage;
 
   const isTextSearch = Boolean(filter.query && filter.query.trim());
@@ -349,9 +354,12 @@ export async function mangadexSearchGL(filter: ContentFilter, page = 1, perPage 
       }
     }
 
-    let items = resp.data
-      .map(normalizeMangaDex)
-      .filter((t) => GL_ALLOWED_CLASSIFICATIONS.includes(t.glClassification));
+    const normalized = resp.data.map(normalizeMangaDex);
+    let items = normalized.filter((t) => {
+      if (GL_ALLOWED_CLASSIFICATIONS.includes(t.glClassification)) return true;
+      onGlDropped?.(t);
+      return false;
+    });
 
     if (isTextSearch && filter.query) {
       const qNorm = filter.query.toLowerCase().replace(/[^a-z0-9]/g, '');
