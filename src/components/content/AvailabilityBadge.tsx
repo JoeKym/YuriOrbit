@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ContentTitle } from '@/types/content';
 import { getTitleAvailability, tmdbLookupFor } from '@/lib/content/watch-availability';
+import { useWatchRegion } from '@/hooks/useWatchRegion';
 import type { TmdbWatchProviderResult } from '@/lib/providers/tmdb';
 
 /**
@@ -11,6 +12,7 @@ export function AvailabilityBadge({ title }: { title: ContentTitle }) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   const [data, setData] = useState<TmdbWatchProviderResult | null>(null);
+  const region = useWatchRegion();
   const lookup = tmdbLookupFor(title);
   const providerId = lookup?.providerId;
   const mediaType = lookup?.mediaType;
@@ -37,9 +39,11 @@ export function AvailabilityBadge({ title }: { title: ContentTitle }) {
     return () => observer.disconnect();
   }, [providerId]);
 
+  // Re-run when the region changes so the logos always match the preference.
   useEffect(() => {
     if (!visible || !providerId) return;
     let cancelled = false;
+    setData(null);
 
     getTitleAvailability(title).then((result) => {
       if (!cancelled) setData(result);
@@ -48,7 +52,7 @@ export function AvailabilityBadge({ title }: { title: ContentTitle }) {
     return () => {
       cancelled = true;
     };
-  }, [visible, providerId, title]);
+  }, [visible, providerId, region, title]);
 
   if (!lookup) return null;
 
