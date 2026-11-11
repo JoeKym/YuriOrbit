@@ -541,21 +541,54 @@ const prefetching = new Map<string, Promise<void>>();
  * start on the next chapter before the current one has finished loading.
  * Warming those pages again in a later call is a browser-cache hit.
  */
-export function prefetchChapterPages(chapterId: string, maxPages?: number): Promise<void> {
+export type PrefetchProgress = (warmed: number, total: number) => void;
+
+const progressListeners = new Map<string, Set<PrefetchProgress>>();
+
+export function prefetchChapterPages(
+  chapterId: string,
+  maxPages?: number,
+  onProgress?: PrefetchProgress
+): Promise<void> {
   if (!isBrowser || !chapterId) return Promise.resolve();
   const key = maxPages && maxPages > 0 ? `${chapterId}:${maxPages}` : chapterId;
+
+  if (onProgress) {
+    const listeners = progressListeners.get(key) ?? new Set<PrefetchProgress>();
+    listeners.add(onProgress);
+    progressListeners.set(key, listeners);
+  }
+
   const running = prefetching.get(key);
   if (running) return running;
+
+  const notify = (warmed: number, total: number) => {
+    const listeners = progressListeners.get(key);
+    if (!listeners) return;
+    for (const listener of listeners) {
+      try {
+        listener(warmed, total);
+      } catch {
+        /* A broken listener must never stop the prefetch. */
+      }
+    }
+  };
 
   const task = (async () => {
     const all = await mangadexGetChapterPages(chapterId);
     const urls = maxPages && maxPages > 0 ? all.slice(0, maxPages) : all;
+    const total = urls.length;
+    notify(0, total);
     for (let i = 0; i < urls.length; i += 3) {
       await Promise.all(urls.slice(i, i + 3).map(warmImage));
+      notify(Math.min(i + 3, total), total);
     }
   })()
     .catch(() => undefined)
-    .finally(() => prefetching.delete(key));
+    .finally(() => {
+      prefetching.delete(key);
+      progressListeners.delete(key);
+    });
 
   prefetching.set(key, task);
   return task;

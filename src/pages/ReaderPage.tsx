@@ -61,6 +61,7 @@ export function ReaderPage() {
   const [pagesReloadKey, setPagesReloadKey] = useState(0);
   const [failedPages, setFailedPages] = useState<Set<number>>(new Set());
   const [pageRetries, setPageRetries] = useState<Record<number, number>>({});
+  const [prefetchProgress, setPrefetchProgress] = useState<{ warmed: number; total: number } | null>(null);
 
   // Reader display controls
   const [showTOC, setShowTOC] = useState(false);
@@ -230,12 +231,26 @@ export function ReaderPage() {
     void prefetchChapterPages(next.id, 3);
   }, [activeChapter?.id, activeChapterIndex, readableChapters]);
 
-  // Once the current chapter is on screen, warm the rest of the next chapter.
+  // Once the current chapter is on screen, warm the rest of the next chapter
+  // and surface how many of its pages are ready.
   useEffect(() => {
     if (!activeChapter || loadingPages || pagesError || pageUrls.length === 0) return;
     const next = readableChapters[activeChapterIndex + 1];
-    if (!next) return;
-    void prefetchChapterPages(next.id);
+    if (!next) {
+      setPrefetchProgress(null);
+      return;
+    }
+
+    let cancelled = false;
+    setPrefetchProgress({ warmed: 0, total: 0 });
+    void prefetchChapterPages(next.id, undefined, (warmed, total) => {
+      if (!cancelled) setPrefetchProgress({ warmed, total });
+    });
+
+    return () => {
+      cancelled = true;
+      setPrefetchProgress(null);
+    };
   }, [activeChapter?.id, activeChapterIndex, loadingPages, pagesError, pageUrls.length, readableChapters]);
 
   const retryChapter = () => {
@@ -594,6 +609,39 @@ export function ReaderPage() {
                 </div>
               </>
             )}
+
+            {/* Next Chapter Prefetch Progress */}
+            {prefetchProgress &&
+              prefetchProgress.total > 0 &&
+              prefetchProgress.warmed < prefetchProgress.total && (
+                <div className="mx-auto mt-6 max-w-xs" aria-live="polite">
+                  <div className="mb-1 flex items-center justify-between text-[11px] opacity-70">
+                    <span className="flex items-center gap-1.5">
+                      <RefreshCw className="h-3 w-3 animate-spin text-rose-400" />
+                      Preparing next chapter
+                    </span>
+                    <span>
+                      {prefetchProgress.warmed} / {prefetchProgress.total} pages
+                    </span>
+                  </div>
+                  <div
+                    className="h-1 w-full overflow-hidden rounded-full bg-rose-400/20"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={prefetchProgress.total}
+                    aria-valuenow={prefetchProgress.warmed}
+                  >
+                    <div
+                      className="h-full rounded-full bg-rose-400 transition-all duration-300"
+                      style={{
+                        width: `${Math.round(
+                          (prefetchProgress.warmed / prefetchProgress.total) * 100
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
 
             {/* Bottom Chapter Navigation */}
             <div className="mt-8 pt-4 border-t border-ink-800 flex items-center justify-between gap-3">
