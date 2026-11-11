@@ -42,7 +42,13 @@ export { normalizeAniList } from './normalize';
 export { getCached, setCached, clearProviderCache } from './cache';
 
 // Re-export chapter helpers from MangaDex
-export { mangadexGetChapters, mangadexGetChapterPages, mangadexFindMangaId };
+export {
+  mangadexGetChapters,
+  mangadexGetChapterPages,
+  mangadexFindMangaId,
+  getCachedChapterPages,
+  prefetchChapterPages,
+} from './mangadex';
 
 function isGL(title: ContentTitle): boolean {
   return GL_ALLOWED_CLASSIFICATIONS.includes(title.glClassification);

@@ -499,8 +499,67 @@ export async function mangadexGetChapters(mangaId: string, page = 1, perPage = 1
   }
 }
 
+/**
+ * Page-image URL lists are stable proxy URLs, so cache them for the session's
+ * browsing window. This lets a prefetched next chapter render instantly.
+ */
+const PAGE_URL_TTL = 5 * 60 * 1000;
+const pageUrlCache = new Map<string, { at: number; urls: string[] }>();
+
+export function getCachedChapterPages(chapterId: string): string[] | null {
+  const cached = pageUrlCache.get(chapterId);
+  if (!cached) return null;
+  if (Date.now() - cached.at > PAGE_URL_TTL) {
+    pageUrlCache.delete(chapterId);
+    return null;
+  }
+  return cached.urls;
+}
+
+function warmImage(url: string): Promise<void> {
+  return new Promise((resolve) => {
+    try {
+      const img = new Image();
+      img.decoding = 'async';
+      img.onload = () => resolve();
+      img.onerror = () => resolve();
+      img.src = url;
+    } catch {
+      resolve();
+    }
+  });
+}
+
+const prefetching = new Map<string, Promise<void>>();
+
+/**
+ * Warm the next chapter's pages in the background so advancing is instant.
+ * Images are fetched in small batches through our own proxy, which keeps the
+ * upstream node within its rate limits.
+ */
+export function prefetchChapterPages(chapterId: string): Promise<void> {
+  if (!isBrowser || !chapterId) return Promise.resolve();
+  const running = prefetching.get(chapterId);
+  if (running) return running;
+
+  const task = (async () => {
+    const urls = await mangadexGetChapterPages(chapterId);
+    for (let i = 0; i < urls.length; i += 3) {
+      await Promise.all(urls.slice(i, i + 3).map(warmImage));
+    }
+  })()
+    .catch(() => undefined)
+    .finally(() => prefetching.delete(chapterId));
+
+  prefetching.set(chapterId, task);
+  return task;
+}
+
 /** Get the page image URLs for a specific MangaDex chapter. */
 export async function mangadexGetChapterPages(chapterId: string): Promise<string[]> {
+  const cached = getCachedChapterPages(chapterId);
+  if (cached) return cached;
+
   try {
     const resp = await mdFetch<{
       result: string;
@@ -509,12 +568,14 @@ export async function mangadexGetChapterPages(chapterId: string): Promise<string
     }>(`/at-home/server/${chapterId}`);
 
     const files = resp.chapter.data?.length ? resp.chapter.data : resp.chapter.dataSaver ?? [];
-    return files.map(
+    const urls = files.map(
       (file) =>
         `${MANGADEX_PAGE_BASE}?chapter=${encodeURIComponent(chapterId)}&hash=${encodeURIComponent(
           resp.chapter.hash
         )}&file=${encodeURIComponent(file)}`
     );
+    if (urls.length > 0) pageUrlCache.set(chapterId, { at: Date.now(), urls });
+    return urls;
   } catch {
     return [];
   }
