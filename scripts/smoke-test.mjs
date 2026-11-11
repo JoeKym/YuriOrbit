@@ -16,6 +16,25 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 
 // The app uses the `@/` alias, so the runner must resolve it the same way.
+// Node has no usable localStorage by default, but the saved-ref and slug
+// redirect stores need one for resolution tests.
+{
+  const store = new Map();
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key) => (store.has(key) ? store.get(key) : null),
+      setItem: (key, value) => store.set(key, String(value)),
+      removeItem: (key) => store.delete(key),
+      clear: () => store.clear(),
+      key: (index) => [...store.keys()][index] ?? null,
+      get length() {
+        return store.size;
+      },
+    },
+  });
+}
+
 const jiti = createJiti(import.meta.url, {
   alias: { '@': fileURLToPath(new URL('../src', import.meta.url)) },
 });
@@ -339,6 +358,58 @@ async function run() {
       const resolved = await index.getTitleById('when-we-met-2024');
       assert(resolved !== null, 'A search-produced slug must resolve instead of showing "not found"');
       assert.equal(resolved.title, 'When We Met');
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  await test('a saved old slug seeds a canonical redirect', async () => {
+    const { rememberSavedRef } = await jiti.import('../src/lib/content/saved-refs.ts');
+    const { getCachedCanonicalSlug } = await jiti.import('../src/lib/catalog/slug-redirects.ts');
+    const realFetch = globalThis.fetch;
+    const json = (body) =>
+      new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+
+    rememberSavedRef({
+      titleId: 'old-when-we-met',
+      provider: 'TMDB',
+      providerId: '990001',
+      contentType: 'MOVIE',
+      updatedAt: new Date().toISOString(),
+    });
+
+    globalThis.fetch = async (input) => {
+      const url = typeof input === 'string' ? input : input.url;
+      if (url.includes('/movie/990001')) {
+        return json({
+          id: 990001,
+          title: 'When We Met',
+          original_title: 'When We Met',
+          overview: 'Two former classmates meet again at a wedding.',
+          release_date: '2024-02-14',
+          vote_average: 7.4,
+          vote_count: 120,
+          poster_path: null,
+          adult: false,
+          genres: [],
+          original_language: 'en',
+        });
+      }
+      return json({ results: [] });
+    };
+
+    try {
+      const resolved = await index.getTitleById('old-when-we-met');
+      assert(resolved !== null, 'The saved provider reference must resolve');
+      assert.equal(resolved.title, 'When We Met');
+      assert.equal(
+        getCachedCanonicalSlug('old-when-we-met'),
+        'when-we-met',
+        'Resolving a saved old slug must publish the canonical alias'
+      );
     } finally {
       globalThis.fetch = realFetch;
     }

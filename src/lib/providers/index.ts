@@ -434,6 +434,12 @@ export async function getTitleById(id: string): Promise<ContentTitle | null> {
   const saved = await fetchSavedProviderTitle(trimmed);
   if (saved) {
     const canonical = canonicalizeTitle(saved);
+    // The saved entry may still use the title's pre-rename slug. Publish the
+    // mapping so other devices follow it too, then keep serving the requested
+    // id for this render (the page redirects once the alias is known).
+    if (canonical.id !== trimmed) {
+      rememberSlugAlias(trimmed, canonical.id, canonical.provider, canonical.providerId);
+    }
     const resolved = { ...canonical, id: trimmed };
     registerTitles([resolved]);
     return resolved;
