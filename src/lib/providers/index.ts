@@ -36,7 +36,7 @@ import { canonicalizeTitle, canonicalizeTitles } from '@/lib/catalog/canonical';
 import { findRegisteredBySlug, getRegisteredTitle, registerTitles } from '@/lib/catalog/registry';
 import { fetchContentModeration, filterModeratedTitles } from '@/lib/moderation/contentModeration';
 import { isLegacyProviderId, slugToQuery, slugifyTitle, titleKey } from '@/lib/catalog/identity';
-import { getSavedRef } from '@/lib/content/saved-refs';
+import { getSavedRef, rememberSavedRef } from '@/lib/content/saved-refs';
 import { canonicalSlugFor, rememberSlugAlias } from '@/lib/catalog/slug-redirects';
 
 export { classifyGL, filterGL, glConfidence, GL_ALLOWED_CLASSIFICATIONS } from './classify';
@@ -308,6 +308,21 @@ async function fetchProviderTitle(id: string): Promise<ContentTitle | null> {
  * provider and its id, so a renamed or re-merged title still opens instead of
  * falling through to a name search that may no longer match.
  */
+/**
+ * Remember how a slug resolved so a later visit — including a library entry
+ * saved before provider ids existed — can skip the name search entirely.
+ */
+function rememberResolvedRef(titleId: string, title: ContentTitle): void {
+  if (!title.providerId) return;
+  rememberSavedRef({
+    titleId,
+    provider: title.provider,
+    providerId: title.providerId,
+    contentType: title.contentType,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
 async function fetchSavedProviderTitle(slug: string): Promise<ContentTitle | null> {
   const ref = getSavedRef(slug);
   if (!ref?.providerId) return null;
@@ -358,6 +373,8 @@ async function resolveSlug(slug: string): Promise<ContentTitle | null> {
       rememberSlugAlias(slug, match.id, match.provider, match.providerId);
     }
     registerTitles([match]);
+    rememberResolvedRef(slug, match);
+    rememberResolvedRef(match.id, match);
     return match;
   }
 
@@ -372,6 +389,8 @@ async function resolveSlug(slug: string): Promise<ContentTitle | null> {
       rememberSlugAlias(slug, loose.id, loose.provider, loose.providerId);
     }
     registerTitles([loose]);
+    rememberResolvedRef(slug, loose);
+    rememberResolvedRef(loose.id, loose);
     return loose;
   }
 
@@ -394,6 +413,8 @@ export async function getTitleById(id: string): Promise<ContentTitle | null> {
     if (!raw) return null;
     const canonical = canonicalizeTitle(raw);
     registerTitles([canonical]);
+    rememberResolvedRef(trimmed, canonical);
+    rememberResolvedRef(canonical.id, canonical);
     return canonical;
   }
 

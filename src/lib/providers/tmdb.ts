@@ -477,7 +477,11 @@ export async function tmdbSearchGL(filter: ContentFilter, page = 1): Promise<Pag
         )
       : undefined;
 
-    const items = collectGL(batches, matchedQuery);
+    // The index applies its own GL allow-list after every provider returns, so
+    // a query match has to be classified as GL here or it is dropped again.
+    const items = collectGL(batches, matchedQuery).map((item) =>
+      matchedQuery?.has(item.id) ? { ...item, glClassification: 'GL_RELATED' as const } : item
+    );
 
     return {
       items,

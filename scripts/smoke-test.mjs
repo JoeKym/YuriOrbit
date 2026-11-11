@@ -270,6 +270,80 @@ async function run() {
     assert.equal(merged.length, 2, 'Titles without a shared identity or name must not merge');
   });
 
+  // ─── Test Suite 4: Screen-title search discoverability ────────────────────
+  console.log(`\n${colors.bold}4. Testing Screen-Title Search Discoverability...${colors.reset}`);
+
+  await test('search finds a TMDB movie whose metadata is not explicitly GL', async () => {
+    const realFetch = globalThis.fetch;
+    const json = (body) =>
+      new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+
+    // A neutral description keeps the heuristics at NEEDS_REVIEW: only the
+    // query match should make this findable, which is the reported bug.
+    globalThis.fetch = async (input) => {
+      const url = typeof input === 'string' ? input : input.url;
+
+      if (url.includes('/search/movie')) {
+        return json({
+          page: 1,
+          total_pages: 1,
+          total_results: 1,
+          results: [
+            {
+              id: 990001,
+              title: 'When We Met',
+              original_title: 'When We Met',
+              overview:
+                'Two former classmates meet again at a wedding and slowly realise what they mean to each other.',
+              release_date: '2024-02-14',
+              vote_average: 7.4,
+              vote_count: 120,
+              poster_path: null,
+              adult: false,
+              media_type: 'movie',
+            },
+          ],
+        });
+      }
+      if (url.includes('/search/tv')) {
+        return json({ page: 1, total_pages: 1, total_results: 0, results: [] });
+      }
+      if (url.includes('graphql')) {
+        return json({ data: { Page: { media: [], pageInfo: { hasNextPage: false, total: 0 } } } });
+      }
+      if (url.includes('/manga')) {
+        return json({ result: 'ok', data: [], limit: 0, offset: 0, total: 0 });
+      }
+      return json({ results: [] });
+    };
+
+    try {
+      const direct = await tmdb.tmdbSearchGL({ query: 'When We Met' });
+      assert.equal(direct.items.length, 1, 'TMDB text search must keep the query match');
+      assert.equal(
+        direct.items[0].glClassification,
+        'GL_RELATED',
+        'A query match must be classified as GL-related so later filters keep it'
+      );
+
+      const searched = await index.searchGLTitles({ query: 'When We Met' }, 1, 10);
+      assert(
+        searched.items.some((item) => item.title === 'When We Met'),
+        'Unified search must return the TMDB movie, not just manga results'
+      );
+
+      // A slug-style URL is exactly what a saved library entry links to.
+      const resolved = await index.getTitleById('when-we-met-2024');
+      assert(resolved !== null, 'A search-produced slug must resolve instead of showing "not found"');
+      assert.equal(resolved.title, 'When We Met');
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
   // ─── Summary ─────────────────────────────────────────────────────────────
   console.log(`\n${colors.bold}─── Summary ───${colors.reset}`);
   console.log(`Passed: ${colors.green}${passed}${colors.reset} | Failed: ${failed > 0 ? colors.red : colors.reset}${failed}${colors.reset}\n`);
