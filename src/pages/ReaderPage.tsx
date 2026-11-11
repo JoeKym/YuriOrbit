@@ -23,6 +23,7 @@ import {
   getCachedChapterPages,
   prefetchChapterPages,
 } from '@/lib/providers';
+import type { ChapterImageQuality } from '@/lib/providers';
 import { getFallbackCover, cn } from '@/lib/utils/format';
 import { useLibrary } from '@/hooks/useLibrary';
 import { usePageMeta } from '@/hooks/usePageMeta';
@@ -77,6 +78,13 @@ export function ReaderPage() {
       return (localStorage.getItem('yuriorbit_reader_bg') as 'dark' | 'light' | 'sepia') || 'dark';
     } catch {
       return 'dark';
+    }
+  });
+  const [quality, setQuality] = useState<ChapterImageQuality>(() => {
+    try {
+      return localStorage.getItem('yuriorbit_reader_quality') === 'data' ? 'data' : 'data-saver';
+    } catch {
+      return 'data-saver';
     }
   });
   const [fullscreen, setFullscreen] = useState(false);
@@ -187,7 +195,7 @@ export function ReaderPage() {
       setPageRetries({});
 
       // A prefetched chapter is already in the browser cache: show it at once.
-      const cached = getCachedChapterPages(activeChapter.id);
+      const cached = getCachedChapterPages(activeChapter.id, quality);
       if (cached && cached.length > 0) {
         setPageUrls(cached);
         if (id && activeChapter.number) updateProgress(id, activeChapter.number);
@@ -197,7 +205,7 @@ export function ReaderPage() {
       setPageUrls([]);
 
       try {
-        const urls = await mangadexGetChapterPages(activeChapter.id);
+        const urls = await mangadexGetChapterPages(activeChapter.id, quality);
         if (cancelled) return;
 
         if (urls.length === 0) {
@@ -220,16 +228,17 @@ export function ReaderPage() {
 
     loadPages();
     return () => { cancelled = true; };
-  }, [activeChapter?.id, pagesReloadKey]);
+  }, [activeChapter?.id, pagesReloadKey, quality]);
 
-  // Start the next chapter's opening pages as soon as the chapter list is
-  // known, without waiting for the current chapter's images to finish.
+  // Start the neighbouring chapters' opening pages as soon as the chapter
+  // list is known, without waiting for the current chapter's images to finish.
   useEffect(() => {
     if (!activeChapter) return;
     const next = readableChapters[activeChapterIndex + 1];
-    if (!next) return;
-    void prefetchChapterPages(next.id, 3);
-  }, [activeChapter?.id, activeChapterIndex, readableChapters]);
+    const previous = readableChapters[activeChapterIndex - 1];
+    if (next) void prefetchChapterPages(next.id, { quality, maxPages: 3 });
+    if (previous) void prefetchChapterPages(previous.id, { quality, maxPages: 3 });
+  }, [activeChapter?.id, activeChapterIndex, readableChapters, quality]);
 
   // Once the current chapter is on screen, warm the rest of the next chapter
   // and surface how many of its pages are ready.
@@ -243,15 +252,18 @@ export function ReaderPage() {
 
     let cancelled = false;
     setPrefetchProgress({ warmed: 0, total: 0 });
-    void prefetchChapterPages(next.id, undefined, (warmed, total) => {
-      if (!cancelled) setPrefetchProgress({ warmed, total });
+    void prefetchChapterPages(next.id, {
+      quality,
+      onProgress: (warmed, total) => {
+        if (!cancelled) setPrefetchProgress({ warmed, total });
+      },
     });
 
     return () => {
       cancelled = true;
       setPrefetchProgress(null);
     };
-  }, [activeChapter?.id, activeChapterIndex, loadingPages, pagesError, pageUrls.length, readableChapters]);
+  }, [activeChapter?.id, activeChapterIndex, loadingPages, pagesError, pageUrls.length, readableChapters, quality]);
 
   const retryChapter = () => {
     setPagesError(null);
@@ -445,6 +457,22 @@ export function ReaderPage() {
               <option value="dark">Dark</option>
               <option value="sepia">Sepia</option>
               <option value="light">Light</option>
+            </select>
+
+            {/* Image Quality */}
+            <select
+              value={quality}
+              onChange={(e) => {
+                const val: ChapterImageQuality = e.target.value === 'data' ? 'data' : 'data-saver';
+                setQuality(val);
+                try { localStorage.setItem('yuriorbit_reader_quality', val); } catch {}
+              }}
+              className="hidden sm:inline-block rounded-lg border border-ink-700 bg-ink-850 px-2 py-1 text-xs text-ink-100 focus:outline-none"
+              title="Image Quality"
+              aria-label="Image quality"
+            >
+              <option value="data-saver">Data saver</option>
+              <option value="data">Original</option>
             </select>
 
             {/* Fullscreen Toggle */}
