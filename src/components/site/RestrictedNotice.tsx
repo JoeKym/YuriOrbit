@@ -2,16 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShieldAlert } from 'lucide-react';
 import type { ContentModerationItem } from '@/lib/moderation/contentModeration';
-
-const ACK_PREFIX = 'yuriorbit:restricted-ack:';
-
-function isAcknowledged(titleId: string): boolean {
-  try {
-    return sessionStorage.getItem(ACK_PREFIX + titleId) === '1';
-  } catch {
-    return false;
-  }
-}
+import {
+  acknowledgeRestricted,
+  isRestrictedAcknowledged,
+} from '@/lib/moderation/restrictedAck';
 
 /**
  * Shown on a title, watch, or reader page that is flagged `restricted`.
@@ -22,7 +16,7 @@ function isAcknowledged(titleId: string): boolean {
 export function RestrictedNotice({ moderation }: { moderation: ContentModerationItem | null }) {
   const [, setVersion] = useState(0);
   const titleId = moderation?.action === 'restricted' ? moderation.titleId : null;
-  const acknowledged = titleId ? isAcknowledged(titleId) : true;
+  const acknowledged = titleId ? isRestrictedAcknowledged(titleId) : true;
 
   // Keep the page behind the notice from scrolling while it is unacknowledged.
   useEffect(() => {
@@ -39,13 +33,7 @@ export function RestrictedNotice({ moderation }: { moderation: ContentModeration
   const reason = moderation.reason?.trim() || 'This title has been flagged by moderation.';
 
   const acknowledge = () => {
-    if (titleId) {
-      try {
-        sessionStorage.setItem(ACK_PREFIX + titleId, '1');
-      } catch {
-        /* Private mode or storage disabled: gate again next visit. */
-      }
-    }
+    if (titleId) acknowledgeRestricted(titleId);
     setVersion((v) => v + 1);
   };
 
