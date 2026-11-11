@@ -213,7 +213,7 @@ async function run() {
       provider: overrides.provider,
       title: overrides.title,
       altTitles: overrides.altTitles || [],
-      contentType: 'MANGA',
+      contentType: overrides.contentType || 'MANGA',
       genres: ['Romance'],
       tags: [],
       status: 'FINISHED',
@@ -253,6 +253,32 @@ async function run() {
     ],
   });
 
+  // A live-action TMDB movie and an AniList screen record with different
+  // titles. Only their shared TMDB identity link can prove they are one work.
+  const tmdbLink = 'https://www.themoviedb.org/movie/290098';
+  const handmaidenTmdb = searchFixture({
+    provider: 'TMDB',
+    providerId: '290098',
+    title: 'Ah-ga-ssi',
+    altTitles: ['The Handmaiden', 'Lady'],
+    contentType: 'MOVIE',
+    externalLinks: [{ url: tmdbLink, site: 'TMDB', type: 'METADATA' }],
+    description: 'A young woman is hired as a handmaiden to a Japanese heiress.',
+  });
+  const handmaidenAnilist = searchFixture({
+    provider: 'ANILIST',
+    providerId: '101921',
+    title: 'The Handmaiden',
+    altTitles: ['Ah-ga-ssi'],
+    contentType: 'MOVIE',
+    coverImage: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/example.jpg',
+    description: 'A con man schemes to defraud a Japanese heiress with the help of a thief.',
+    externalLinks: [
+      { url: tmdbLink, site: 'TMDB', type: 'DATABASE' },
+      { url: 'https://anilist.co/anime/101921', site: 'AniList', type: 'DATABASE' },
+    ],
+  });
+
   const namesOf = (entry) =>
     [entry.title, ...entry.altTitles].map((name) => name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim());
 
@@ -275,6 +301,23 @@ async function run() {
     const forward = canonical.canonicalizeTitles([anilistRecord, mangadexRecord])[0];
     const reversed = canonical.canonicalizeTitles([mangadexRecord, anilistRecord])[0];
     assert.equal(reversed.id, forward.id, 'One story must keep one URL regardless of result order');
+  });
+
+  await test('search merge: a TMDB live-action movie joins AniList through its TMDB link', () => {
+    const merged = canonical.canonicalizeTitles([handmaidenTmdb, handmaidenAnilist]);
+    assert.equal(merged.length, 1, `Expected one merged entry, got ${merged.length}`);
+
+    const entry = merged[0];
+    const providers = (entry.sources || []).map((source) => source.provider);
+    assert(providers.includes('TMDB'), 'Merged entry must keep the TMDB source');
+    assert(providers.includes('ANILIST'), 'Merged entry must keep the AniList source');
+    assert.equal(entry.contentType, 'MOVIE', 'Screen titles must stay in the screen family');
+    assert(!/^(ANILIST|TMDB)-/.test(entry.id), `Merged id must be a YuriOrbit slug, got ${entry.id}`);
+
+    const names = namesOf(entry);
+    assert(names.includes('the handmaiden'), `Missing AniList title; got ${names.join(' | ')}`);
+    assert(names.includes('ah ga ssi'), `Missing TMDB title; got ${names.join(' | ')}`);
+    assert.equal(entry.id, 'the-handmaiden', `Unexpected canonical slug: ${entry.id}`);
   });
 
   await test('search merge leaves unrelated works separate', () => {
