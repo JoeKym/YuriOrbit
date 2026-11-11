@@ -310,11 +310,11 @@ function isGL(title: ContentTitle): boolean {
   return GL_ALLOWED_CLASSIFICATIONS.includes(title.glClassification);
 }
 
-function collectGL(items: ContentTitle[]): ContentTitle[] {
+function collectGL(items: ContentTitle[], allow?: Set<string>): ContentTitle[] {
   const seen = new Set<string>();
   const out: ContentTitle[] = [];
   for (const item of items) {
-    if (seen.has(item.id) || !isGL(item)) continue;
+    if (seen.has(item.id) || (!isGL(item) && !allow?.has(item.id))) continue;
     seen.add(item.id);
     out.push(item);
   }
@@ -458,7 +458,26 @@ export async function tmdbSearchGL(filter: ContentFilter, page = 1): Promise<Pag
       }
     }
 
-    const items = collectGL(batches);
+    // A direct title search is strong evidence of intent. Keep TMDB titles the
+    // heuristic classifier is unsure about when they match the query, so works
+    // like "Apple My Love" are findable instead of being silently dropped.
+    const matchedQuery = query
+      ? new Set(
+          batches
+            .filter((item) => item.glClassification === 'NEEDS_REVIEW')
+            .filter((item) => {
+              const needle = query.toLowerCase();
+              const hay = `${item.title} ${item.altTitles.join(' ')}`.toLowerCase();
+              return needle
+                .split(/\s+/)
+                .filter(Boolean)
+                .every((word) => hay.includes(word));
+            })
+            .map((item) => item.id)
+        )
+      : undefined;
+
+    const items = collectGL(batches, matchedQuery);
 
     return {
       items,

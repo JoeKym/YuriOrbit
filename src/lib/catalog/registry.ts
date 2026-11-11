@@ -7,6 +7,7 @@
  * re-resolves the slug through the providers (see `getTitleById`).
  */
 import type { ContentTitle } from '@/types/content';
+import { familyOf, titleKey } from './identity';
 
 const STORAGE_KEY = 'yot:catalog:v1';
 const MAX_ENTRIES = 500;
@@ -99,6 +100,34 @@ export function getRegisteredTitle(id: string): ContentTitle | null {
     return null;
   }
   return record.title;
+}
+
+/**
+ * A slug already used for this work, in any provider's spelling. Keeps a story
+ * on one URL even when the provider that wins the merge changes between pages.
+ */
+export function findRegisteredSlugFor(
+  title: Pick<ContentTitle, 'title' | 'altTitles' | 'contentType'>
+): string | null {
+  hydrate();
+
+  const family = familyOf(title.contentType);
+  const keys = new Set(
+    [title.title, ...(title.altTitles || [])]
+      .map((value) => titleKey(value))
+      .filter((key) => key.length >= 6)
+  );
+  if (keys.size === 0) return null;
+
+  for (const record of Object.values(store)) {
+    if (Date.now() - record.at > TTL_MS) continue;
+    if (familyOf(record.title.contentType) !== family) continue;
+
+    const candidates = [record.title.title, ...(record.title.altTitles || [])];
+    if (candidates.some((value) => keys.has(titleKey(value)))) return record.title.id;
+  }
+
+  return null;
 }
 
 /** Find a registered title whose title string matches loosely (slug fallbacks). */
