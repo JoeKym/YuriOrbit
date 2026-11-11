@@ -114,6 +114,69 @@ async function run() {
   });
 
 
+  await test('MangaDex text search filters by GL tag and reports filtered totals', async () => {
+    const originalFetch = globalThis.fetch;
+    let requested = '';
+    globalThis.fetch = async (input) => {
+      requested = String(input);
+      return new Response(
+        JSON.stringify({
+          result: 'ok',
+          data: [
+            {
+              id: '11111111-2222-3333-4444-555555555555',
+              type: 'manga',
+              attributes: {
+                title: { en: 'Bloom Into You' },
+                altTitles: [],
+                description: { en: 'Two girls fall in love at school.' },
+                status: 'completed',
+                year: 2015,
+                contentRating: 'safe',
+                originalLanguage: 'ja',
+                tags: [
+                  {
+                    id: 'a3c67850-4684-404e-9b7f-c69850ee5da6',
+                    attributes: { name: { en: "Girls' Love" }, group: 'genre' },
+                  },
+                ],
+                links: {},
+              },
+              relationships: [],
+            },
+          ],
+          limit: 24,
+          offset: 24,
+          total: 53,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    };
+
+    try {
+      const result = await mangadex.mangadexSearchGL({ query: 'bloom' }, 2, 24);
+      const url = new URL(requested);
+      assert.equal(
+        url.searchParams.get('includedTags[]'),
+        'a3c67850-4684-404e-9b7f-c69850ee5da6',
+        'Text search must constrain MangaDex to the GL tag'
+      );
+      assert.equal(
+        url.searchParams.get('excludedTags[]'),
+        '5920b825-4181-4a17-beeb-9baec0c9d5cc',
+        'BL must stay excluded upstream'
+      );
+      assert.equal(url.searchParams.get('offset'), '24');
+      assert.equal(url.searchParams.get('limit'), '24');
+      assert.equal(result.total, 53, 'total must come from the GL-filtered query');
+      assert.equal(result.hasNextPage, true);
+      assert.equal(result.items.length, 1);
+      assert.equal(result.items[0].title, 'Bloom Into You');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   await test('tmdb.ts exports movies, dramas, search, and byId helpers', async () => {
     tmdb = await jiti.import('../src/lib/providers/tmdb.ts');
     assert.equal(typeof tmdb.tmdbSearchGL, 'function');
