@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Loader2, Save, Search, ShieldAlert, Trash2 } from 'lucide-react';
+import { AlertTriangle, Loader2, RotateCcw, Save, Search, ShieldAlert, Trash2 } from 'lucide-react';
 import { adminApi } from '@/lib/admin/api';
 import { getTitleById } from '@/lib/providers';
 import { cn } from '@/lib/utils/format';
+import {
+  clearAllRestrictedAcknowledgments,
+  clearRestrictedAcknowledgment,
+} from '@/lib/moderation/restrictedAck';
 
 type Action = 'takedown' | 'suspended' | 'restricted';
 
@@ -12,6 +16,8 @@ interface Item {
   action: Action;
   reason?: string;
   note?: string;
+  /** ISO timestamp; suspensions restore automatically once this passes. */
+  expiresAt?: string;
   updatedAt?: string;
   updatedBy?: string;
 }
@@ -28,6 +34,7 @@ export function ContentModerationTab() {
   const [lookupBusy, setLookupBusy] = useState(false);
   const [draft, setDraft] = useState<Item>({ titleId: '', action: 'takedown', reason: '', note: '' });
   const [durationHours, setDurationHours] = useState(24);
+  const [gateNotice, setGateNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -96,6 +103,29 @@ export function ContentModerationTab() {
     await saveAll(next);
   };
 
+  const flashGateNotice = (message: string) => {
+    setGateNotice(message);
+    window.setTimeout(() => {
+      setGateNotice((current) => (current === message ? null : current));
+    }, 3000);
+  };
+
+  const resetGate = (titleId: string) => {
+    clearRestrictedAcknowledgment(titleId);
+    flashGateNotice(
+      `Restricted notice reset for ${titleId}. It will show again on its next visit in this browser.`
+    );
+  };
+
+  const resetAllGates = () => {
+    const count = clearAllRestrictedAcknowledgments();
+    flashGateNotice(
+      count > 0
+        ? `Reset ${count} restricted notice${count === 1 ? '' : 's'} in this browser.`
+        : 'No restricted notices are acknowledged in this browser.'
+    );
+  };
+
   const list = useMemo(() => {
     const q = query.trim().toLowerCase();
     return Object.values(items)
@@ -155,10 +185,24 @@ export function ContentModerationTab() {
       <div className="card-surface overflow-hidden">
         <div className="flex flex-wrap items-center gap-2 border-b border-ink-800 p-4">
           <h3 className="text-sm font-semibold text-ink-100">Active content actions</h3>
+          <button
+            type="button"
+            onClick={resetAllGates}
+            disabled={!list.some((i) => i.action === 'restricted')}
+            className="btn-secondary text-xs disabled:opacity-40"
+            title="Clear restricted-content acknowledgments stored in this browser"
+          >
+            <RotateCcw className="h-3.5 w-3.5" /> Reset gates
+          </button>
           <div className="relative ml-auto min-w-[220px]">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-400" />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter actions…" className="input-field py-2 pl-9 text-xs" />
           </div>
+          {gateNotice && (
+            <div className="basis-full rounded-lg border border-ink-700 bg-ink-850/60 p-2 text-[11px] text-ink-300">
+              {gateNotice}
+            </div>
+          )}
         </div>
         {loading ? (
           <div className="flex items-center gap-2 p-6 text-sm text-ink-300"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>
@@ -196,6 +240,16 @@ export function ContentModerationTab() {
                     <td className="max-w-[260px] truncate px-4 py-2.5 text-ink-400" title={item.reason}>{item.reason || '—'}</td>
                     <td className="whitespace-nowrap px-4 py-2.5 text-ink-500">{item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '—'}</td>
                     <td className="px-4 py-2.5 text-right">
+                      {item.action === 'restricted' && (
+                        <button
+                          onClick={() => resetGate(item.titleId)}
+                          className="rounded-lg p-1.5 text-ink-400 hover:bg-ink-800 hover:text-warning-400"
+                          title="Reset the restricted-content notice in this browser"
+                          aria-label={`Reset restricted notice for ${item.title || item.titleId}`}
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                       <button onClick={() => clear(item.titleId)} disabled={saving} className="rounded-lg p-1.5 text-ink-400 hover:bg-ink-800 hover:text-error-400 disabled:opacity-40" title="Remove action"><Trash2 className="h-3.5 w-3.5" /></button>
                     </td>
                   </tr>
@@ -208,6 +262,7 @@ export function ContentModerationTab() {
 
       <div className="rounded-xl border border-warning-500/20 bg-warning-500/5 p-4 text-xs text-warning-300/90">
         <p className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" /> Takedown/suspension enforcement in the UI is best-effort and depends on client fetch/caching. For legal/urgent requests, also follow your operational process and document actions in audit/notes.</p>
+        <p className="mt-2 flex items-start gap-2"><RotateCcw className="mt-0.5 h-4 w-4 flex-shrink-0" /> Restricted-content acknowledgments are stored per browser session, so resetting a gate only affects this browser — useful for previewing the notice. Other visitors' acknowledgments cannot be reset from here.</p>
       </div>
     </div>
   );
