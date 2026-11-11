@@ -1,29 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ContentTitle } from '@/types/content';
-import { getWatchAvailability } from '@/lib/content/watch-availability';
+import { getTitleAvailability, tmdbLookupFor } from '@/lib/content/watch-availability';
 import type { TmdbWatchProviderResult } from '@/lib/providers/tmdb';
-
-/**
- * Find the TMDB record behind a card. Merged entries often use an AniList or
- * MangaDex title as their primary source, but keep the TMDB source alongside.
- */
-function tmdbLookup(title: ContentTitle): { providerId: string; mediaType: 'movie' | 'tv' } | null {
-  if (title.provider === 'TMDB' && title.providerId) {
-    return {
-      providerId: title.providerId,
-      mediaType: title.contentType === 'MOVIE' ? 'movie' : 'tv',
-    };
-  }
-
-  const source = title.sources?.find((entry) => entry.provider === 'TMDB');
-  if (!source?.providerId) return null;
-
-  const fromUrl = source.url ? /\/movie\//.test(source.url) : false;
-  return {
-    providerId: source.providerId,
-    mediaType: fromUrl || title.contentType === 'MOVIE' ? 'movie' : 'tv',
-  };
-}
 
 /**
  * Provider logos for a card. The lookup only starts once the card is close to
@@ -33,7 +11,7 @@ export function AvailabilityBadge({ title }: { title: ContentTitle }) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   const [data, setData] = useState<TmdbWatchProviderResult | null>(null);
-  const lookup = tmdbLookup(title);
+  const lookup = tmdbLookupFor(title);
   const providerId = lookup?.providerId;
   const mediaType = lookup?.mediaType;
 
@@ -60,17 +38,17 @@ export function AvailabilityBadge({ title }: { title: ContentTitle }) {
   }, [providerId]);
 
   useEffect(() => {
-    if (!visible || !providerId || !mediaType) return;
+    if (!visible || !providerId) return;
     let cancelled = false;
 
-    getWatchAvailability(providerId, mediaType).then((result) => {
+    getTitleAvailability(title).then((result) => {
       if (!cancelled) setData(result);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [visible, providerId, mediaType]);
+  }, [visible, providerId, title]);
 
   if (!lookup) return null;
 
