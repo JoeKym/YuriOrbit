@@ -533,25 +533,31 @@ function warmImage(url: string): Promise<void> {
 const prefetching = new Map<string, Promise<void>>();
 
 /**
- * Warm the next chapter's pages in the background so advancing is instant.
+ * Warm chapter pages in the background so advancing is instant.
  * Images are fetched in small batches through our own proxy, which keeps the
  * upstream node within its rate limits.
+ *
+ * Pass `maxPages` to warm only the first few pages, which lets the reader
+ * start on the next chapter before the current one has finished loading.
+ * Warming those pages again in a later call is a browser-cache hit.
  */
-export function prefetchChapterPages(chapterId: string): Promise<void> {
+export function prefetchChapterPages(chapterId: string, maxPages?: number): Promise<void> {
   if (!isBrowser || !chapterId) return Promise.resolve();
-  const running = prefetching.get(chapterId);
+  const key = maxPages && maxPages > 0 ? `${chapterId}:${maxPages}` : chapterId;
+  const running = prefetching.get(key);
   if (running) return running;
 
   const task = (async () => {
-    const urls = await mangadexGetChapterPages(chapterId);
+    const all = await mangadexGetChapterPages(chapterId);
+    const urls = maxPages && maxPages > 0 ? all.slice(0, maxPages) : all;
     for (let i = 0; i < urls.length; i += 3) {
       await Promise.all(urls.slice(i, i + 3).map(warmImage));
     }
   })()
     .catch(() => undefined)
-    .finally(() => prefetching.delete(chapterId));
+    .finally(() => prefetching.delete(key));
 
-  prefetching.set(chapterId, task);
+  prefetching.set(key, task);
   return task;
 }
 
@@ -567,12 +573,15 @@ export async function mangadexGetChapterPages(chapterId: string): Promise<string
       chapter: { hash: string; data: string[]; dataSaver: string[] };
     }>(`/at-home/server/${chapterId}`);
 
-    const files = resp.chapter.data?.length ? resp.chapter.data : resp.chapter.dataSaver ?? [];
+    // Data-saver pages are much smaller and load considerably faster; fall
+    // back to the original files only when the chapter has no saver variant.
+    const useSaver = (resp.chapter.dataSaver?.length ?? 0) > 0;
+    const files = useSaver ? resp.chapter.dataSaver : resp.chapter.data ?? [];
     const urls = files.map(
       (file) =>
         `${MANGADEX_PAGE_BASE}?chapter=${encodeURIComponent(chapterId)}&hash=${encodeURIComponent(
           resp.chapter.hash
-        )}&file=${encodeURIComponent(file)}`
+        )}&file=${encodeURIComponent(file)}${useSaver ? '&saver=1' : ''}`
     );
     if (urls.length > 0) pageUrlCache.set(chapterId, { at: Date.now(), urls });
     return urls;

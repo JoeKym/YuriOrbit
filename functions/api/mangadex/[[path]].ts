@@ -142,6 +142,8 @@ async function handlePageImage(
   const chapterId = (url.searchParams.get('chapter') || '').trim();
   const file = (url.searchParams.get('file') || '').trim();
   const hashParam = (url.searchParams.get('hash') || '').trim();
+  // Data-saver images live under /data-saver/ and are a fraction of the size.
+  const dataPath = url.searchParams.get('saver') === '1' ? 'data-saver' : 'data';
 
   const notFound = () =>
     new Response('Image not found', {
@@ -165,7 +167,7 @@ async function handlePageImage(
 
   if (home) {
     const attempt = await fetchPageImage(
-      `${home.baseUrl}/data/${home.hash}/${encodeURIComponent(file)}`,
+      `${home.baseUrl}/${dataPath}/${home.hash}/${encodeURIComponent(file)}`,
       env,
       method
     );
@@ -176,7 +178,7 @@ async function handlePageImage(
   // A dead node or expired URL falls back to MangaDex's canonical uploads host.
   if ((!upstream || !upstream.ok) && hash) {
     const fallback = await fetchPageImage(
-      `https://uploads.mangadex.org/data/${hash}/${encodeURIComponent(file)}`,
+      `https://uploads.mangadex.org/${dataPath}/${hash}/${encodeURIComponent(file)}`,
       env,
       method
     );
@@ -188,7 +190,7 @@ async function handlePageImage(
     const refreshed = await fetchAtHome(chapterId, env, true);
     if (refreshed && refreshed.baseUrl !== home?.baseUrl) {
       const retry = await fetchPageImage(
-        `${refreshed.baseUrl}/data/${refreshed.hash}/${encodeURIComponent(file)}`,
+        `${refreshed.baseUrl}/${dataPath}/${refreshed.hash}/${encodeURIComponent(file)}`,
         env,
         method
       );

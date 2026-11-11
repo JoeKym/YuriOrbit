@@ -221,8 +221,16 @@ export function ReaderPage() {
     return () => { cancelled = true; };
   }, [activeChapter?.id, pagesReloadKey]);
 
-  // Warm the next chapter as soon as the current one is on screen. Pages are
-  // fetched in order, so the first pages of the next chapter are ready first.
+  // Start the next chapter's opening pages as soon as the chapter list is
+  // known, without waiting for the current chapter's images to finish.
+  useEffect(() => {
+    if (!activeChapter) return;
+    const next = readableChapters[activeChapterIndex + 1];
+    if (!next) return;
+    void prefetchChapterPages(next.id, 3);
+  }, [activeChapter?.id, activeChapterIndex, readableChapters]);
+
+  // Once the current chapter is on screen, warm the rest of the next chapter.
   useEffect(() => {
     if (!activeChapter || loadingPages || pagesError || pageUrls.length === 0) return;
     const next = readableChapters[activeChapterIndex + 1];
