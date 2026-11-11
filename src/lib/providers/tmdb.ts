@@ -571,3 +571,137 @@ export async function tmdbGetById(id: string): Promise<ContentTitle | null> {
     return null;
   }
 }
+
+// ─── Watch providers & trailers ──────────────────────────────────────────────
+
+export interface TmdbWatchProvider {
+  id: number;
+  name: string;
+  logoUrl?: string;
+}
+
+export interface TmdbWatchProviderResult {
+  /** Region the returned availability actually belongs to (falls back to US). */
+  region: string;
+  /** JustWatch region page for the title. */
+  link?: string;
+  providers: TmdbWatchProvider[];
+}
+
+interface TmdbProviderEntry {
+  provider_id: number;
+  provider_name: string;
+  logo_path?: string;
+}
+
+interface TmdbRegionProviders {
+  link?: string;
+  flatrate?: TmdbProviderEntry[];
+  rent?: TmdbProviderEntry[];
+  buy?: TmdbProviderEntry[];
+}
+
+/** Best-guess ISO country for TMDB availability, defaulting to the US. */
+export function tmdbPreferredRegion(): string {
+  if (typeof navigator === 'undefined') return 'US';
+  const LocaleCtor = (Intl as unknown as {
+    Locale?: new (tag: string) => { region?: string };
+  }).Locale;
+  if (!LocaleCtor) return 'US';
+
+  const languages = [navigator.language, ...(navigator.languages || [])].filter(Boolean);
+  for (const language of languages) {
+    try {
+      const region = new LocaleCtor(language).region;
+      if (region && /^[A-Z]{2}$/.test(region)) return region;
+    } catch {
+      /* Unparseable locale: try the next one. */
+    }
+  }
+  return 'US';
+}
+
+/**
+ * Streaming availability for a title, preferring the visitor's region and
+ * falling back to US data when that region has no entry. TMDB requires a
+ * JustWatch attribution wherever this data is shown, so callers get the link.
+ */
+export async function tmdbGetWatchProviders(
+  providerId: string,
+  mediaType: 'movie' | 'tv',
+  region = 'US'
+): Promise<TmdbWatchProviderResult | null> {
+  try {
+    const resp = await tmdbFetch<{ results?: Record<string, TmdbRegionProviders> }>(
+      `/${mediaType}/${providerId}/watch/providers`
+    );
+    const results = resp.results || {};
+    const local = results[region];
+    const fallback = results.US;
+
+    const chosen = local?.flatrate?.length
+      ? { region, entry: local }
+      : fallback?.flatrate?.length
+        ? { region: 'US', entry: fallback }
+        : local
+          ? { region, entry: local }
+          : fallback
+            ? { region: 'US', entry: fallback }
+            : null;
+    if (!chosen) return null;
+
+    const source = chosen.entry.flatrate?.length
+      ? chosen.entry.flatrate
+      : [...(chosen.entry.rent || []), ...(chosen.entry.buy || [])];
+
+    const seen = new Set<number>();
+    const providers: TmdbWatchProvider[] = [];
+    for (const entry of source) {
+      if (seen.has(entry.provider_id)) continue;
+      seen.add(entry.provider_id);
+      providers.push({
+        id: entry.provider_id,
+        name: entry.provider_name,
+        logoUrl: entry.logo_path ? `${TMDB_IMAGE_BASE}/w92${entry.logo_path}` : undefined,
+      });
+    }
+    if (providers.length === 0) return null;
+
+    return {
+      region: chosen.region,
+      link: chosen.entry.link,
+      providers: providers.slice(0, 8),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** First YouTube trailer for a TMDB title, preferring official English uploads. */
+export async function tmdbGetTrailerKey(
+  providerId: string,
+  mediaType: 'movie' | 'tv'
+): Promise<string | null> {
+  try {
+    const resp = await tmdbFetch<{
+      results?: {
+        key?: string;
+        site?: string;
+        type?: string;
+        official?: boolean;
+        iso_639_1?: string;
+      }[];
+    }>(`/${mediaType}/${providerId}/videos`, { language: 'en-US' });
+
+    const trailers = (resp.results || []).filter(
+      (video) => video.site === 'YouTube' && video.type === 'Trailer' && !!video.key
+    );
+    const best =
+      trailers.find((video) => video.official && video.iso_639_1?.startsWith('en')) ??
+      trailers.find((video) => video.official) ??
+      trailers[0];
+    return best?.key ?? null;
+  } catch {
+    return null;
+  }
+}
