@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useParams, useSearchParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import {
   BookOpen,
   ExternalLink,
@@ -23,6 +23,7 @@ import {
   getCachedChapterPages,
   prefetchChapterPages,
 } from '@/lib/providers';
+import { canonicalSlugFor } from '@/lib/catalog/slug-redirects';
 import type { ChapterImageQuality } from '@/lib/providers';
 import { getFallbackCover, cn } from '@/lib/utils/format';
 import { useLibrary } from '@/hooks/useLibrary';
@@ -33,6 +34,7 @@ import { RestrictedNotice } from '@/components/site/RestrictedNotice';
 
 export function ReaderPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [title, setTitle] = useState<ContentTitle | null>(null);
@@ -101,6 +103,16 @@ export function ReaderPage() {
       try {
         const result = await getTitleById(id);
         if (cancelled) return;
+
+        // A merged story may have moved; keep one canonical URL per story.
+        if (result) {
+          const canonical = await canonicalSlugFor(result.id);
+          if (!cancelled && canonical !== id) {
+            navigate(`/read/${canonical}${window.location.search}`, { replace: true });
+            return;
+          }
+        }
+
         setTitle(result);
       } catch {
         if (!cancelled) setTitle(null);

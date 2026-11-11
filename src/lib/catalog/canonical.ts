@@ -8,6 +8,7 @@
 import type { ContentTitle, ExternalLink, Tag, TitleRelation } from '@/types/content';
 import { familyOf, slugifyTitle, titleKey } from './identity';
 import { findRegisteredSlugFor, registerTitles } from './registry';
+import { rememberSlugAlias } from './slug-redirects';
 
 const PROVIDER_WEIGHT: Record<ContentTitle['provider'], number> = {
   ANILIST: 30,
@@ -267,9 +268,12 @@ export function canonicalizeTitles(titles: ContentTitle[]): ContentTitle[] {
     used.add(slug);
     result.push(merged);
 
-    // Old links keep working: each previous slug now points at the merged entry.
+    // Old links keep working: each previous slug now points at the merged entry,
+    // and the shared table makes that mapping hold on every device.
     for (const alias of new Set(existingSlugs)) {
-      if (alias !== slug) aliases.push({ ...merged, id: alias });
+      if (alias === slug) continue;
+      aliases.push({ ...merged, id: alias });
+      rememberSlugAlias(alias, slug, merged.provider, merged.providerId);
     }
   }
 
