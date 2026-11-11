@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import {
   SlidersHorizontal,
@@ -13,7 +13,9 @@ import {
   RotateCcw,
   Star,
   CheckCircle2,
-  Calendar
+  Calendar,
+  Globe,
+  Loader2
 } from 'lucide-react';
 import { ContentCard, ContentCardGrid } from '@/components/content/ContentCard';
 import { ContentCardSkeleton } from '@/components/content/ContentCard';
@@ -30,7 +32,9 @@ import {
   SORT_OPTIONS,
   CONTENT_TYPE_LABELS
 } from '@/types/content';
-import { searchGLTitles } from '@/lib/providers';
+import { searchGLTitles, tmdbPreferredRegion } from '@/lib/providers';
+import { getTitleAvailability } from '@/lib/content/watch-availability';
+import { readStoredWatchRegion, regionName } from '@/lib/content/watch-region';
 import { GL_ALLOWED_CLASSIFICATIONS } from '@/lib/providers/classify';
 import { cn, formatScore, getFallbackCover } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
@@ -74,6 +78,7 @@ export function DiscoverPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [searchInput, setSearchInput] = useState(searchParams.get('q') || '');
+  const streamingOnly = searchParams.get('streaming') === '1';
 
   const filter: ContentFilter = useMemo(() => ({
     query: searchParams.get('q') || undefined,
@@ -168,6 +173,53 @@ export function DiscoverPage() {
     }
   };
 
+  const [availability, setAvailability] = useState<Record<string, boolean>>({});
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
+  const [checkedCount, setCheckedCount] = useState(0);
+  const availabilityChecked = useRef<Set<string>>(new Set());
+
+  // Availability needs one TMDB lookup per title, so check lazily through the
+  // shared queue, then hide titles that are not streaming in the chosen region.
+  useEffect(() => {
+    if (!streamingOnly) {
+      setCheckingAvailability(false);
+      return;
+    }
+
+    const pending = titles.filter((title) => !availabilityChecked.current.has(title.id));
+    if (pending.length === 0) {
+      setCheckingAvailability(false);
+      return;
+    }
+
+    let cancelled = false;
+    setCheckingAvailability(true);
+    setCheckedCount(0);
+    let done = 0;
+
+    void Promise.all(
+      pending.map(async (title) => {
+        const result = await getTitleAvailability(title);
+        if (cancelled) return;
+        availabilityChecked.current.add(title.id);
+        setAvailability((prev) => ({ ...prev, [title.id]: Boolean(result) }));
+        done += 1;
+        setCheckedCount(done);
+      })
+    ).finally(() => {
+      if (!cancelled) setCheckingAvailability(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [streamingOnly, titles]);
+
+  const visibleTitles = streamingOnly
+    ? titles.filter((title) => availability[title.id] === true)
+    : titles;
+  const streamingRegion = regionName(readStoredWatchRegion() || tmdbPreferredRegion());
+
   // Build active filter tags for quick removal
   const activeFilters: { key: string; label: string }[] = [];
   if (filter.query) {
@@ -193,6 +245,9 @@ export function DiscoverPage() {
   }
   if (filter.classification && filter.classification === 'ALL') {
     activeFilters.push({ key: 'gl', label: 'All GL (inc. Subtext)' });
+  }
+  if (streamingOnly) {
+    activeFilters.push({ key: 'streaming', label: `Streaming in ${streamingRegion}` });
   }
 
   return (
@@ -287,6 +342,20 @@ export function DiscoverPage() {
                   {activeFilters.length}
                 </span>
               )}
+            </button>
+
+            <button
+              onClick={() => updateFilter('streaming', streamingOnly ? undefined : '1')}
+              className={cn(
+                'inline-flex items-center gap-2 px-3.5 py-2 text-xs font-medium rounded-lg border transition-all duration-200',
+                streamingOnly
+                  ? 'border-rose-500/50 bg-rose-500/10 text-rose-300'
+                  : 'border-ink-700 bg-ink-900 text-ink-200 hover:bg-ink-850'
+              )}
+              title={`Only show titles with a streaming provider in ${streamingRegion}`}
+            >
+              <Globe className="h-3.5 w-3.5" />
+              <span>Streaming in {streamingRegion}</span>
             </button>
 
             {/* Active Filter Pills */}
@@ -483,6 +552,13 @@ export function DiscoverPage() {
           </div>
         )}
 
+        {streamingOnly && checkingAvailability && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-ink-800 bg-ink-900/60 px-3 py-2 text-xs text-ink-300">
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-rose-400" />
+            Checking streaming availability in {streamingRegion}… {checkedCount}/{titles.length}
+          </div>
+        )}
+
         {/* Content Display: Loading, Error, Empty, or Results */}
         {loading ? (
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
@@ -518,9 +594,34 @@ export function DiscoverPage() {
               Reset Filters
             </button>
           </div>
+        ) : streamingOnly && visibleTitles.length === 0 ? (
+          checkingAvailability ? (
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <ContentCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl border border-dashed border-ink-800 p-8">
+              <Globe className="h-12 w-12 text-ink-600 mb-3" />
+              <h3 className="text-base font-medium text-ink-200">
+                Nothing streaming in {streamingRegion}
+              </h3>
+              <p className="mt-1 text-xs text-ink-400 max-w-sm">
+                No titles in this batch have a streaming provider listed there. Change the region
+                in settings, or show all titles.
+              </p>
+              <button
+                onClick={() => updateFilter('streaming', undefined)}
+                className="btn-secondary mt-4 text-xs"
+              >
+                Show all titles
+              </button>
+            </div>
+          )
         ) : viewMode === 'grid' ? (
           <>
-            <ContentCardGrid titles={titles} showAvailability />
+            <ContentCardGrid titles={visibleTitles} showAvailability />
             {hasNextPage && (
               <div className="mt-12 flex justify-center">
                 <button
@@ -535,7 +636,7 @@ export function DiscoverPage() {
           </>
         ) : (
           <>
-            <ListView titles={titles} />
+            <ListView titles={visibleTitles} />
             {hasNextPage && (
               <div className="mt-12 flex justify-center">
                 <button

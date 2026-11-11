@@ -83,6 +83,29 @@ export function readStoredWatchRegion(): string | null {
   }
 }
 
+const listeners = new Set<() => void>();
+
+function emitRegionChange(): void {
+  for (const listener of listeners) {
+    try {
+      listener();
+    } catch {
+      /* A broken listener must not block the others. */
+    }
+  }
+}
+
+export function subscribeWatchRegion(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+export function getWatchRegion(): string | null {
+  return readStoredWatchRegion();
+}
+
 export function writeStoredWatchRegion(region: string | null): void {
   try {
     if (region) localStorage.setItem(WATCH_REGION_STORAGE_KEY, region);
@@ -90,4 +113,12 @@ export function writeStoredWatchRegion(region: string | null): void {
   } catch {
     /* Private mode or storage disabled: the choice just won't persist. */
   }
+  emitRegionChange();
+}
+
+// Keep mounted cards honest when the region changes in another tab.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === WATCH_REGION_STORAGE_KEY || event.key === null) emitRegionChange();
+  });
 }

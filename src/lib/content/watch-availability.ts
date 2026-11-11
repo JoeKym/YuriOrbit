@@ -6,6 +6,7 @@
  * through a small queue. Cards only request data once they are near the
  * viewport, which keeps a page load to the titles actually being seen.
  */
+import type { ContentTitle } from '@/types/content';
 import { tmdbGetWatchProviders, tmdbPreferredRegion } from '@/lib/providers';
 import type { TmdbWatchProviderResult } from '@/lib/providers/tmdb';
 import { readStoredWatchRegion } from './watch-region';
@@ -64,4 +65,39 @@ export function getWatchAvailability(
 
   inflight.set(key, task);
   return task;
+}
+
+/**
+ * The TMDB record behind a card. Merged entries often use an AniList or
+ * MangaDex title as their primary source but keep the TMDB source alongside.
+ */
+export function tmdbLookupFor(
+  title: ContentTitle
+): { providerId: string; mediaType: 'movie' | 'tv' } | null {
+  if (title.provider === 'TMDB' && title.providerId) {
+    return {
+      providerId: title.providerId,
+      mediaType: title.contentType === 'MOVIE' ? 'movie' : 'tv',
+    };
+  }
+
+  const source = title.sources?.find((entry) => entry.provider === 'TMDB');
+  if (!source?.providerId) return null;
+
+  const fromUrl = source.url ? /\/movie\//.test(source.url) : false;
+  return {
+    providerId: source.providerId,
+    mediaType: fromUrl || title.contentType === 'MOVIE' ? 'movie' : 'tv',
+  };
+}
+
+/** Availability for a catalog entry, or null when nothing is streaming. */
+export async function getTitleAvailability(
+  title: ContentTitle
+): Promise<TmdbWatchProviderResult | null> {
+  const lookup = tmdbLookupFor(title);
+  if (!lookup) return null;
+
+  const result = await getWatchAvailability(lookup.providerId, lookup.mediaType);
+  return result && result.providers.length > 0 ? result : null;
 }

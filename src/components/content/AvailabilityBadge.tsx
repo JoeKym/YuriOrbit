@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ContentTitle } from '@/types/content';
-import { getWatchAvailability } from '@/lib/content/watch-availability';
+import { getTitleAvailability, tmdbLookupFor } from '@/lib/content/watch-availability';
+import { useWatchRegion } from '@/hooks/useWatchRegion';
 import type { TmdbWatchProviderResult } from '@/lib/providers/tmdb';
 
 /**
@@ -11,11 +12,14 @@ export function AvailabilityBadge({ title }: { title: ContentTitle }) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   const [data, setData] = useState<TmdbWatchProviderResult | null>(null);
-  const mediaType = title.contentType === 'MOVIE' ? 'movie' : 'tv';
+  const region = useWatchRegion();
+  const lookup = tmdbLookupFor(title);
+  const providerId = lookup?.providerId;
+  const mediaType = lookup?.mediaType;
 
   useEffect(() => {
     const element = ref.current;
-    if (!element) return;
+    if (!element || !providerId) return;
 
     if (typeof IntersectionObserver === 'undefined') {
       setVisible(true);
@@ -29,37 +33,38 @@ export function AvailabilityBadge({ title }: { title: ContentTitle }) {
           observer.disconnect();
         }
       },
-      { rootMargin: '200px' }
+      { rootMargin: '300px' }
     );
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [providerId]);
 
+  // Re-run when the region changes so the logos always match the preference.
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || !providerId) return;
     let cancelled = false;
+    setData(null);
 
-    getWatchAvailability(title.providerId, mediaType).then((result) => {
+    getTitleAvailability(title).then((result) => {
       if (!cancelled) setData(result);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [visible, title.providerId, mediaType]);
+  }, [visible, providerId, region, title]);
+
+  if (!lookup) return null;
 
   const providers = data?.providers ?? [];
   const shown = providers.slice(0, 3);
   const remaining = providers.length - shown.length;
 
   return (
-    <div
-      ref={ref}
-      className="pointer-events-none absolute right-2 top-[70px] z-10 flex flex-col items-end gap-1"
-    >
+    <div ref={ref} className="pointer-events-none absolute inset-0 z-10">
       {shown.length > 0 && (
         <span
-          className="flex items-center gap-1 rounded-md border border-white/10 bg-ink-950/85 px-1.5 py-1 shadow-sm backdrop-blur-md"
+          className="absolute right-2 top-[70px] flex items-center gap-1 rounded-md border border-white/10 bg-ink-950/85 px-1.5 py-1 shadow-sm backdrop-blur-md"
           title={`Streaming via JustWatch (${data?.region}): ${providers
             .map((provider) => provider.name)
             .join(', ')}`}
