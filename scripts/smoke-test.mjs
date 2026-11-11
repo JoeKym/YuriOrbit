@@ -501,6 +501,30 @@ async function run() {
     }
   });
 
+  await test('manual GL overrides upgrade only the matching TMDB record', async () => {
+    const { applyGLOverrides, glOverrideKey } = await jiti.import('../src/lib/moderation/glOverrides.ts');
+    assert.equal(glOverrideKey('tv', '123'), 'tv:123');
+
+    const map = { 'movie:990001': { title: 'When We Met' } };
+    const [overridden] = applyGLOverrides(
+      [{ provider: 'TMDB', providerId: '990001', contentType: 'MOVIE', glClassification: 'NEEDS_REVIEW' }],
+      map
+    );
+    assert.equal(overridden.glClassification, 'GL_RELATED');
+
+    const [otherId] = applyGLOverrides(
+      [{ provider: 'TMDB', providerId: '990002', contentType: 'MOVIE', glClassification: 'NEEDS_REVIEW' }],
+      map
+    );
+    assert.equal(otherId.glClassification, 'NEEDS_REVIEW');
+
+    const [anilist] = applyGLOverrides(
+      [{ provider: 'ANILIST', providerId: '990001', contentType: 'MOVIE', glClassification: 'NEEDS_REVIEW' }],
+      map
+    );
+    assert.equal(anilist.glClassification, 'NEEDS_REVIEW', 'Overrides must not affect other providers');
+  });
+
   await test('a saved old slug seeds a canonical redirect', async () => {
     const { rememberSavedRef } = await jiti.import('../src/lib/content/saved-refs.ts');
     const { getCachedCanonicalSlug } = await jiti.import('../src/lib/catalog/slug-redirects.ts');

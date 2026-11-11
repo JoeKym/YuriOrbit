@@ -10,6 +10,7 @@ import {
   Megaphone,
   Shield,
   Link2,
+  BadgeCheck,
   Sparkles,
   Star,
   Users,
@@ -22,6 +23,7 @@ import { OverviewTab } from '@/components/admin/OverviewTab';
 import { UsersTab } from '@/components/admin/UsersTab';
 import { LibraryTab } from '@/components/admin/LibraryTab';
 import { SlugRedirectsTab } from '@/components/admin/SlugRedirectsTab';
+import { GLOverridesTab } from '@/components/admin/GLOverridesTab';
 import { FeaturedTab } from '@/components/admin/FeaturedTab';
 import { SiteSettingsTab } from '@/components/admin/SiteSettingsTab';
 import { AuditTab } from '@/components/admin/AuditTab';
@@ -33,7 +35,7 @@ import { ReviewsTab } from '@/components/admin/ReviewsTab';
 import { BarChart3, Scale, ShieldAlert, Quote } from 'lucide-react';
 import { usePageMeta } from '@/hooks/usePageMeta';
 
-type TabKey = 'overview' | 'traffic' | 'users' | 'appeals' | 'moderation' | 'reviews' | 'library' | 'redirects' | 'feedback' | 'contact' | 'featured' | 'settings' | 'audit';
+type TabKey = 'overview' | 'traffic' | 'users' | 'appeals' | 'moderation' | 'reviews' | 'library' | 'redirects' | 'gl-overrides' | 'feedback' | 'contact' | 'featured' | 'settings' | 'audit';
 
 const TABS: { key: TabKey; label: string; icon: typeof Shield }[] = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -44,6 +46,7 @@ const TABS: { key: TabKey; label: string; icon: typeof Shield }[] = [
   { key: 'reviews', label: 'Reviews', icon: Quote },
   { key: 'library', label: 'Library', icon: ListChecks },
   { key: 'redirects', label: 'Slug redirects', icon: Link2 },
+  { key: 'gl-overrides', label: 'GL overrides', icon: BadgeCheck },
   { key: 'feedback', label: 'Feedback', icon: Inbox },
   { key: 'contact', label: 'Contact', icon: Mail },
   { key: 'featured', label: "Editor's Picks", icon: Sparkles },
@@ -160,6 +163,7 @@ export function AdminPage() {
       {tab === 'reviews' && <ReviewsTab />}
       {tab === 'library' && <LibraryTab />}
       {tab === 'redirects' && <SlugRedirectsTab />}
+      {tab === 'gl-overrides' && <GLOverridesTab />}
       {tab === 'feedback' && <FeedbackTab />}
       {tab === 'contact' && <FeedbackTab mode="contact" />}
       {tab === 'featured' && <FeaturedTab />}
