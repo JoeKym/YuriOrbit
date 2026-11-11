@@ -9,6 +9,7 @@ import type { LibraryEntry, LibraryStatus, ContentTitle } from '@/types/content'
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { rememberSavedRef, rememberSavedRefs } from '@/lib/content/saved-refs';
+import { getTitleById } from '@/lib/providers';
 
 const DB_NAME = 'yuriorbit';
 const DB_VERSION = 1;
@@ -164,6 +165,40 @@ function entryToRow(entry: LibraryEntry, userId?: string) {
   };
 }
 
+/**
+ * Save a reference discovered for an existing entry without touching its status,
+ * progress or timestamps. Cloud rows get a targeted update; local rows update
+ * both stores so the next load sees the value.
+ */
+async function persistBackfilledRef(
+  entry: LibraryEntry,
+  isAuthenticated: boolean,
+  userId: string | null
+): Promise<void> {
+  if (isAuthenticated && userId && supabase) {
+    const { error } = await supabase
+      .from('library_entries')
+      .update({ provider: entry.provider, provider_id: entry.providerId ?? null })
+      .eq('user_id', userId)
+      .eq('title_id', entry.titleId);
+    if (!error) return;
+    if (!isMissingProviderIdColumn(error)) return;
+
+    // Pre-migration deployment: record at least the provider name.
+    await supabase
+      .from('library_entries')
+      .update({ provider: entry.provider })
+      .eq('user_id', userId)
+      .eq('title_id', entry.titleId);
+    return;
+  }
+
+  if (isIDBAvailable()) {
+    try { await idbPut(entry); } catch {}
+  }
+  lsSave({ ...lsLoad(), [entry.id]: entry });
+}
+
 // ─── Local load (IDB first, LS fallback) ──────────────────────────────────────
 
 async function loadLocal(): Promise<Record<string, LibraryEntry>> {
@@ -180,13 +215,21 @@ async function loadLocal(): Promise<Record<string, LibraryEntry>> {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-export function useLibrary() {
+export function useLibrary(options: { backfillProviderRefs?: boolean } = {}) {
+  const { backfillProviderRefs = false } = options;
   const { user, isAuthenticated } = useAuth();
   const userId = user?.id ?? null;
   const [library, setLibrary] = useState<Record<string, LibraryEntry>>({});
   const [loaded, setLoaded] = useState(false);
   const [cloudError, setCloudError] = useState<string | null>(null);
   const useIDB = useRef(isIDBAvailable());
+
+  // Snapshot for the one-shot backfill below; a library update must not cancel
+  // or restart the batch.
+  const libraryRef = useRef(library);
+  useEffect(() => {
+    libraryRef.current = library;
+  }, [library]);
 
   // Load library data — Supabase when authenticated, local when not
   useEffect(() => {
@@ -247,6 +290,53 @@ export function useLibrary() {
     init();
     return () => { cancelled = true; };
   }, [isAuthenticated, userId]);
+
+  // Resolve references for entries saved before `provider_id` was recorded.
+  // useLibrary is called by every content card, so this only runs where a caller
+  // opts in (the library page); otherwise each card would repeat the lookups.
+  useEffect(() => {
+    if (!backfillProviderRefs || !loaded) return;
+
+    const pending = Object.values(libraryRef.current).filter((entry) => !entry.providerId);
+    if (pending.length === 0) return;
+
+    let cancelled = false;
+    const queue = [...pending];
+
+    const worker = async () => {
+      while (!cancelled && queue.length > 0) {
+        const entry = queue.shift();
+        if (!entry) continue;
+        try {
+          const title = await getTitleById(entry.titleId);
+          if (cancelled || !title?.providerId) continue;
+
+          const updated: LibraryEntry = {
+            ...entry,
+            provider: title.provider,
+            providerId: title.providerId,
+          };
+          rememberSavedRef(updated);
+          setLibrary((prev) => {
+            const current = prev[entry.id];
+            if (!current || current.providerId) return prev;
+            return {
+              ...prev,
+              [entry.id]: { ...current, provider: title.provider, providerId: title.providerId },
+            };
+          });
+          await persistBackfilledRef(updated, isAuthenticated, userId);
+        } catch {
+          // Best effort: an unresolvable title keeps its slug-based fallback.
+        }
+      }
+    };
+
+    void Promise.all(Array.from({ length: Math.min(3, queue.length) }, worker));
+    return () => {
+      cancelled = true;
+    };
+  }, [backfillProviderRefs, loaded, isAuthenticated, userId]);
 
   // ─── Local persistence helpers ──────────────────────────────────────────────
 

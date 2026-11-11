@@ -45,6 +45,10 @@ export interface AdminEntry {
   title: string;
   cover_image: string | null;
   content_type: string;
+  /** Upstream provider stored with the entry; absent on legacy rows. */
+  provider?: string | null;
+  /** Upstream record id; absent before the provider-ref migration. */
+  provider_id?: string | null;
   status: string;
   progress: number;
   total_progress?: number | null;

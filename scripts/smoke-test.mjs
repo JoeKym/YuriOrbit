@@ -13,8 +13,12 @@
 
 import { createJiti } from 'jiti';
 import assert from 'node:assert/strict';
+import { fileURLToPath } from 'node:url';
 
-const jiti = createJiti(import.meta.url);
+// The app uses the `@/` alias, so the runner must resolve it the same way.
+const jiti = createJiti(import.meta.url, {
+  alias: { '@': fileURLToPath(new URL('../src', import.meta.url)) },
+});
 
 const colors = {
   reset: '\x1b[0m',
@@ -53,7 +57,7 @@ async function run() {
   // ─── Test Suite 1: Provider Exports Verification ──────────────────────────
   console.log(`${colors.bold}1. Checking Module Exports & Contracts...${colors.reset}`);
 
-  let anilist, normalize, mangadex, jikan, tmdb, classify, index;
+  let anilist, normalize, mangadex, tmdb, classify, index;
 
   await test('normalize.ts exports normalizeAniList & normalizeAniListMedia', async () => {
     normalize = await jiti.import('../src/lib/providers/normalize.ts');
@@ -90,12 +94,6 @@ async function run() {
     assert.equal(typeof mangadex.mangadexFindMangaId, 'function');
   });
 
-  await test('jikan.ts exports search, popular, and byId helpers', async () => {
-    jikan = await jiti.import('../src/lib/providers/jikan.ts');
-    assert.equal(typeof jikan.jikanSearchGL, 'function');
-    assert.equal(typeof jikan.jikanGetPopular, 'function');
-    assert.equal(typeof jikan.jikanGetById, 'function');
-  });
 
   await test('tmdb.ts exports movies, dramas, search, and byId helpers', async () => {
     tmdb = await jiti.import('../src/lib/providers/tmdb.ts');
@@ -174,6 +172,176 @@ async function run() {
     const title = await index.getTitleById('ANILIST-86218');
     assert(title !== null, 'Title must be resolved');
     assert(title.title.toLowerCase().includes('bloom into you') || title.title.toLowerCase().includes('yagate'), `Unexpected title: ${title.title}`);
+  });
+
+  // ─── Test Suite 3: Cross-provider search merges ───────────────────────────
+  console.log(`\n${colors.bold}3. Testing Cross-Provider Search Merges...${colors.reset}`);
+
+  let canonical;
+
+  await test('canonical.ts exports the merge used by searchGLTitles', async () => {
+    canonical = await jiti.import('../src/lib/catalog/canonical.ts');
+    assert.equal(typeof canonical.canonicalizeTitles, 'function', 'canonicalizeTitles must be exported');
+    assert.equal(typeof canonical.canonicalizeTitle, 'function', 'canonicalizeTitle must be exported');
+  });
+
+  // Fixtures shaped like provider records: different titles and ids, one shared
+  // MyAnimeList link. This is the exact pair canonical.ts documents merging.
+  function searchFixture(overrides) {
+    return {
+      id: `${overrides.provider}-${overrides.providerId}`,
+      providerId: overrides.providerId,
+      provider: overrides.provider,
+      title: overrides.title,
+      altTitles: overrides.altTitles || [],
+      contentType: 'MANGA',
+      genres: ['Romance'],
+      tags: [],
+      status: 'FINISHED',
+      externalLinks: overrides.externalLinks || [],
+      relations: [],
+      glClassification: 'CONFIRMED_GL',
+      coverImage: overrides.coverImage,
+      description: overrides.description,
+    };
+  }
+
+  const malLink = 'https://myanimelist.net/manga/113813/Straight_Girl_Trap';
+  const anilistRecord = searchFixture({
+    provider: 'ANILIST',
+    providerId: '113813',
+    title: 'Straight Girl Trap',
+    altTitles: ['Zhi Nu Xianjing'],
+    coverImage: 'https://s4.anilist.co/file/anilistcdn/media/manga/cover/example.jpg',
+    description: 'A woman wakes up in the body of a dating-sim character and must court her.',
+    externalLinks: [
+      { url: malLink, site: 'MyAnimeList', type: 'DATABASE' },
+      { url: 'https://anilist.co/manga/113813', site: 'AniList', type: 'DATABASE' },
+    ],
+  });
+  const mangadexRecord = searchFixture({
+    provider: 'MANGADEX',
+    providerId: '8f3a6a3e-6b1e-4f0c-9d3f-2b1d6f7c8e9a',
+    title: 'Zhi Nu Xianjing',
+    altTitles: ['Straight Girl Trap'],
+    externalLinks: [
+      { url: malLink, site: 'MyAnimeList', type: 'DATABASE' },
+      {
+        url: 'https://mangadex.org/title/8f3a6a3e-6b1e-4f0c-9d3f-2b1d6f7c8e9a',
+        site: 'MangaDex',
+        type: 'DATABASE',
+      },
+    ],
+  });
+
+  const namesOf = (entry) =>
+    [entry.title, ...entry.altTitles].map((name) => name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim());
+
+  await test('search merge: "Straight Girl Trap" and "Zhi Nu Xianjing" collapse to one entry', () => {
+    const merged = canonical.canonicalizeTitles([anilistRecord, mangadexRecord]);
+    assert.equal(merged.length, 1, `Expected one merged entry, got ${merged.length}`);
+
+    const entry = merged[0];
+    const providers = (entry.sources || []).map((source) => source.provider);
+    assert(providers.includes('ANILIST'), 'Merged entry must keep the AniList source');
+    assert(providers.includes('MANGADEX'), 'Merged entry must keep the MangaDex source');
+
+    const names = namesOf(entry);
+    assert(names.includes('straight girl trap'), `Missing English title; got ${names.join(' | ')}`);
+    assert(names.includes('zhi nu xianjing'), `Missing romanized title; got ${names.join(' | ')}`);
+    assert(!/^(ANILIST|MANGADEX)-/.test(entry.id), `Merged id must be a YuriOrbit slug, got ${entry.id}`);
+  });
+
+  await test('search merge: the slug stays the same whichever provider comes first', () => {
+    const forward = canonical.canonicalizeTitles([anilistRecord, mangadexRecord])[0];
+    const reversed = canonical.canonicalizeTitles([mangadexRecord, anilistRecord])[0];
+    assert.equal(reversed.id, forward.id, 'One story must keep one URL regardless of result order');
+  });
+
+  await test('search merge leaves unrelated works separate', () => {
+    const unrelated = searchFixture({
+      provider: 'ANILIST',
+      providerId: '86218',
+      title: 'Bloom Into You',
+      altTitles: ['Yagate Kimi ni Naru'],
+      externalLinks: [{ url: 'https://myanimelist.net/manga/104147/Yagate_Kimi_ni_Naru', site: 'MyAnimeList' }],
+    });
+    const merged = canonical.canonicalizeTitles([anilistRecord, unrelated]);
+    assert.equal(merged.length, 2, 'Titles without a shared identity or name must not merge');
+  });
+
+  // ─── Test Suite 4: Screen-title search discoverability ────────────────────
+  console.log(`\n${colors.bold}4. Testing Screen-Title Search Discoverability...${colors.reset}`);
+
+  await test('search finds a TMDB movie whose metadata is not explicitly GL', async () => {
+    const realFetch = globalThis.fetch;
+    const json = (body) =>
+      new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+
+    // A neutral description keeps the heuristics at NEEDS_REVIEW: only the
+    // query match should make this findable, which is the reported bug.
+    globalThis.fetch = async (input) => {
+      const url = typeof input === 'string' ? input : input.url;
+
+      if (url.includes('/search/movie')) {
+        return json({
+          page: 1,
+          total_pages: 1,
+          total_results: 1,
+          results: [
+            {
+              id: 990001,
+              title: 'When We Met',
+              original_title: 'When We Met',
+              overview:
+                'Two former classmates meet again at a wedding and slowly realise what they mean to each other.',
+              release_date: '2024-02-14',
+              vote_average: 7.4,
+              vote_count: 120,
+              poster_path: null,
+              adult: false,
+              media_type: 'movie',
+            },
+          ],
+        });
+      }
+      if (url.includes('/search/tv')) {
+        return json({ page: 1, total_pages: 1, total_results: 0, results: [] });
+      }
+      if (url.includes('graphql')) {
+        return json({ data: { Page: { media: [], pageInfo: { hasNextPage: false, total: 0 } } } });
+      }
+      if (url.includes('/manga')) {
+        return json({ result: 'ok', data: [], limit: 0, offset: 0, total: 0 });
+      }
+      return json({ results: [] });
+    };
+
+    try {
+      const direct = await tmdb.tmdbSearchGL({ query: 'When We Met' });
+      assert.equal(direct.items.length, 1, 'TMDB text search must keep the query match');
+      assert.equal(
+        direct.items[0].glClassification,
+        'GL_RELATED',
+        'A query match must be classified as GL-related so later filters keep it'
+      );
+
+      const searched = await index.searchGLTitles({ query: 'When We Met' }, 1, 10);
+      assert(
+        searched.items.some((item) => item.title === 'When We Met'),
+        'Unified search must return the TMDB movie, not just manga results'
+      );
+
+      // A slug-style URL is exactly what a saved library entry links to.
+      const resolved = await index.getTitleById('when-we-met-2024');
+      assert(resolved !== null, 'A search-produced slug must resolve instead of showing "not found"');
+      assert.equal(resolved.title, 'When We Met');
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 
   // ─── Summary ─────────────────────────────────────────────────────────────

@@ -34,10 +34,11 @@ import {
 } from '@/types/content';
 import { searchGLTitles, tmdbPreferredRegion } from '@/lib/providers';
 import { getTitleAvailability } from '@/lib/content/watch-availability';
-import { readStoredWatchRegion, regionName } from '@/lib/content/watch-region';
+import { regionName } from '@/lib/content/watch-region';
 import { GL_ALLOWED_CLASSIFICATIONS } from '@/lib/providers/classify';
 import { cn, formatScore, getFallbackCover } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { useWatchRegion } from '@/hooks/useWatchRegion';
 
 interface MediaTypeTab {
   value: ContentType | 'ALL';
@@ -79,6 +80,7 @@ export function DiscoverPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [searchInput, setSearchInput] = useState(searchParams.get('q') || '');
   const streamingOnly = searchParams.get('streaming') === '1';
+  const watchRegion = useWatchRegion();
 
   const filter: ContentFilter = useMemo(() => ({
     query: searchParams.get('q') || undefined,
@@ -177,6 +179,7 @@ export function DiscoverPage() {
   const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [checkedCount, setCheckedCount] = useState(0);
   const availabilityChecked = useRef<Set<string>>(new Set());
+  const availabilityRegion = useRef<string | null | undefined>(undefined);
 
   // Availability needs one TMDB lookup per title, so check lazily through the
   // shared queue, then hide titles that are not streaming in the chosen region.
@@ -184,6 +187,16 @@ export function DiscoverPage() {
     if (!streamingOnly) {
       setCheckingAvailability(false);
       return;
+    }
+
+    // A new region invalidates every previous answer, including the set of
+    // titles already checked, so start the batch over instead of keeping stale
+    // visibility results from the old region.
+    if (availabilityRegion.current !== watchRegion) {
+      availabilityRegion.current = watchRegion;
+      availabilityChecked.current.clear();
+      setAvailability({});
+      setCheckedCount(0);
     }
 
     const pending = titles.filter((title) => !availabilityChecked.current.has(title.id));
@@ -213,12 +226,12 @@ export function DiscoverPage() {
     return () => {
       cancelled = true;
     };
-  }, [streamingOnly, titles]);
+  }, [streamingOnly, titles, watchRegion]);
 
   const visibleTitles = streamingOnly
     ? titles.filter((title) => availability[title.id] === true)
     : titles;
-  const streamingRegion = regionName(readStoredWatchRegion() || tmdbPreferredRegion());
+  const streamingRegion = regionName(watchRegion || tmdbPreferredRegion());
 
   // Build active filter tags for quick removal
   const activeFilters: { key: string; label: string }[] = [];
