@@ -143,6 +143,7 @@ export function ProfileEditor({ userId, profile, initialNeedsSetup, onSaved, onC
       avatarUrl: avatarUrl || null,
       isPublic,
       createdAt: profile?.createdAt ?? new Date().toISOString(),
+      watchRegion: profile?.watchRegion ?? null,
     });
   };
 

@@ -14,6 +14,8 @@ export interface Profile {
   avatarUrl: string | null;
   isPublic: boolean;
   createdAt: string | null;
+  /** ISO 3166-1 alpha-2 country for streaming availability; null = auto-detect. */
+  watchRegion: string | null;
 }
 
 export const PROFILE_SETUP_HINT =
@@ -41,6 +43,7 @@ interface ProfileRow {
   avatar_url: string | null;
   is_public: boolean;
   created_at: string | null;
+  watch_region: string | null;
 }
 
 function rowToProfile(row: ProfileRow): Profile {
@@ -52,6 +55,7 @@ function rowToProfile(row: ProfileRow): Profile {
     avatarUrl: row.avatar_url,
     isPublic: row.is_public,
     createdAt: row.created_at,
+    watchRegion: row.watch_region ?? null,
   };
 }
 
@@ -135,6 +139,29 @@ export async function saveMyProfile(
     if (error.code === '23505' || /duplicate key|unique/i.test(error.message)) {
       return { data: null, error: 'That username is already taken.', needsSetup: false };
     }
+    return {
+      data: null,
+      error: isMissingSchema(error) ? PROFILE_SETUP_HINT : error.message,
+      needsSetup: isMissingSchema(error),
+    };
+  }
+
+  return { data: null, error: null, needsSetup: false };
+}
+
+/** Persist the visitor's streaming region on their own profile row. */
+export async function saveWatchRegion(
+  userId: string,
+  region: string | null
+): Promise<ProfileResult<null>> {
+  if (!supabase) return { data: null, error: null, needsSetup: true };
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ watch_region: region, updated_at: new Date().toISOString() })
+    .eq('id', userId);
+
+  if (error) {
     return {
       data: null,
       error: isMissingSchema(error) ? PROFILE_SETUP_HINT : error.message,
