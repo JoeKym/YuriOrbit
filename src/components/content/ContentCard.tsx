@@ -47,8 +47,7 @@ export function ContentCard({ title, className, showAvailability = false }: Cont
 
   const contentFormatLabel = CONTENT_TYPE_LABELS[title.contentType] || title.contentType;
   const isWatchable = ['MOVIE', 'TV', 'DRAMA'].includes(title.contentType);
-  const canShowAvailability =
-    showAvailability && isWatchable && title.provider === 'TMDB' && !!title.providerId;
+  const canShowAvailability = showAvailability && isWatchable;
 
   // Chapter or episode label if available
   const countLabel = title.chapters
