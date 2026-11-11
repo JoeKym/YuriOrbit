@@ -221,15 +221,13 @@ export function ReaderPage() {
     return () => { cancelled = true; };
   }, [activeChapter?.id, pagesReloadKey]);
 
-  // Warm the next chapter once the current one is on screen.
+  // Warm the next chapter as soon as the current one is on screen. Pages are
+  // fetched in order, so the first pages of the next chapter are ready first.
   useEffect(() => {
     if (!activeChapter || loadingPages || pagesError || pageUrls.length === 0) return;
     const next = readableChapters[activeChapterIndex + 1];
     if (!next) return;
-    const timer = window.setTimeout(() => {
-      void prefetchChapterPages(next.id);
-    }, 1200);
-    return () => window.clearTimeout(timer);
+    void prefetchChapterPages(next.id);
   }, [activeChapter?.id, activeChapterIndex, loadingPages, pagesError, pageUrls.length, readableChapters]);
 
   const retryChapter = () => {
