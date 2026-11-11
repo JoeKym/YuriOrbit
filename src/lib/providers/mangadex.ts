@@ -499,18 +499,29 @@ export async function mangadexGetChapters(mangaId: string, page = 1, perPage = 1
   }
 }
 
+export type ChapterImageQuality = 'data-saver' | 'data';
+
 /**
  * Page-image URL lists are stable proxy URLs, so cache them for the session's
  * browsing window. This lets a prefetched next chapter render instantly.
+ * The cache is keyed by quality because the two variants use different files.
  */
 const PAGE_URL_TTL = 5 * 60 * 1000;
 const pageUrlCache = new Map<string, { at: number; urls: string[] }>();
 
-export function getCachedChapterPages(chapterId: string): string[] | null {
-  const cached = pageUrlCache.get(chapterId);
+function pageCacheKey(chapterId: string, quality: ChapterImageQuality): string {
+  return `${chapterId}:${quality}`;
+}
+
+export function getCachedChapterPages(
+  chapterId: string,
+  quality: ChapterImageQuality = 'data-saver'
+): string[] | null {
+  const key = pageCacheKey(chapterId, quality);
+  const cached = pageUrlCache.get(key);
   if (!cached) return null;
   if (Date.now() - cached.at > PAGE_URL_TTL) {
-    pageUrlCache.delete(chapterId);
+    pageUrlCache.delete(key);
     return null;
   }
   return cached.urls;
@@ -543,15 +554,21 @@ const prefetching = new Map<string, Promise<void>>();
  */
 export type PrefetchProgress = (warmed: number, total: number) => void;
 
+export interface PrefetchChapterOptions {
+  quality?: ChapterImageQuality;
+  maxPages?: number;
+  onProgress?: PrefetchProgress;
+}
+
 const progressListeners = new Map<string, Set<PrefetchProgress>>();
 
 export function prefetchChapterPages(
   chapterId: string,
-  maxPages?: number,
-  onProgress?: PrefetchProgress
+  options: PrefetchChapterOptions = {}
 ): Promise<void> {
   if (!isBrowser || !chapterId) return Promise.resolve();
-  const key = maxPages && maxPages > 0 ? `${chapterId}:${maxPages}` : chapterId;
+  const { quality = 'data-saver', maxPages, onProgress } = options;
+  const key = `${chapterId}:${quality}:${maxPages && maxPages > 0 ? maxPages : 'all'}`;
 
   if (onProgress) {
     const listeners = progressListeners.get(key) ?? new Set<PrefetchProgress>();
@@ -575,7 +592,7 @@ export function prefetchChapterPages(
   };
 
   const task = (async () => {
-    const all = await mangadexGetChapterPages(chapterId);
+    const all = await mangadexGetChapterPages(chapterId, quality);
     const urls = maxPages && maxPages > 0 ? all.slice(0, maxPages) : all;
     const total = urls.length;
     notify(0, total);
@@ -595,8 +612,11 @@ export function prefetchChapterPages(
 }
 
 /** Get the page image URLs for a specific MangaDex chapter. */
-export async function mangadexGetChapterPages(chapterId: string): Promise<string[]> {
-  const cached = getCachedChapterPages(chapterId);
+export async function mangadexGetChapterPages(
+  chapterId: string,
+  quality: ChapterImageQuality = 'data-saver'
+): Promise<string[]> {
+  const cached = getCachedChapterPages(chapterId, quality);
   if (cached) return cached;
 
   try {
@@ -606,17 +626,21 @@ export async function mangadexGetChapterPages(chapterId: string): Promise<string
       chapter: { hash: string; data: string[]; dataSaver: string[] };
     }>(`/at-home/server/${chapterId}`);
 
-    // Data-saver pages are much smaller and load considerably faster; fall
-    // back to the original files only when the chapter has no saver variant.
-    const useSaver = (resp.chapter.dataSaver?.length ?? 0) > 0;
-    const files = useSaver ? resp.chapter.dataSaver : resp.chapter.data ?? [];
+    // Data-saver pages are much smaller and load faster; originals are offered
+    // as an opt-in. Each variant falls back to the other if it is unavailable.
+    const hasSaver = (resp.chapter.dataSaver?.length ?? 0) > 0;
+    const hasOriginal = (resp.chapter.data?.length ?? 0) > 0;
+    const useSaver = quality === 'data-saver' ? hasSaver : !hasOriginal && hasSaver;
+    const files = useSaver ? resp.chapter.dataSaver ?? [] : resp.chapter.data ?? [];
     const urls = files.map(
       (file) =>
         `${MANGADEX_PAGE_BASE}?chapter=${encodeURIComponent(chapterId)}&hash=${encodeURIComponent(
           resp.chapter.hash
         )}&file=${encodeURIComponent(file)}${useSaver ? '&saver=1' : ''}`
     );
-    if (urls.length > 0) pageUrlCache.set(chapterId, { at: Date.now(), urls });
+    if (urls.length > 0) {
+      pageUrlCache.set(pageCacheKey(chapterId, quality), { at: Date.now(), urls });
+    }
     return urls;
   } catch {
     return [];

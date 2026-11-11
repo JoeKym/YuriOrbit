@@ -49,6 +49,7 @@ export {
   getCachedChapterPages,
   prefetchChapterPages,
 } from './mangadex';
+export type { ChapterImageQuality } from './mangadex';
 
 function isGL(title: ContentTitle): boolean {
   return GL_ALLOWED_CLASSIFICATIONS.includes(title.glClassification);
