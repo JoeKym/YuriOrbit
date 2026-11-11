@@ -192,6 +192,42 @@ async function run() {
     assert(Array.isArray(classify.GL_ALLOWED_CLASSIFICATIONS));
   });
 
+  await test('classifier uses strong GL evidence from a related franchise title', () => {
+    const relatedGL = classify.classifyGL({
+      genres: ['Comedy', 'Fantasy'],
+      tags: [{ name: 'Yuri', rank: 20 }],
+      description: 'A 4-koma side project by the manga adaptation artist.',
+      relations: [
+        {
+          relationType: 'PARENT',
+          genres: ['Fantasy', 'Romance'],
+          tags: [{ name: 'Yuri', rank: 96 }],
+        },
+      ],
+    });
+    assert.equal(relatedGL, 'GL_RELATED', 'A GL parent must admit its weak-tagged spin-off');
+
+    const withoutEvidence = classify.classifyGL({
+      genres: ['Comedy', 'Fantasy'],
+      tags: [{ name: 'Yuri', rank: 20 }],
+      description: 'A 4-koma side project by the manga adaptation artist.',
+    });
+    assert.equal(withoutEvidence, 'NEEDS_REVIEW', 'Weak tags alone must still need review');
+
+    const blRelated = classify.classifyGL({
+      genres: ['Comedy', 'Fantasy'],
+      description: 'A side project.',
+      relations: [
+        {
+          relationType: 'PARENT',
+          genres: ['Romance'],
+          tags: [{ name: "Boys' Love", rank: 96 }],
+        },
+      ],
+    });
+    assert.notEqual(blRelated, 'GL_RELATED', 'Related BL works must not be inherited as GL');
+  });
+
   await test('classifier ignores weak/spoiler Yuri tags and keeps explicit BL out', () => {
     const reZero = classify.classifyGL({
       genres: ['Action', 'Adventure', 'Drama', 'Fantasy', 'Romance'],

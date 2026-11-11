@@ -39,7 +39,7 @@ export interface AniListMedia {
   format?: string;
   source?: string;
   externalLinks?: { url: string; site: string; type?: string; icon?: string; color?: string }[];
-  relations?: { edges?: { relationType?: string; node?: { id: number; title?: { romaji?: string; english?: string }; coverImage?: { large?: string }; format?: string; type?: string } }[] };
+  relations?: { edges?: { relationType?: string; node?: { id: number; title?: { romaji?: string; english?: string }; coverImage?: { large?: string }; format?: string; type?: string; genres?: string[]; tags?: { name: string; rank?: number }[] } }[] };
   trailer?: { id: string; site: string };
   isAdult?: boolean;
   siteUrl?: string;
@@ -107,12 +107,21 @@ export function normalizeAniList(media: AniListMedia): ContentTitle {
   const genres = media.genres || [];
   const tags: Tag[] = (media.tags || []).map((t) => ({ id: t.id, name: t.name, rank: t.rank }));
 
+  const relationEvidence = (media.relations?.edges || [])
+    .filter((edge) => edge.node)
+    .map((edge) => ({
+      relationType: edge.relationType,
+      genres: edge.node!.genres,
+      tags: edge.node!.tags,
+    }));
+
   const glClassification: GLClassification = classifyGL({
     genres,
     tags,
     description: stripHtml(media.description),
     title,
     altTitles,
+    relations: relationEvidence,
   });
 
   const externalLinks: ExternalLink[] = (media.externalLinks || []).map((l) => ({
