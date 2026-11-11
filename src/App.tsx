@@ -31,10 +31,21 @@ import { AdminPage } from '@/pages/AdminPage';
 import { AuthPage } from '@/pages/AuthPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { AuthProvider } from '@/lib/auth/AuthContext';
+import { useLibrary } from '@/hooks/useLibrary';
+
+/**
+ * Runs the provider-reference upgrade once per signed-in browser session,
+ * independent of navigation. The library page no longer owns this work.
+ */
+function LibraryReferenceBackfill() {
+  useLibrary({ backfillProviderRefs: true });
+  return null;
+}
 
 export default function App() {
   return (
     <AuthProvider>
+      <LibraryReferenceBackfill />
       <BrowserRouter>
         <ScrollToTop />
         <TrafficTracker />
