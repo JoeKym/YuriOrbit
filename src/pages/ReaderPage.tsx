@@ -230,13 +230,14 @@ export function ReaderPage() {
     return () => { cancelled = true; };
   }, [activeChapter?.id, pagesReloadKey, quality]);
 
-  // Start the next chapter's opening pages as soon as the chapter list is
-  // known, without waiting for the current chapter's images to finish.
+  // Start the neighbouring chapters' opening pages as soon as the chapter
+  // list is known, without waiting for the current chapter's images to finish.
   useEffect(() => {
     if (!activeChapter) return;
     const next = readableChapters[activeChapterIndex + 1];
-    if (!next) return;
-    void prefetchChapterPages(next.id, { quality, maxPages: 3 });
+    const previous = readableChapters[activeChapterIndex - 1];
+    if (next) void prefetchChapterPages(next.id, { quality, maxPages: 3 });
+    if (previous) void prefetchChapterPages(previous.id, { quality, maxPages: 3 });
   }, [activeChapter?.id, activeChapterIndex, readableChapters, quality]);
 
   // Once the current chapter is on screen, warm the rest of the next chapter
