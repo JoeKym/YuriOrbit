@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Play, ExternalLink, ChevronLeft, Star, Calendar, Globe } from 'lucide-react';
 import type { ContentTitle, ExternalLink as ExternalLinkInfo } from '@/types/content';
 import { getTitleById, tmdbGetTrailerKey } from '@/lib/providers';
+import { canonicalSlugFor } from '@/lib/catalog/slug-redirects';
 import { StreamingProviders } from '@/components/site/StreamingProviders';
 import type { StreamingProvidersStatus } from '@/components/site/StreamingProviders';
 import { CONTENT_TYPE_LABELS } from '@/types/content';
@@ -27,6 +28,7 @@ function isStreamingLink(link: ExternalLinkInfo): boolean {
 
 export function WatchPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [title, setTitle] = useState<ContentTitle | null>(null);
   const [loading, setLoading] = useState(true);
   const [tmdbTrailerId, setTmdbTrailerId] = useState<string | null>(null);
@@ -52,6 +54,17 @@ export function WatchPage() {
       try {
         const result = await getTitleById(id);
         if (cancelled) return;
+
+        // A merged story may have moved; keep one canonical URL per story.
+        if (result) {
+          const canonical = await canonicalSlugFor(result.id);
+          if (!cancelled && canonical !== id) {
+            const suffix = '';
+            navigate(`/watch/${canonical}${suffix}`, { replace: true });
+            return;
+          }
+        }
+
         setTitle(result);
       } catch {
         if (!cancelled) setTitle(null);

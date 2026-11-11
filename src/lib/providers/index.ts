@@ -37,6 +37,7 @@ import { findRegisteredBySlug, getRegisteredTitle, registerTitles } from '@/lib/
 import { fetchContentModeration, filterModeratedTitles } from '@/lib/moderation/contentModeration';
 import { isLegacyProviderId, slugToQuery, slugifyTitle, titleKey } from '@/lib/catalog/identity';
 import { getSavedRef } from '@/lib/content/saved-refs';
+import { canonicalSlugFor, rememberSlugAlias } from '@/lib/catalog/slug-redirects';
 
 export { classifyGL, filterGL, glConfidence, GL_ALLOWED_CLASSIFICATIONS } from './classify';
 export { normalizeAniList } from './normalize';
@@ -351,9 +352,13 @@ async function resolveSlug(slug: string): Promise<ContentTitle | null> {
     result.items.find((item) => item.id === slug);
 
   if (match) {
-    const resolved = { ...match, id: slug };
-    registerTitles([resolved]);
-    return resolved;
+    // Keep the canonical id: pages redirect an old alias to it, and the shared
+    // table records the mapping so other devices do the same.
+    if (match.id !== slug) {
+      rememberSlugAlias(slug, match.id, match.provider, match.providerId);
+    }
+    registerTitles([match]);
+    return match;
   }
 
   const wantedKey = titleKey(query);
@@ -363,9 +368,11 @@ async function resolveSlug(slug: string): Promise<ContentTitle | null> {
       item.altTitles.some((alt) => titleKey(alt) === wantedKey)
   );
   if (loose) {
-    const resolved = { ...loose, id: slug };
-    registerTitles([resolved]);
-    return resolved;
+    if (loose.id !== slug) {
+      rememberSlugAlias(slug, loose.id, loose.provider, loose.providerId);
+    }
+    registerTitles([loose]);
+    return loose;
   }
 
   return null;
@@ -388,6 +395,17 @@ export async function getTitleById(id: string): Promise<ContentTitle | null> {
     const canonical = canonicalizeTitle(raw);
     registerTitles([canonical]);
     return canonical;
+  }
+
+  // A merged story may have moved to a canonical slug on another device.
+  const canonicalSlug = await canonicalSlugFor(trimmed);
+  if (canonicalSlug !== trimmed) {
+    const redirected =
+      getRegisteredTitle(canonicalSlug) ?? findRegisteredBySlug(canonicalSlug);
+    if (redirected) return redirected;
+
+    const resolved = await resolveSlug(canonicalSlug);
+    if (resolved) return resolved;
   }
 
   // Saved titles carry the upstream reference, so resolve them exactly before

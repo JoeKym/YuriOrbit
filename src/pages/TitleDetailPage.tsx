@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Heart, BookOpen, Play, Share2, Flag, ExternalLink, Star,
   ChevronLeft, Calendar, Globe, Layers, Hash, TrendingUp, Users,
@@ -9,6 +9,7 @@ import type { ContentTitle, LibraryStatus } from '@/types/content';
 import { CONTENT_TYPE_LABELS, LIBRARY_STATUS_LABELS } from '@/types/content';
 import { getStatusDisplay, getLibraryStatusLabel } from '@/lib/utils/status';
 import { getTitleById } from '@/lib/providers';
+import { canonicalSlugFor } from '@/lib/catalog/slug-redirects';
 import { useLibrary } from '@/hooks/useLibrary';
 import { cn, formatScore, getFallbackCover, getFallbackBanner, getStatusLabel, getStatusColor } from '@/lib/utils/format';
 import { useMaturity } from '@/hooks/useMaturity';
@@ -25,6 +26,7 @@ const STATUSES: LibraryStatus[] = ['CURRENT', 'PLANNED', 'COMPLETED', 'ON_HOLD',
 
 export function TitleDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [title, setTitle] = useState<ContentTitle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -58,6 +60,17 @@ export function TitleDetailPage() {
       try {
         const result = await getTitleById(id);
         if (cancelled) return;
+
+        // A merged story may have moved; keep one canonical URL per story.
+        if (result) {
+          const canonical = await canonicalSlugFor(result.id);
+          if (!cancelled && canonical !== id) {
+            const suffix = '';
+            navigate(`/title/${canonical}${suffix}`, { replace: true });
+            return;
+          }
+        }
+
         setTitle(result);
       } catch {
         if (!cancelled) setError(true);
