@@ -28,6 +28,7 @@
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://yuriorbit.pages.dev/" />
     <meta property="og:site_name" content="YuriOrbit" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:title" content="YuriOrbit — Your World of Girls' Love" />
     <meta property="og:description" content="Discover, track, and enjoy curated Yuri and Girls' Love anime, manga, manhwa, webtoons, light novels, and live-action dramas from around the globe." />
     <meta property="og:image" content="https://yuriorbit.pages.dev/android-chrome-512x512.png" />
@@ -59,9 +60,74 @@
       }
     }
     </script>
+    <!--
+      Static shell for crawlers and no-JS visitors. React replaces this on mount,
+      so the real app UI (and its own headings) still takes over in the browser.
+    -->
+    <style>
+      .boot-fallback {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        padding: 3rem 1.25rem;
+        text-align: center;
+        background: #0d0a14;
+        color: #f6f4fb;
+        font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+      }
+      .boot-fallback h1 {
+        margin: 0;
+        max-width: 34rem;
+        font-size: clamp(1.75rem, 5vw, 2.75rem);
+        line-height: 1.15;
+        font-weight: 600;
+      }
+      .boot-fallback p {
+        margin: 0;
+        max-width: 38rem;
+        color: #b6b0c6;
+        font-size: 0.95rem;
+        line-height: 1.6;
+      }
+      .boot-fallback nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 1.25rem;
+        justify-content: center;
+        font-size: 0.875rem;
+      }
+      .boot-fallback a {
+        color: #f7a8c8;
+        text-decoration: none;
+      }
+      .boot-fallback a:hover {
+        text-decoration: underline;
+      }
+    </style>
   </head>
   <body class="bg-ink-950 text-ink-50 selection:bg-rose-500/30 selection:text-rose-200">
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot-fallback">
+        <h1>YuriOrbit — Your World of Girls' Love</h1>
+        <p>
+          Discover, track, and enjoy curated Yuri and Girls' Love anime, manga, manhwa, webtoons, light novels, and
+          live-action dramas from around the globe.
+        </p>
+        <nav aria-label="Browse the catalogue">
+          <a href="/discover">Discover</a>
+          <a href="/anime">GL Anime</a>
+          <a href="/manga">GL Manga</a>
+          <a href="/manhwa">GL Manhwa</a>
+          <a href="/webtoons">GL Webtoons</a>
+          <a href="/novels">GL Novels</a>
+          <a href="/dramas">GL Dramas</a>
+          <a href="/movies">GL Movies</a>
+        </nav>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
