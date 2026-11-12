@@ -42,17 +42,23 @@ export function ContentCard({ title, className, showAvailability = false }: Cont
         : { label: '18+', className: 'border-rose-500/50 bg-rose-600/30 text-rose-100' };
 
   const statusInfo = getStatusDisplay(title.status, title.contentType);
-  const popularFormatted = formatCount(title.popularity);
   const primaryGenre = title.genres && title.genres.length > 0 ? title.genres[0] : null;
 
   const contentFormatLabel = CONTENT_TYPE_LABELS[title.contentType] || title.contentType;
   const isWatchable = ['MOVIE', 'TV', 'DRAMA'].includes(title.contentType);
+
+  // TMDB list responses carry no release status, and its popularity score is not
+  // a readership figure — screen titles show neither rather than "UNKNOWN" and
+  // "2 readers".
+  const statusLabel = title.status === 'UNKNOWN' ? null : statusInfo.label;
+  const popularFormatted = isWatchable ? null : formatCount(title.popularity);
   const canShowAvailability = showAvailability && isWatchable;
 
-  // Chapter or episode label if available
+  // Chapter or episode label if available. Films report a single "episode",
+  // which is just noise on the card.
   const countLabel = title.chapters
     ? `Ch. ${title.chapters}`
-    : title.episodes
+    : title.contentType !== 'MOVIE' && title.episodes
       ? `${title.episodes} Ep.`
       : null;
 
@@ -144,23 +150,23 @@ export function ContentCard({ title, className, showAvailability = false }: Cont
           {/* Status indicator, then the chapter/episode and genre group, which
               truncates as a unit so a word is never sliced by the card edge. */}
           <div className="mb-1 flex min-w-0 items-center gap-1.5 text-[10px] font-medium text-ink-300">
-            {statusInfo.label && (
+            {statusLabel && (
               <span className="flex shrink-0 items-center gap-1">
                 <span className={cn('h-1.5 w-1.5 rounded-full', statusInfo.dotClass)} />
-                <span className="text-ink-300">{statusInfo.label}</span>
+                <span className="text-ink-300">{statusLabel}</span>
               </span>
             )}
             {(countLabel || primaryGenre) && (
               <span className="flex min-w-0 items-center gap-1.5">
                 {countLabel && (
                   <>
-                    {statusInfo.label && <span className="shrink-0 text-ink-600">·</span>}
+                    {statusLabel && <span className="shrink-0 text-ink-600">·</span>}
                     <span className="shrink-0 text-ink-400">{countLabel}</span>
                   </>
                 )}
                 {primaryGenre && (
                   <>
-                    {(statusInfo.label || countLabel) && (
+                    {(statusLabel || countLabel) && (
                       <span className="shrink-0 text-ink-600">·</span>
                     )}
                     <span className="min-w-0 truncate font-semibold text-rose-400">{primaryGenre}</span>
@@ -199,10 +205,10 @@ export function ContentCard({ title, className, showAvailability = false }: Cont
                   {g}
                 </span>
               ))}
-              {statusInfo.label && (
+              {statusLabel && (
                 <span className={cn('rounded-full border px-2 py-0.5 text-[9px] font-semibold flex items-center gap-1', statusInfo.bgClass)}>
                   <span className={cn('h-1 w-1 rounded-full', statusInfo.dotClass)} />
-                  {statusInfo.label}
+                  {statusLabel}
                 </span>
               )}
             </div>
