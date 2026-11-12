@@ -11,6 +11,7 @@
 import type { MaturityLevel } from '@/types/content';
 import { MATURITY_LEVELS } from '@/types/content';
 import { clearProviderCache } from '@/lib/providers/cache';
+import { clearCatalogCount } from '@/lib/catalog/catalog-count';
 import { maturityRank, requiresAdultConfirmation } from './maturity';
 
 const LEVEL_KEY = 'yuriorbit_maturity_level';
@@ -85,8 +86,10 @@ export function setMaturityLevel(next: MaturityLevel): boolean {
   }
 
   // Provider queries are built per level (adult flags, content ratings), so
-  // anything cached under the previous level must go.
+  // anything cached under the previous level must go — including the headline
+  // "titles catalogued" count, which is measured at this level.
   clearProviderCache();
+  clearCatalogCount();
   emit();
   return true;
 }
@@ -99,6 +102,7 @@ export function resetMaturityPreference(): void {
     // ignore
   }
   clearProviderCache();
+  clearCatalogCount();
   emit();
 }
 

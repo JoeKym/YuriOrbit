@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { AlertCircle, RotateCcw, Search, SlidersHorizontal, X } from 'lucide-react';
 import { ContentCard, ContentCardSkeleton } from '@/components/content/ContentCard';
@@ -8,7 +8,7 @@ import { searchGLTitles } from '@/lib/providers';
 import { usePaginatedTitles } from '@/hooks/usePaginatedTitles';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { useStatusCounts } from '@/hooks/useStatusCounts';
-import { readListState, writeListState } from '@/lib/catalog/list-state';
+import { useListRestoreEffects, useRestoredPageDepth } from '@/hooks/useListRestore';
 import { PageHeading } from '@/components/layout/PageHeading';
 import {
   ActiveFilterBar,
@@ -89,9 +89,7 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
   );
 
   const listKey = `${contentType}|${status}|${sort}`;
-  const mountKey = useRef(listKey);
-  const remembered = useRef(readListState(listKey));
-  const scrollRestored = useRef(false);
+  const restorePages = useRestoredPageDepth(listKey);
 
   const feed = usePaginatedTitles(
     (page) =>
@@ -106,43 +104,11 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
       ),
     listKey,
     // Only the filter combination the visitor left restores its page depth;
-    // changing a filter starts from page 1.
-    { initialPages: listKey === mountKey.current ? remembered.current.pages : 1 }
+    // changing a filter starts from page 1 (handled inside the hook).
+    { initialPages: restorePages }
   );
 
-  const pageRef = useRef(feed.page);
-  pageRef.current = feed.page;
-
-  // Remember how many pages are open for this filter combination. Skip while the
-  // feed is still loading, otherwise the page 1 placeholder would overwrite the
-  // depth that is about to be restored.
-  useEffect(() => {
-    if (feed.loading) return;
-    writeListState(listKey, { pages: feed.page, scrollY: readListState(listKey).scrollY });
-  }, [listKey, feed.page, feed.loading]);
-
-  // Save the reading position when leaving or backgrounding the page.
-  useEffect(() => {
-    const save = () => {
-      writeListState(listKey, { pages: pageRef.current, scrollY: window.scrollY });
-    };
-    window.addEventListener('pagehide', save);
-    return () => {
-      window.removeEventListener('pagehide', save);
-      save();
-    };
-  }, [listKey]);
-
-  // ScrollToTop resets the window on navigation; put the visitor back once the
-  // remembered pages have rendered.
-  useEffect(() => {
-    if (feed.loading || scrollRestored.current) return;
-    scrollRestored.current = true;
-    const target = remembered.current.scrollY;
-    if (target > 0) {
-      requestAnimationFrame(() => window.scrollTo({ top: target }));
-    }
-  }, [feed.loading]);
+  useListRestoreEffects({ listKey, pages: feed.page, loading: feed.loading });
 
   const displayed = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -235,9 +201,14 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
         </aside>
 
         <div className="min-w-0">
-          {hasFilters && (
-            <ActiveFilterBar count={activeFilterCount} onClearAll={resetFilters}>
-              {query.trim() && (
+          {/* Always present, so the summary is visible on load whether or not
+              anything is filtered. */}
+          <ActiveFilterBar
+            count={activeFilterCount}
+            onClearAll={resetFilters}
+            emptyLabel={`None — showing every ${title.toLowerCase()} title, most popular first.`}
+          >
+            {query.trim() && (
                 <ActiveFilterChip
                   label={`Search: ${query.trim()}`}
                   onRemove={() => setFilterParam('q', undefined)}
@@ -255,8 +226,7 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
                   onRemove={() => setFilterParam('sort', undefined)}
                 />
               )}
-            </ActiveFilterBar>
-          )}
+          </ActiveFilterBar>
 
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs text-ink-400">

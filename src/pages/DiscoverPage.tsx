@@ -38,7 +38,7 @@ import { cn, formatScore, getFallbackCover } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { useWatchRegion } from '@/hooks/useWatchRegion';
 import { useStatusCounts } from '@/hooks/useStatusCounts';
-import { MAX_RESTORED_PAGES, readListState, writeListState } from '@/lib/catalog/list-state';
+import { useListRestoreEffects, useRestoredPageDepth } from '@/hooks/useListRestore';
 import {
   ActiveFilterBar,
   ActiveFilterChip,
@@ -74,6 +74,12 @@ const STATUS_OPTIONS: { value: ReleaseStatus | 'ALL'; label: string }[] = [
 ];
 
 const STATUS_VALUES = STATUS_OPTIONS.map((option) => option.value);
+
+/**
+ * Keys where "ALL" is a real choice, not "no filter". `gl=ALL` means include
+ * subtext / GL-adjacent titles, so it must survive into the URL.
+ */
+const KEYS_THAT_KEEP_ALL = new Set(['gl']);
 
 /** Stable key for the current filter combination, regardless of param order. */
 function canonicalQuery(params: URLSearchParams): string {
@@ -111,8 +117,9 @@ export function DiscoverPage() {
 
   const updateFilter = useCallback((key: string, value: string | undefined) => {
     const next = new URLSearchParams(searchParams);
-    if (value && value !== 'ALL' && value.trim() !== '') {
-      next.set(key, value);
+    const keep = Boolean(value && value.trim() !== '' && (value !== 'ALL' || KEYS_THAT_KEEP_ALL.has(key)));
+    if (keep) {
+      next.set(key, value as string);
     } else {
       next.delete(key);
     }
@@ -139,15 +146,10 @@ export function DiscoverPage() {
   const [reloadKey, setReloadKey] = useState(0);
 
   const listKey = `discover|${canonicalQuery(searchParams)}`;
-  const mountKey = useRef(listKey);
-  const remembered = useRef(readListState(listKey));
-  const scrollRestored = useRef(false);
+  const pagesToLoad = useRestoredPageDepth(listKey);
 
   useEffect(() => {
     let cancelled = false;
-    // Only the filter combination the visitor left restores its depth.
-    const restorePages = listKey === mountKey.current ? remembered.current.pages : 1;
-    const pagesToLoad = Math.min(Math.max(restorePages, 1), MAX_RESTORED_PAGES);
 
     const keepGL = (items: ContentTitle[]) =>
       items.filter((t) =>
@@ -190,38 +192,7 @@ export function DiscoverPage() {
     };
   }, [filter, reloadKey]);
 
-  const pageRef = useRef(page);
-  pageRef.current = page;
-
-  // Remember how many pages are open for this filter combination. Skip while
-  // loading so the placeholder depth cannot overwrite what is being restored.
-  useEffect(() => {
-    if (loading) return;
-    writeListState(listKey, { pages: page, scrollY: readListState(listKey).scrollY });
-  }, [listKey, page, loading]);
-
-  // Save the reading position when leaving or backgrounding the page.
-  useEffect(() => {
-    const save = () => {
-      writeListState(listKey, { pages: pageRef.current, scrollY: window.scrollY });
-    };
-    window.addEventListener('pagehide', save);
-    return () => {
-      window.removeEventListener('pagehide', save);
-      save();
-    };
-  }, [listKey]);
-
-  // ScrollToTop resets the window on navigation; put the visitor back once the
-  // remembered pages have rendered.
-  useEffect(() => {
-    if (loading || scrollRestored.current) return;
-    scrollRestored.current = true;
-    const target = remembered.current.scrollY;
-    if (target > 0) {
-      requestAnimationFrame(() => window.scrollTo({ top: target }));
-    }
-  }, [loading]);
+  useListRestoreEffects({ listKey, pages: page, loading });
 
   const loadMore = async () => {
     if (loadingMore || !hasNextPage) return;
@@ -431,7 +402,7 @@ export function DiscoverPage() {
                   <FilterRow
                     label="Confirmed GL only"
                     active={filter.classification !== 'ALL'}
-                    onClick={() => updateFilter('gl', 'CONFIRMED_GL')}
+                    onClick={() => updateFilter('gl', undefined)}
                   />
                   <FilterRow
                     label="Include subtext & GL-adjacent"
