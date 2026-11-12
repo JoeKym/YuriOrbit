@@ -134,8 +134,30 @@ async function postAnilistQuery(endpoint: string, body: string): Promise<unknown
   return json.data;
 }
 
+/**
+ * Statuses worth retrying: AniList throttles with 429 and occasionally returns
+ * a transient 5xx. Without a retry the caller sees a rejection, `allSettled`
+ * swallows it, and a whole row of the homepage silently disappears.
+ */
+const RETRYABLE_STATUSES = new Set([429, 502, 503, 504]);
+const MAX_ATTEMPTS = 3;
+
 async function anilistQuery(query: string, variables: Record<string, unknown>): Promise<unknown> {
   const body = JSON.stringify({ query, variables });
+
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await submitAnilistQuery(body);
+    } catch (error) {
+      const status = (error as AnilistError).status;
+      if (attempt >= MAX_ATTEMPTS || status === undefined || !RETRYABLE_STATUSES.has(status)) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 700 * attempt));
+      await paceAnilistRequest();
+    }
+  }
+}
+
+async function submitAnilistQuery(body: string): Promise<unknown> {
 
   if (ANILIST_PROXY) {
     try {
@@ -169,7 +191,7 @@ interface MediaFilterVars {
   seasonYear?: number;
   search?: string;
   countryOfOrigin?: string;
-  /** `false` hides adult titles, `null` requests everything. */
+  /** `false` hides adult titles; leaving it out requests everything. */
   isAdult?: boolean | null;
 }
 
@@ -178,8 +200,15 @@ interface MediaFilterVars {
  * setting: `false` for Safe/Suggestive, `null` (no filter) once erotica and
  * pornographic content is allowed.
  */
-function adultFilter(): boolean | null {
-  return maturityRank(getMaturityLevel()) >= maturityRank('EROTICA') ? null : false;
+/**
+ * `false` hides adult titles. Above SUGGESTIVE no value is sent at all.
+ *
+ * Sending `isAdult: null` looks like "no preference" but AniList treats it as a
+ * filter that matches nothing — anime, novels and dramas came back empty for
+ * every visitor on the erotica and pornographic levels.
+ */
+function adultFilter(): boolean | undefined {
+  return maturityRank(getMaturityLevel()) >= maturityRank('EROTICA') ? undefined : false;
 }
 
 function buildPageQuery(sortEnum: string): string {
@@ -201,7 +230,12 @@ const ANILIST_TOTAL_CAP = 5000;
 
 async function fetchFiltered(vars: MediaFilterVars, sortEnum: string): Promise<PaginatedResult> {
   const query = buildPageQuery(sortEnum);
-  const data = await anilistQuery(query, { ...vars, isAdult: vars.isAdult ?? adultFilter() } as unknown as Record<string, unknown>) as {
+  const adult = vars.isAdult ?? adultFilter();
+  const payload: Record<string, unknown> = { ...vars };
+  if (adult === undefined) delete payload.isAdult;
+  else payload.isAdult = adult;
+
+  const data = await anilistQuery(query, payload) as {
     Page: { pageInfo: { hasNextPage: boolean; total: number; currentPage: number; perPage: number }, media: unknown[] }
   };
   const items = (data.Page.media || []).map((m) => normalizeAniList(m as Parameters<typeof normalizeAniList>[0]));
@@ -384,7 +418,7 @@ export async function searchGLByCreator(query: string, perPage = 3): Promise<Cre
       for (const media of [...(member.manga || []), ...(member.anime || [])]) {
         const normalized = normalizeAniList(media as Parameters<typeof normalizeAniList>[0]);
         if (!GL_ALLOWED_CLASSIFICATIONS.includes(normalized.glClassification)) continue;
-        if (normalized.isAdult && adultFilter() !== null) continue;
+        if (normalized.isAdult && adultFilter() === false) continue;
         if (seen.has(normalized.id)) continue;
         seen.add(normalized.id);
         titles.push({ ...normalized, creators: [name] });

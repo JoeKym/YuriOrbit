@@ -78,7 +78,7 @@ export function CatalogStats({ className }: { className?: string }) {
         label="Titles catalogued"
         hint={
           titleCount !== null
-            ? 'Live provider total across all formats'
+            ? 'Provider total for your content filter, all formats'
             : counting
               ? 'Counting live catalogue…'
               : 'Provider counts unavailable right now'
