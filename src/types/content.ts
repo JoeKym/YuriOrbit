@@ -155,6 +155,11 @@ export interface PaginatedResult {
    * and must not be shown as a figure.
    */
   totalCapped?: boolean;
+  /**
+   * Largest capped total seen across providers — the real figure is at least
+   * this. Used where "5,000+" is a more honest answer than a blank.
+   */
+  totalFloor?: number;
   hasNextPage: boolean;
 }
 

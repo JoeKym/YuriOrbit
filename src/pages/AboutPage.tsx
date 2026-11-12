@@ -4,6 +4,7 @@ import { usePageMeta } from '@/hooks/usePageMeta';
 import { PageHeading } from '@/components/layout/PageHeading';
 import { CatalogStats } from '@/components/site/CatalogStats';
 import { HowItWorksFlow } from '@/components/site/HowItWorksFlow';
+import { FormatDistribution } from '@/components/site/FormatDistribution';
 
 export function AboutPage() {
   usePageMeta({
@@ -40,6 +41,8 @@ export function AboutPage() {
       </div>
 
       <CatalogStats />
+
+      <FormatDistribution />
 
       <HowItWorksFlow />
 
