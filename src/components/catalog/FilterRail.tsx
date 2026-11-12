@@ -53,13 +53,23 @@ export function ActiveFilterChip({ label, onRemove }: { label: string; onRemove:
 export function ActiveFilterBar({
   children,
   onClearAll,
+  count,
 }: {
   children: ReactNode;
   onClearAll?: () => void;
+  /** Number applied, shown as a badge so the strip still reads on small screens. */
+  count?: number;
 }) {
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-ink-800 bg-ink-900/40 px-3 py-2">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-500">Active filters</span>
+      <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-500">
+        Active filters
+        {typeof count === 'number' && count > 0 && (
+          <span className="rounded-full bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-rose-200">
+            {count}
+          </span>
+        )}
+      </span>
       {children}
       {onClearAll && (
         <button

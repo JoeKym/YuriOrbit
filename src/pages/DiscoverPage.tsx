@@ -453,6 +453,19 @@ export function DiscoverPage() {
           </aside>
 
           <div className="min-w-0">
+            {/* Applied filters sit above the toolbar so they are visible on load. */}
+            {activeFilters.length > 0 && (
+              <ActiveFilterBar count={activeFilters.length} onClearAll={clearAllFilters}>
+                {activeFilters.map((f) => (
+                  <ActiveFilterChip
+                    key={f.key}
+                    label={f.label}
+                    onRemove={() => updateFilter(f.key, undefined)}
+                  />
+                ))}
+              </ActiveFilterBar>
+            )}
+
             {/* Toolbar: mobile filter toggle, active chips, view mode */}
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -509,18 +522,6 @@ export function DiscoverPage() {
                 </div>
               </div>
             </div>
-
-            {activeFilters.length > 0 && (
-              <ActiveFilterBar onClearAll={clearAllFilters}>
-                {activeFilters.map((f) => (
-                  <ActiveFilterChip
-                    key={f.key}
-                    label={f.label}
-                    onRemove={() => updateFilter(f.key, undefined)}
-                  />
-                ))}
-              </ActiveFilterBar>
-            )}
 
             {streamingOnly && checkingAvailability && (
               <div className="mb-4 flex items-center gap-2 rounded-lg border border-ink-800 bg-ink-900/60 px-3 py-2 text-xs text-ink-300">
