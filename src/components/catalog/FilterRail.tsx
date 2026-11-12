@@ -35,6 +35,45 @@ export function FilterRow({
   );
 }
 
+export function ActiveFilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onRemove}
+      className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-[11px] text-rose-200 transition-colors hover:border-rose-400/50 hover:bg-rose-500/15"
+    >
+      {label}
+      <X className="h-3 w-3 opacity-70" />
+      <span className="sr-only">Remove filter</span>
+    </button>
+  );
+}
+
+/** The "ACTIVE FILTERS" strip shown above a result grid. */
+export function ActiveFilterBar({
+  children,
+  onClearAll,
+}: {
+  children: ReactNode;
+  onClearAll?: () => void;
+}) {
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-ink-800 bg-ink-900/40 px-3 py-2">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-500">Active filters</span>
+      {children}
+      {onClearAll && (
+        <button
+          type="button"
+          onClick={onClearAll}
+          className="ml-auto text-[11px] font-medium text-ink-400 transition-colors hover:text-rose-300"
+        >
+          Clear all
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function FilterGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="border-t border-ink-800/70 pt-3">

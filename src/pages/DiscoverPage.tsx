@@ -37,7 +37,13 @@ import { cn, formatScore, getFallbackCover } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { useWatchRegion } from '@/hooks/useWatchRegion';
 import { useStatusCounts } from '@/hooks/useStatusCounts';
-import { FilterGroup, FilterPanel, FilterRow } from '@/components/catalog/FilterRail';
+import {
+  ActiveFilterBar,
+  ActiveFilterChip,
+  FilterGroup,
+  FilterPanel,
+  FilterRow,
+} from '@/components/catalog/FilterRail';
 
 interface MediaTypeTab {
   value: ContentType | 'ALL';
@@ -468,28 +474,6 @@ export function DiscoverPage() {
                   )}
                 </button>
 
-                {/* Active Filter Pills */}
-                {activeFilters.map((f) => (
-                  <span key={f.key} className="chip chip-active">
-                    <span>{f.label}</span>
-                    <button
-                      onClick={() => updateFilter(f.key, undefined)}
-                      className="hover:text-rose-100 transition-colors"
-                      aria-label={`Remove filter ${f.label}`}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
-
-                {activeFilters.length > 0 && (
-                  <button
-                    onClick={clearAllFilters}
-                    className="btn-ghost py-1 px-2 text-xs text-rose-400 hover:text-rose-300"
-                  >
-                    Clear all
-                  </button>
-                )}
               </div>
 
               <div className="ml-auto flex items-center gap-3">
@@ -525,6 +509,18 @@ export function DiscoverPage() {
                 </div>
               </div>
             </div>
+
+            {activeFilters.length > 0 && (
+              <ActiveFilterBar onClearAll={clearAllFilters}>
+                {activeFilters.map((f) => (
+                  <ActiveFilterChip
+                    key={f.key}
+                    label={f.label}
+                    onRemove={() => updateFilter(f.key, undefined)}
+                  />
+                ))}
+              </ActiveFilterBar>
+            )}
 
             {streamingOnly && checkingAvailability && (
               <div className="mb-4 flex items-center gap-2 rounded-lg border border-ink-800 bg-ink-900/60 px-3 py-2 text-xs text-ink-300">
