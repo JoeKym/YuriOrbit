@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ChevronRight, AlertCircle, RotateCcw, SlidersHorizontal, Search } from 'lucide-react';
 import type { ContentTitle } from '@/types/content';
 import { CONTENT_TYPE_LABELS, GENRE_LIST } from '@/types/content';
@@ -42,6 +42,17 @@ const STATUS_OPTIONS = [
   { value: 'NOT_YET_RELEASED', label: 'Upcoming' },
 ];
 
+const STATUS_VALUES = STATUS_OPTIONS.map((option) => option.value);
+
+// URL values are validated on read, so a hand-edited or stale link degrades to
+// the default instead of showing an empty grid.
+const parseGenre = (value: string | null) =>
+  value && FEATURED_GENRES.includes(value) ? value : 'ALL';
+const parseFormat = (value: string | null) =>
+  value && value in CONTENT_TYPE_LABELS ? value : 'ALL';
+const parseStatus = (value: string | null) =>
+  value && STATUS_VALUES.includes(value) ? value : 'ALL';
+
 export function GenresPage() {
   usePageMeta({
     title: 'Genres',
@@ -54,12 +65,33 @@ export function GenresPage() {
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
-  // Page-level filters (alternate to just browsing sections)
+  // Filters live in the query string so a genre/format choice survives
+  // navigation, refresh and sharing.
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
-  const [query, setQuery] = useState('');
-  const [selectedGenre, setSelectedGenre] = useState<string>('ALL');
-  const [formatFilter, setFormatFilter] = useState<string>('ALL');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [searchInput, setSearchInput] = useState(searchParams.get('q') ?? '');
+  const query = searchInput;
+  const selectedGenre = parseGenre(searchParams.get('genre'));
+  const formatFilter = parseFormat(searchParams.get('format'));
+  const statusFilter = parseStatus(searchParams.get('status'));
+
+  // Mirror URL changes that come from elsewhere (back/forward, chip removal).
+  useEffect(() => {
+    setSearchInput(searchParams.get('q') ?? '');
+  }, [searchParams]);
+
+  const setFilterParam = useCallback(
+    (key: string, value: string | undefined, replace = false) => {
+      const next = new URLSearchParams(searchParams);
+      if (value && value !== 'ALL' && value.trim() !== '') {
+        next.set(key, value);
+      } else {
+        next.delete(key);
+      }
+      setSearchParams(next, { replace });
+    },
+    [searchParams, setSearchParams]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -163,17 +195,13 @@ export function GenresPage() {
   const hasActiveFilters = activeFilters.length > 0;
 
   const clearFilters = () => {
-    setQuery('');
-    setSelectedGenre('ALL');
-    setFormatFilter('ALL');
-    setStatusFilter('ALL');
+    setSearchInput('');
+    setSearchParams(new URLSearchParams(), { replace: true });
   };
 
   const clearOne = (key: 'q' | 'genre' | 'format' | 'status') => {
-    if (key === 'q') setQuery('');
-    if (key === 'genre') setSelectedGenre('ALL');
-    if (key === 'format') setFormatFilter('ALL');
-    if (key === 'status') setStatusFilter('ALL');
+    if (key === 'q') setSearchInput('');
+    setFilterParam(key, undefined);
   };
 
   const gridClass = 'grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5';
@@ -209,8 +237,13 @@ export function GenresPage() {
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-500" />
               <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                value={searchInput}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSearchInput(value);
+                  // Replace so typing does not fill the history stack.
+                  setFilterParam('q', value, true);
+                }}
                 placeholder="Title or keyword…"
                 className="input-field pl-9 text-xs"
               />
@@ -221,7 +254,7 @@ export function GenresPage() {
                 <FilterRow
                   label="All featured genres"
                   active={selectedGenre === 'ALL'}
-                  onClick={() => setSelectedGenre('ALL')}
+                  onClick={() => setFilterParam('genre', undefined)}
                 />
                 <div className="max-h-48 overflow-y-auto overscroll-contain pr-1">
                   {FEATURED_GENRES.map((genre) => (
@@ -229,20 +262,24 @@ export function GenresPage() {
                       key={genre}
                       label={genre}
                       active={selectedGenre === genre}
-                      onClick={() => setSelectedGenre(genre)}
+                      onClick={() => setFilterParam('genre', genre)}
                     />
                   ))}
                 </div>
               </FilterGroup>
 
               <FilterGroup title="Format">
-                <FilterRow label="All formats" active={formatFilter === 'ALL'} onClick={() => setFormatFilter('ALL')} />
+                <FilterRow
+                  label="All formats"
+                  active={formatFilter === 'ALL'}
+                  onClick={() => setFilterParam('format', undefined)}
+                />
                 {formats.map((format) => (
                   <FilterRow
                     key={format}
                     label={CONTENT_TYPE_LABELS[format as keyof typeof CONTENT_TYPE_LABELS] ?? format}
                     active={formatFilter === format}
-                    onClick={() => setFormatFilter(format)}
+                    onClick={() => setFilterParam('format', format)}
                   />
                 ))}
               </FilterGroup>
@@ -253,7 +290,9 @@ export function GenresPage() {
                     key={option.value}
                     label={option.label}
                     active={statusFilter === option.value}
-                    onClick={() => setStatusFilter(option.value)}
+                    onClick={() =>
+                      setFilterParam('status', option.value === 'ALL' ? undefined : option.value)
+                    }
                   />
                 ))}
               </FilterGroup>
