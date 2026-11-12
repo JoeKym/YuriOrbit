@@ -12,6 +12,13 @@ export default defineConfig({
     },
   },
   server: {
+    // Cloud preview hostnames are generated per session, and Vite rejects any
+    // Host it does not know. They arrive through the environment rather than
+    // being hard-coded here; never set this to `true`.
+    allowedHosts: (process.env.VITE_ALLOWED_HOSTS ?? '')
+      .split(',')
+      .map((host) => host.trim())
+      .filter(Boolean),
     proxy: {
       // Covers are served from a different MangaDex host; keep the proxy order
       // specific-first so /api/mangadex/covers is not swallowed by the API rule.
