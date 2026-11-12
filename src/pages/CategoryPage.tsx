@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { AlertCircle, RotateCcw, Search, SlidersHorizontal, X } from 'lucide-react';
 import { ContentCard, ContentCardSkeleton } from '@/components/content/ContentCard';
 import { LoadMoreButton } from '@/components/content/LoadMoreButton';
@@ -39,6 +39,14 @@ const SORT_OPTIONS: { value: SortValue; label: string }[] = [
 
 const STATUS_VALUES = STATUS_OPTIONS.map((option) => option.value);
 
+function parseStatus(value: string | null): StatusValue {
+  return STATUS_OPTIONS.some((option) => option.value === value) ? (value as StatusValue) : 'ALL';
+}
+
+function parseSort(value: string | null): SortValue {
+  return SORT_OPTIONS.some((option) => option.value === value) ? (value as SortValue) : 'POPULARITY';
+}
+
 function ActiveChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
     <button
@@ -60,11 +68,32 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
     path: window.location.pathname,
   });
 
+  // Filters live in the query string so they survive navigation, refresh and sharing.
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
-  const [query, setQuery] = useState('');
-  const [status, setStatus] = useState<StatusValue>('ALL');
-  const [sort, setSort] = useState<SortValue>('POPULARITY');
+  const status = parseStatus(searchParams.get('status'));
+  const sort = parseSort(searchParams.get('sort'));
+  const [searchInput, setSearchInput] = useState(searchParams.get('q') ?? '');
+  const query = searchInput;
   const counts = useStatusCounts(contentType, STATUS_VALUES);
+
+  // Mirror URL changes that come from elsewhere (back/forward, chip removal).
+  useEffect(() => {
+    setSearchInput(searchParams.get('q') ?? '');
+  }, [searchParams]);
+
+  const setFilterParam = useCallback(
+    (key: string, value: string | undefined, replace = false) => {
+      const next = new URLSearchParams(searchParams);
+      if (value && value !== 'ALL' && value.trim() !== '') {
+        next.set(key, value);
+      } else {
+        next.delete(key);
+      }
+      setSearchParams(next, { replace });
+    },
+    [searchParams, setSearchParams]
+  );
 
   const feed = usePaginatedTitles(
     (page) =>
@@ -92,9 +121,8 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
   const hasFilters = !!query.trim() || status !== 'ALL' || sort !== 'POPULARITY';
 
   const resetFilters = () => {
-    setQuery('');
-    setStatus('ALL');
-    setSort('POPULARITY');
+    setSearchInput('');
+    setSearchParams(new URLSearchParams(), { replace: true });
   };
 
   const statusLabel = STATUS_OPTIONS.find((option) => option.value === status)?.label ?? 'All statuses';
@@ -128,8 +156,13 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-500" />
               <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                value={searchInput}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSearchInput(value);
+                  // Replace so typing does not fill the history stack.
+                  setFilterParam('q', value, true);
+                }}
                 placeholder="Search loaded titles…"
                 className="input-field pl-9 text-xs"
               />
@@ -143,7 +176,9 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
                     label={option.label}
                     count={counts[option.value]}
                     active={status === option.value}
-                    onClick={() => setStatus(option.value)}
+                    onClick={() =>
+                      setFilterParam('status', option.value === 'ALL' ? undefined : option.value)
+                    }
                   />
                 ))}
               </FilterGroup>
@@ -154,7 +189,7 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
                     key={option.value}
                     label={option.label}
                     active={sort === option.value}
-                    onClick={() => setSort(option.value)}
+                    onClick={() => setFilterParam('sort', option.value)}
                   />
                 ))}
               </FilterGroup>
@@ -166,14 +201,14 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
           {hasFilters && (
             <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-ink-800 bg-ink-900/40 px-3 py-2">
               <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-500">Active filters</span>
-              {query.trim() && (
-                <ActiveChip label={`Search: ${query.trim()}`} onRemove={() => setQuery('')} />
+                              {query.trim() && (
+                <ActiveChip label={`Search: ${query.trim()}`} onRemove={() => setFilterParam('q', undefined)} />
               )}
               {status !== 'ALL' && (
-                <ActiveChip label={`Status: ${statusLabel}`} onRemove={() => setStatus('ALL')} />
+                <ActiveChip label={`Status: ${statusLabel}`} onRemove={() => setFilterParam('status', undefined)} />
               )}
               {sort !== 'POPULARITY' && (
-                <ActiveChip label={`Sort: ${sortLabel}`} onRemove={() => setSort('POPULARITY')} />
+                <ActiveChip label={`Sort: ${sortLabel}`} onRemove={() => setFilterParam('sort', undefined)} />
               )}
               <button
                 type="button"
