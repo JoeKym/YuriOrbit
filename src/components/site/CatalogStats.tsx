@@ -12,7 +12,37 @@ const FORMATS: ContentType[] = ['MANGA', 'MANHWA', 'MANHUA', 'WEBTOON', 'LIGHT_N
 const SOURCES = ['AniList', 'MangaDex', 'Jikan (MAL)', 'TMDB'];
 
 // One count query per browser session, shared by the homepage strip and About.
+const STORAGE_KEY = 'yuriorbit:catalog-title-count';
 let cachedTitleCount: number | null = null;
+
+function readStoredCount(): number | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = Number.parseInt(raw, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  } catch {
+    // Private mode or blocked storage: fall back to querying.
+    return null;
+  }
+}
+
+function storeCount(value: number) {
+  try {
+    window.sessionStorage.setItem(STORAGE_KEY, String(value));
+  } catch {
+    // Storage is a nicety; the in-memory cache still covers this page view.
+  }
+}
+
+/** Reads the session cache (memory first, then sessionStorage) once. */
+function readCachedCount(): number | null {
+  if (cachedTitleCount !== null) return cachedTitleCount;
+  const stored = readStoredCount();
+  if (stored !== null) cachedTitleCount = stored;
+  return cachedTitleCount;
+}
 
 function Tile({
   icon: Icon,
@@ -43,8 +73,8 @@ function Tile({
  * a live query summed across formats (skipped silently when a provider fails).
  */
 export function CatalogStats({ className }: { className?: string }) {
-  const [titleCount, setTitleCount] = useState<number | null>(cachedTitleCount);
-  const [counting, setCounting] = useState(cachedTitleCount === null);
+  const [titleCount, setTitleCount] = useState<number | null>(readCachedCount);
+  const [counting, setCounting] = useState(titleCount === null);
 
   useEffect(() => {
     if (cachedTitleCount !== null) return;
@@ -59,6 +89,7 @@ export function CatalogStats({ className }: { className?: string }) {
         if (cancelled) return;
         const total = result.total ?? 0;
         cachedTitleCount = total;
+        storeCount(total);
         setTitleCount(total);
       } catch {
         // Leave the tile blank rather than claiming a number we could not read.
