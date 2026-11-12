@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { BookOpen, Database, Layers } from 'lucide-react';
 import type { ContentType } from '@/types/content';
 import { searchGLTitles } from '@/lib/providers';
+import { cn } from '@/lib/utils/format';
 
 /** Formats the catalogue actually surfaces in navigation. */
 const FORMATS: ContentType[] = ['MANGA', 'MANHWA', 'MANHUA', 'WEBTOON', 'LIGHT_NOVEL', 'TV', 'MOVIE', 'DRAMA'];
@@ -40,7 +41,7 @@ function Tile({
  * marketing numbers. Format and source counts are structural; the title total is
  * a live query summed across formats (skipped silently when a provider fails).
  */
-export function CatalogStats() {
+export function CatalogStats({ className }: { className?: string }) {
   const [titleCount, setTitleCount] = useState<number | null>(cachedTitleCount);
   const [counting, setCounting] = useState(cachedTitleCount === null);
 
@@ -49,6 +50,11 @@ export function CatalogStats() {
     let cancelled = false;
 
     (async () => {
+      // Let the page's own rails start first; these counts are not urgent and
+      // eight immediate queries would compete with them for provider budget.
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      if (cancelled) return;
+
       let sum = 0;
       let answered = 0;
 
@@ -77,7 +83,7 @@ export function CatalogStats() {
   }, []);
 
   return (
-    <div className="mt-10 grid gap-3 sm:grid-cols-3">
+    <div className={cn('grid gap-3 sm:grid-cols-3', className ?? 'mt-10')}>
       <Tile
         icon={BookOpen}
         value={counting ? '—' : (titleCount ?? 0).toLocaleString()}
