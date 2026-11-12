@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { AlertCircle, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
 import { ContentCard, ContentCardSkeleton } from '@/components/content/ContentCard';
 import { LoadMoreButton } from '@/components/content/LoadMoreButton';
@@ -45,14 +45,44 @@ const STATUS_OPTIONS: { value: StatusValue; label: string }[] = [
 ];
 
 const STATUS_VALUES = STATUS_OPTIONS.map((option) => option.value);
+const FORMAT_VALUES = TYPE_OPTIONS.map((option) => option.value);
+
+// URL values are validated on read, so a hand-edited or stale link degrades to
+// the default instead of requesting nonsense from the providers.
+const parseFormat = (value: string | null): FormatValue =>
+  value && FORMAT_VALUES.includes(value as FormatValue) ? (value as FormatValue) : 'ALL';
+const parseStatus = (value: string | null): StatusValue =>
+  value && STATUS_VALUES.includes(value as StatusValue) ? (value as StatusValue) : 'ALL';
 
 export function TrendingPage() {
   usePageMeta({ title: 'Trending', description: "See trending Girls' Love titles on YuriOrbit.", path: '/trending' });
 
+  // Filters live in the query string so a choice survives navigation, refresh
+  // and sharing.
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
-  const [query, setQuery] = useState('');
-  const [format, setFormat] = useState<FormatValue>('ALL');
-  const [status, setStatus] = useState<StatusValue>('ALL');
+  const [searchInput, setSearchInput] = useState(searchParams.get('q') ?? '');
+  const query = searchInput;
+  const format = parseFormat(searchParams.get('format'));
+  const status = parseStatus(searchParams.get('status'));
+
+  // Mirror URL changes that come from elsewhere (back/forward, chip removal).
+  useEffect(() => {
+    setSearchInput(searchParams.get('q') ?? '');
+  }, [searchParams]);
+
+  const setFilterParam = useCallback(
+    (key: string, value: string | undefined, replace = false) => {
+      const next = new URLSearchParams(searchParams);
+      if (value && value !== 'ALL' && value.trim() !== '') {
+        next.set(key, value);
+      } else {
+        next.delete(key);
+      }
+      setSearchParams(next, { replace });
+    },
+    [searchParams, setSearchParams]
+  );
 
   const listKey = `trending|${format}|${status}`;
   const restorePages = useRestoredPageDepth(listKey);
@@ -93,15 +123,13 @@ export function TrendingPage() {
   ].filter((item): item is { key: 'q' | 'format' | 'status'; label: string } => item !== null);
 
   const clearFilters = () => {
-    setQuery('');
-    setFormat('ALL');
-    setStatus('ALL');
+    setSearchInput('');
+    setSearchParams(new URLSearchParams(), { replace: true });
   };
 
   const clearOne = (key: 'q' | 'format' | 'status') => {
-    if (key === 'q') setQuery('');
-    if (key === 'format') setFormat('ALL');
-    if (key === 'status') setStatus('ALL');
+    if (key === 'q') setSearchInput('');
+    setFilterParam(key, undefined);
   };
 
   const gridClass = 'grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5';
@@ -134,8 +162,13 @@ export function TrendingPage() {
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-500" />
               <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                value={searchInput}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSearchInput(value);
+                  // Replace so typing does not fill the history stack.
+                  setFilterParam('q', value, true);
+                }}
                 placeholder="Search loaded titles…"
                 className="input-field pl-9 text-xs"
               />
@@ -148,7 +181,9 @@ export function TrendingPage() {
                     key={option.value}
                     label={option.label}
                     active={format === option.value}
-                    onClick={() => setFormat(option.value)}
+                    onClick={() =>
+                      setFilterParam('format', option.value === 'ALL' ? undefined : option.value)
+                    }
                   />
                 ))}
               </FilterGroup>
@@ -160,7 +195,9 @@ export function TrendingPage() {
                     label={option.label}
                     count={counts[option.value]}
                     active={status === option.value}
-                    onClick={() => setStatus(option.value)}
+                    onClick={() =>
+                      setFilterParam('status', option.value === 'ALL' ? undefined : option.value)
+                    }
                   />
                 ))}
               </FilterGroup>
