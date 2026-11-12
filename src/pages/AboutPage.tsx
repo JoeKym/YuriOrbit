@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Heart, Compass, BookOpen, Shield, Globe, Sparkles, Film, Eye } from 'lucide-react';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { PageHeading } from '@/components/layout/PageHeading';
+import { CatalogStats } from '@/components/site/CatalogStats';
 
 export function AboutPage() {
   usePageMeta({
@@ -36,6 +37,8 @@ export function AboutPage() {
           films, YuriOrbit indexes, categorizes, and organizes them all without manual data entry.
         </p>
       </div>
+
+      <CatalogStats />
 
       <div className="mt-10 grid gap-4 sm:grid-cols-2">
         <div className="card-surface p-5">
