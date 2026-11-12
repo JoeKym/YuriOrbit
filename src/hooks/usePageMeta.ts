@@ -12,10 +12,25 @@ export interface PageMeta {
 }
 
 const SITE_NAME = 'YuriOrbit';
+const SITE_URL = 'https://yuriorbit.pages.dev';
 const DEFAULT_TITLE = 'YuriOrbit — Your World of Girls\' Love';
 const DEFAULT_DESCRIPTION =
   "Discover, track, and enjoy curated Yuri and Girls' Love anime, manga, manhwa, webtoons, light novels, and live-action dramas from around the globe.";
 const DEFAULT_IMAGE = '/android-chrome-512x512.png';
+
+function siteOrigin() {
+  if (typeof window !== 'undefined' && window.location?.origin) return window.location.origin;
+  return SITE_URL;
+}
+
+function toAbsoluteUrl(value: string | undefined, base?: string): string | undefined {
+  if (!value) return undefined;
+  try {
+    return new URL(value, base || siteOrigin()).toString();
+  } catch {
+    return value;
+  }
+}
 
 function upsertMeta(selector: string, attrs: Record<string, string>, content: string) {
   let el = document.head.querySelector<HTMLMetaElement>(selector);
@@ -55,6 +70,10 @@ export function usePageMeta(meta: PageMeta) {
           ? `${title} — ${SITE_NAME}`
           : title;
 
+    const origin = siteOrigin();
+    const url = toAbsoluteUrl(path, origin);
+    const imageUrl = toAbsoluteUrl(image, origin) || toAbsoluteUrl(DEFAULT_IMAGE, origin)!;
+
     document.title = fullTitle;
 
     upsertMeta('meta[name="description"]', { name: 'description' }, description);
@@ -63,17 +82,18 @@ export function usePageMeta(meta: PageMeta) {
     // Open Graph
     upsertMeta('meta[property="og:title"]', { property: 'og:title' }, fullTitle);
     upsertMeta('meta[property="og:description"]', { property: 'og:description' }, description);
-    upsertMeta('meta[property="og:image"]', { property: 'og:image' }, image);
+    upsertMeta('meta[property="og:image"]', { property: 'og:image' }, imageUrl);
     upsertMeta('meta[property="og:site_name"]', { property: 'og:site_name' }, SITE_NAME);
     upsertMeta('meta[property="og:type"]', { property: 'og:type' }, 'website');
+    upsertMeta('meta[property="og:locale"]', { property: 'og:locale' }, 'en_US');
 
     // Twitter
+    upsertMeta('meta[name="twitter:card"]', { name: 'twitter:card' }, 'summary_large_image');
     upsertMeta('meta[name="twitter:title"]', { name: 'twitter:title' }, fullTitle);
     upsertMeta('meta[name="twitter:description"]', { name: 'twitter:description' }, description);
-    upsertMeta('meta[name="twitter:image"]', { name: 'twitter:image' }, image);
+    upsertMeta('meta[name="twitter:image"]', { name: 'twitter:image' }, imageUrl);
 
-    if (path && typeof window !== 'undefined') {
-      const url = new URL(path, window.location.origin).toString();
+    if (url) {
       upsertMeta('meta[property="og:url"]', { property: 'og:url' }, url);
       upsertMeta('meta[name="twitter:url"]', { name: 'twitter:url' }, url);
       upsertLink('canonical', url);
