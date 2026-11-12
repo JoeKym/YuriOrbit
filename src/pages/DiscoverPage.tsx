@@ -12,13 +12,10 @@ import {
   Film,
   RotateCcw,
   Star,
-  CheckCircle2,
-  Calendar,
   Globe,
   Loader2
 } from 'lucide-react';
-import { ContentCard, ContentCardGrid } from '@/components/content/ContentCard';
-import { ContentCardSkeleton } from '@/components/content/ContentCard';
+import { ContentCard, ContentCardSkeleton } from '@/components/content/ContentCard';
 import type {
   ContentTitle,
   ContentFilter,
@@ -39,6 +36,8 @@ import { GL_ALLOWED_CLASSIFICATIONS } from '@/lib/providers/classify';
 import { cn, formatScore, getFallbackCover } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { useWatchRegion } from '@/hooks/useWatchRegion';
+import { useStatusCounts } from '@/hooks/useStatusCounts';
+import { FilterGroup, FilterPanel, FilterRow } from '@/components/catalog/FilterRail';
 
 interface MediaTypeTab {
   value: ContentType | 'ALL';
@@ -59,12 +58,14 @@ const MEDIA_CATEGORIES: MediaTypeTab[] = [
 ];
 
 const STATUS_OPTIONS: { value: ReleaseStatus | 'ALL'; label: string }[] = [
-  { value: 'ALL', label: 'All Statuses' },
-  { value: 'RELEASING', label: 'Ongoing / Airing' },
+  { value: 'ALL', label: 'All statuses' },
+  { value: 'RELEASING', label: 'Ongoing / airing' },
   { value: 'FINISHED', label: 'Completed' },
   { value: 'NOT_YET_RELEASED', label: 'Upcoming' },
-  { value: 'HIATUS', label: 'On Hiatus' },
+  { value: 'HIATUS', label: 'On hiatus' },
 ];
+
+const STATUS_VALUES = STATUS_OPTIONS.map((option) => option.value);
 
 export function DiscoverPage() {
   usePageMeta({ title: 'Discover', description: 'Discover Girls\' Love anime, manga, manhwa, webtoons, novels, and dramas on YuriOrbit.', path: '/discover' });
@@ -233,6 +234,9 @@ export function DiscoverPage() {
     : titles;
   const streamingRegion = regionName(watchRegion || tmdbPreferredRegion());
 
+  const activeFormat = filter.contentType && filter.contentType !== 'ALL' ? filter.contentType : 'ALL';
+  const counts = useStatusCounts(activeFormat, STATUS_VALUES);
+
   // Build active filter tags for quick removal
   const activeFilters: { key: string; label: string }[] = [];
   if (filter.query) {
@@ -256,12 +260,21 @@ export function DiscoverPage() {
       label: STATUS_OPTIONS.find((s) => s.value === filter.status)?.label || filter.status,
     });
   }
+  if (filter.sort && filter.sort !== 'POPULARITY') {
+    activeFilters.push({
+      key: 'sort',
+      label: SORT_OPTIONS.find((s) => s.value === filter.sort)?.label || filter.sort,
+    });
+  }
   if (filter.classification && filter.classification === 'ALL') {
     activeFilters.push({ key: 'gl', label: 'All GL (inc. Subtext)' });
   }
   if (streamingOnly) {
     activeFilters.push({ key: 'streaming', label: `Streaming in ${streamingRegion}` });
   }
+
+  const resultGridClass =
+    'grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4';
 
   return (
     <div className="min-h-screen bg-ink-950 text-ink-100 pb-20">
@@ -336,333 +349,287 @@ export function DiscoverPage() {
 
       {/* Main Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        {/* Controls Toolbar: Filters Button, Active Chips, Sort & View Mode */}
-        <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={cn(
-                'inline-flex items-center gap-2 px-3.5 py-2 text-xs font-medium rounded-lg border transition-all duration-200',
-                showFilters
-                  ? 'border-rose-500/50 bg-rose-500/10 text-rose-300'
-                  : 'border-ink-700 bg-ink-900 text-ink-200 hover:bg-ink-850'
-              )}
-            >
-              <SlidersHorizontal className="h-3.5 w-3.5" />
-              <span>Filters</span>
-              {activeFilters.length > 0 && (
-                <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center font-bold">
-                  {activeFilters.length}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => updateFilter('streaming', streamingOnly ? undefined : '1')}
-              className={cn(
-                'inline-flex items-center gap-2 px-3.5 py-2 text-xs font-medium rounded-lg border transition-all duration-200',
-                streamingOnly
-                  ? 'border-rose-500/50 bg-rose-500/10 text-rose-300'
-                  : 'border-ink-700 bg-ink-900 text-ink-200 hover:bg-ink-850'
-              )}
-              title={`Only show titles with a streaming provider in ${streamingRegion}`}
-            >
-              <Globe className="h-3.5 w-3.5" />
-              <span>Streaming in {streamingRegion}</span>
-            </button>
-
-            {/* Active Filter Pills */}
-            {activeFilters.map((f) => (
-              <span key={f.key} className="chip chip-active">
-                <span>{f.label}</span>
-                <button
-                  onClick={() => updateFilter(f.key, undefined)}
-                  className="hover:text-rose-100 transition-colors"
-                  aria-label={`Remove filter ${f.label}`}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            ))}
-
-            {activeFilters.length > 0 && (
-              <button
-                onClick={clearAllFilters}
-                className="btn-ghost text-xs text-rose-400 hover:text-rose-300 py-1 px-2"
-              >
-                Clear all
-              </button>
+        <div className="grid gap-6 lg:grid-cols-[248px_minmax(0,1fr)]">
+          <aside
+            className={cn(
+              'lg:sticky lg:top-[168px] lg:self-start',
+              showFilters ? 'block' : 'hidden lg:block'
             )}
-          </div>
+          >
+            <FilterPanel onReset={activeFilters.length > 0 ? clearAllFilters : undefined}>
+              <div className="space-y-3">
+                <FilterGroup title="Girls' Love classification">
+                  <FilterRow
+                    label="Confirmed GL only"
+                    active={filter.classification !== 'ALL'}
+                    onClick={() => updateFilter('gl', 'CONFIRMED_GL')}
+                  />
+                  <FilterRow
+                    label="Include subtext & GL-adjacent"
+                    active={filter.classification === 'ALL'}
+                    onClick={() => updateFilter('gl', 'ALL')}
+                  />
+                </FilterGroup>
 
-          <div className="flex items-center gap-3 ml-auto">
-            {/* Sort Dropdown */}
-            <select
-              value={filter.sort || 'POPULARITY'}
-              onChange={(e) => updateFilter('sort', e.target.value)}
-              className="px-3 py-1.5 bg-ink-900 border border-ink-700 rounded-lg text-xs text-ink-200 focus:outline-none focus:border-rose-500/50"
-            >
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+                <FilterGroup title="Publishing status">
+                  {STATUS_OPTIONS.map((option) => (
+                    <FilterRow
+                      key={option.value}
+                      label={option.label}
+                      count={counts[option.value]}
+                      active={
+                        filter.status === option.value ||
+                        (!filter.status && option.value === 'ALL')
+                      }
+                      onClick={() =>
+                        updateFilter('status', option.value === 'ALL' ? undefined : option.value)
+                      }
+                    />
+                  ))}
+                </FilterGroup>
 
-            {/* View Mode (Grid vs List) */}
-            <div className="flex items-center rounded-lg border border-ink-700 bg-ink-900 p-0.5">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={cn(
-                  'p-1.5 rounded-md transition-colors',
-                  viewMode === 'grid'
-                    ? 'bg-ink-750 text-ink-50'
-                    : 'text-ink-400 hover:text-ink-200'
-                )}
-                title="Grid View"
-              >
-                <Grid3x3 className="h-3.5 w-3.5" />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={cn(
-                  'p-1.5 rounded-md transition-colors',
-                  viewMode === 'list'
-                    ? 'bg-ink-750 text-ink-50'
-                    : 'text-ink-400 hover:text-ink-200'
-                )}
-                title="List View"
-              >
-                <List className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
-        </div>
+                <FilterGroup title="Streaming">
+                  <FilterRow
+                    label={`Streaming in ${streamingRegion}`}
+                    active={streamingOnly}
+                    onClick={() => updateFilter('streaming', streamingOnly ? undefined : '1')}
+                  />
+                </FilterGroup>
 
-        {/* Collapsible Filter Panel */}
-        {showFilters && (
-          <div className="mb-6 p-4 md:p-5 rounded-2xl bg-ink-900 border border-ink-800 shadow-xl grid grid-cols-1 md:grid-cols-3 gap-6 animate-fadeIn">
-            {/* Genre Selectors */}
-            <div>
-              <label className="block text-xs font-semibold text-ink-200 mb-2.5">
-                Genres & Themes
-              </label>
-              <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto pr-1">
-                {GENRE_LIST.map((genre) => {
-                  const isSelected = filter.genre === genre;
-                  return (
-                    <button
-                      key={genre}
-                      onClick={() => updateFilter('genre', isSelected ? undefined : genre)}
-                      className={cn(
-                        'text-xs px-2.5 py-1 rounded-md transition-all duration-150',
-                        isSelected
-                          ? 'bg-rose-500 text-white font-medium shadow-sm'
-                          : 'bg-ink-850 text-ink-300 hover:bg-ink-800 hover:text-ink-100 border border-ink-800'
-                      )}
-                    >
-                      {genre}
-                    </button>
-                  );
-                })}
+                <FilterGroup title="Sort by">
+                  {SORT_OPTIONS.map((option) => (
+                    <FilterRow
+                      key={option.value}
+                      label={option.label}
+                      active={(filter.sort || 'POPULARITY') === option.value}
+                      onClick={() => updateFilter('sort', option.value)}
+                    />
+                  ))}
+                </FilterGroup>
+
+                <FilterGroup title="Release year">
+                  <input
+                    type="number"
+                    min="1970"
+                    max="2030"
+                    value={filter.year || ''}
+                    onChange={(e) => updateFilter('year', e.target.value)}
+                    placeholder="e.g. 2024"
+                    className="input-field py-1.5 text-xs"
+                  />
+                </FilterGroup>
+
+                <FilterGroup title="Genres & themes">
+                  <div className="flex max-h-52 flex-wrap gap-1.5 overflow-y-auto pr-1 pt-1">
+                    {GENRE_LIST.map((genre) => {
+                      const isSelected = filter.genre === genre;
+                      return (
+                        <button
+                          key={genre}
+                          onClick={() =>
+                            updateFilter('genre', isSelected ? undefined : genre)
+                          }
+                          className={cn(
+                            'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
+                            isSelected
+                              ? 'border-rose-500/40 bg-rose-500/15 text-rose-200'
+                              : 'border-ink-700/60 bg-ink-850/60 text-ink-300 hover:border-rose-500/30 hover:text-ink-100'
+                          )}
+                        >
+                          {genre}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </FilterGroup>
               </div>
-            </div>
+            </FilterPanel>
+          </aside>
 
-            {/* Release Status & Year */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-ink-200 mb-2">
-                  Publication / Airing Status
-                </label>
-                <div className="flex flex-col gap-1.5">
-                  {STATUS_OPTIONS.map((status) => {
-                    const isSelected =
-                      filter.status === status.value ||
-                      (!filter.status && status.value === 'ALL');
+          <div className="min-w-0">
+            {/* Toolbar: mobile filter toggle, active chips, view mode */}
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={cn(
+                    'inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-xs font-medium transition-all duration-200 lg:hidden',
+                    showFilters
+                      ? 'border-rose-500/50 bg-rose-500/10 text-rose-300'
+                      : 'border-ink-700 bg-ink-900 text-ink-200 hover:bg-ink-850'
+                  )}
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  <span>Filters</span>
+                  {activeFilters.length > 0 && (
+                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
+                      {activeFilters.length}
+                    </span>
+                  )}
+                </button>
 
-                    return (
-                      <button
-                        key={status.value}
-                        onClick={() =>
-                          updateFilter(
-                            'status',
-                            status.value === 'ALL' ? undefined : status.value
-                          )
-                        }
-                        className={cn(
-                          'text-left text-xs px-3 py-1.5 rounded-lg transition-colors',
-                          isSelected
-                            ? 'bg-ink-800 text-rose-300 font-medium border border-rose-500/20'
-                            : 'text-ink-400 hover:bg-ink-850 hover:text-ink-200'
-                        )}
-                      >
-                        {status.label}
-                      </button>
-                    );
-                  })}
+                {/* Active Filter Pills */}
+                {activeFilters.map((f) => (
+                  <span key={f.key} className="chip chip-active">
+                    <span>{f.label}</span>
+                    <button
+                      onClick={() => updateFilter(f.key, undefined)}
+                      className="hover:text-rose-100 transition-colors"
+                      aria-label={`Remove filter ${f.label}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+
+                {activeFilters.length > 0 && (
+                  <button
+                    onClick={clearAllFilters}
+                    className="btn-ghost py-1 px-2 text-xs text-rose-400 hover:text-rose-300"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+
+              <div className="ml-auto flex items-center gap-3">
+                <span className="text-[11px] uppercase tracking-[0.14em] text-ink-500">
+                  {loading ? 'Loading…' : `${visibleTitles.length} shown`}
+                </span>
+                {/* View Mode (Grid vs List) */}
+                <div className="flex items-center rounded-lg border border-ink-700 bg-ink-900 p-0.5">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={cn(
+                      'p-1.5 rounded-md transition-colors',
+                      viewMode === 'grid'
+                        ? 'bg-ink-750 text-ink-50'
+                        : 'text-ink-400 hover:text-ink-200'
+                    )}
+                    title="Grid View"
+                  >
+                    <Grid3x3 className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={cn(
+                      'p-1.5 rounded-md transition-colors',
+                      viewMode === 'list'
+                        ? 'bg-ink-750 text-ink-50'
+                        : 'text-ink-400 hover:text-ink-200'
+                    )}
+                    title="List View"
+                  >
+                    <List className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-ink-200 mb-1.5 flex items-center gap-1.5">
-                  <Calendar className="h-3 w-3 text-ink-400" />
-                  <span>Release Year</span>
-                </label>
-                <input
-                  type="number"
-                  min="1970"
-                  max="2030"
-                  value={filter.year || ''}
-                  onChange={(e) => updateFilter('year', e.target.value)}
-                  placeholder="e.g. 2024"
-                  className="input-field py-1.5 text-xs max-w-[140px]"
-                />
-              </div>
             </div>
 
-            {/* GL Focus & Classification */}
-            <div>
-              <label className="block text-xs font-semibold text-ink-200 mb-2.5">
-                Girls' Love Classification
-              </label>
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={() => updateFilter('gl', 'CONFIRMED_GL')}
-                  className={cn(
-                    'text-left text-xs p-3 rounded-xl border transition-all duration-200',
-                    filter.classification !== 'ALL'
-                      ? 'bg-rose-500/10 border-rose-500/40 text-rose-200 font-medium'
-                      : 'bg-ink-850/60 border-ink-800 text-ink-400 hover:text-ink-200'
-                  )}
-                >
-                  <div className="font-semibold text-ink-100 flex items-center gap-1.5">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-rose-400" />
-                    <span>Confirmed GL Only</span>
-                  </div>
-                  <p className="text-[11px] text-ink-400 mt-1 leading-relaxed">
-                    Canonical romantic Girls' Love, Shoujo Ai, and Yuri relationships.
-                  </p>
-                </button>
-
-                <button
-                  onClick={() => updateFilter('gl', 'ALL')}
-                  className={cn(
-                    'text-left text-xs p-3 rounded-xl border transition-all duration-200',
-                    filter.classification === 'ALL'
-                      ? 'bg-rose-500/10 border-rose-500/40 text-rose-200 font-medium'
-                      : 'bg-ink-850/60 border-ink-800 text-ink-400 hover:text-ink-200'
-                  )}
-                >
-                  <div className="font-semibold text-ink-100">
-                    Include Subtext & GL-Adjacent
-                  </div>
-                  <p className="text-[11px] text-ink-400 mt-1 leading-relaxed">
-                    Includes strong romantic subtext, queer themes, and GL side-couples.
-                  </p>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {streamingOnly && checkingAvailability && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg border border-ink-800 bg-ink-900/60 px-3 py-2 text-xs text-ink-300">
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-rose-400" />
-            Checking streaming availability in {streamingRegion}… {checkedCount}/{titles.length}
-          </div>
-        )}
-
-        {/* Content Display: Loading, Error, Empty, or Results */}
-        {loading ? (
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
-            {Array.from({ length: 18 }).map((_, i) => (
-              <ContentCardSkeleton key={i} />
-            ))}
-          </div>
-        ) : error ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl border border-ink-800 bg-ink-900/40 p-8">
-            <RotateCcw className="h-10 w-10 text-rose-400 mb-3" />
-            <h3 className="text-base font-semibold text-ink-100">Unable to load titles</h3>
-            <p className="mt-1 text-xs text-ink-400 max-w-sm">
-              We encountered an issue fetching metadata from the providers.
-            </p>
-            <button
-              onClick={() => {
-                setError(false);
-                setReloadKey((k) => k + 1);
-              }}
-              className="btn-primary mt-4 text-xs"
-            >
-              Try Again
-            </button>
-          </div>
-        ) : titles.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl border border-dashed border-ink-800 p-8">
-            <Search className="h-12 w-12 text-ink-600 mb-3" />
-            <h3 className="text-base font-medium text-ink-200">No Yuri titles found</h3>
-            <p className="mt-1 text-xs text-ink-400 max-w-sm">
-              No matching titles found for your current filter and search combination.
-            </p>
-            <button onClick={clearAllFilters} className="btn-secondary mt-4 text-xs">
-              Reset Filters
-            </button>
-          </div>
-        ) : streamingOnly && visibleTitles.length === 0 ? (
-          checkingAvailability ? (
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <ContentCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl border border-dashed border-ink-800 p-8">
-              <Globe className="h-12 w-12 text-ink-600 mb-3" />
-              <h3 className="text-base font-medium text-ink-200">
-                Nothing streaming in {streamingRegion}
-              </h3>
-              <p className="mt-1 text-xs text-ink-400 max-w-sm">
-                No titles in this batch have a streaming provider listed there. Change the region
-                in settings, or show all titles.
-              </p>
-              <button
-                onClick={() => updateFilter('streaming', undefined)}
-                className="btn-secondary mt-4 text-xs"
-              >
-                Show all titles
-              </button>
-            </div>
-          )
-        ) : viewMode === 'grid' ? (
-          <>
-            <ContentCardGrid titles={visibleTitles} showAvailability />
-            {hasNextPage && (
-              <div className="mt-12 flex justify-center">
-                <button
-                  onClick={loadMore}
-                  disabled={loadingMore}
-                  className="btn-secondary px-8 py-2.5 text-xs font-medium disabled:opacity-50"
-                >
-                  {loadingMore ? 'Loading titles...' : 'Load More Titles'}
-                </button>
+            {streamingOnly && checkingAvailability && (
+              <div className="mb-4 flex items-center gap-2 rounded-lg border border-ink-800 bg-ink-900/60 px-3 py-2 text-xs text-ink-300">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-rose-400" />
+                Checking streaming availability in {streamingRegion}… {checkedCount}/{titles.length}
               </div>
             )}
-          </>
-        ) : (
-          <>
-            <ListView titles={visibleTitles} />
-            {hasNextPage && (
-              <div className="mt-12 flex justify-center">
+
+            {/* Content Display: Loading, Error, Empty, or Results */}
+            {loading ? (
+              <div className={resultGridClass}>
+                {Array.from({ length: 18 }).map((_, i) => (
+                  <ContentCardSkeleton key={i} />
+                ))}
+              </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl border border-ink-800 bg-ink-900/40 p-8">
+                <RotateCcw className="h-10 w-10 text-rose-400 mb-3" />
+                <h3 className="text-base font-semibold text-ink-100">Unable to load titles</h3>
+                <p className="mt-1 text-xs text-ink-400 max-w-sm">
+                  We encountered an issue fetching metadata from the providers.
+                </p>
                 <button
-                  onClick={loadMore}
-                  disabled={loadingMore}
-                  className="btn-secondary px-8 py-2.5 text-xs font-medium disabled:opacity-50"
+                  onClick={() => {
+                    setError(false);
+                    setReloadKey((k) => k + 1);
+                  }}
+                  className="btn-primary mt-4 text-xs"
                 >
-                  {loadingMore ? 'Loading titles...' : 'Load More Titles'}
+                  Try Again
                 </button>
               </div>
+            ) : titles.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl border border-dashed border-ink-800 p-8">
+                <Search className="h-12 w-12 text-ink-600 mb-3" />
+                <h3 className="text-base font-medium text-ink-200">No Yuri titles found</h3>
+                <p className="mt-1 text-xs text-ink-400 max-w-sm">
+                  No matching titles found for your current filter and search combination.
+                </p>
+                <button onClick={clearAllFilters} className="btn-secondary mt-4 text-xs">
+                  Reset Filters
+                </button>
+              </div>
+            ) : streamingOnly && visibleTitles.length === 0 ? (
+              checkingAvailability ? (
+                <div className={resultGridClass}>
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <ContentCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl border border-dashed border-ink-800 p-8">
+                  <Globe className="h-12 w-12 text-ink-600 mb-3" />
+                  <h3 className="text-base font-medium text-ink-200">
+                    Nothing streaming in {streamingRegion}
+                  </h3>
+                  <p className="mt-1 text-xs text-ink-400 max-w-sm">
+                    No titles in this batch have a streaming provider listed there. Change the region
+                    in settings, or show all titles.
+                  </p>
+                  <button
+                    onClick={() => updateFilter('streaming', undefined)}
+                    className="btn-secondary mt-4 text-xs"
+                  >
+                    Show all titles
+                  </button>
+                </div>
+              )
+            ) : viewMode === 'grid' ? (
+              <>
+                <div className={resultGridClass}>
+                  {visibleTitles.map((item) => (
+                    <ContentCard key={item.id} title={item} className="w-full" showAvailability />
+                  ))}
+                </div>
+                {hasNextPage && (
+                  <div className="mt-12 flex justify-center">
+                    <button
+                      onClick={loadMore}
+                      disabled={loadingMore}
+                      className="btn-secondary px-8 py-2.5 text-xs font-medium disabled:opacity-50"
+                    >
+                      {loadingMore ? 'Loading titles...' : 'Load More Titles'}
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <ListView titles={visibleTitles} />
+                {hasNextPage && (
+                  <div className="mt-12 flex justify-center">
+                    <button
+                      onClick={loadMore}
+                      disabled={loadingMore}
+                      className="btn-secondary px-8 py-2.5 text-xs font-medium disabled:opacity-50"
+                    >
+                      {loadingMore ? 'Loading titles...' : 'Load More Titles'}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
-          </>
-        )}
+          </div>
+        </div>
       </div>
     </div>
   );

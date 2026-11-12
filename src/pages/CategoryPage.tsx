@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertCircle, RotateCcw, Search, SlidersHorizontal, X } from 'lucide-react';
 import { ContentCard, ContentCardSkeleton } from '@/components/content/ContentCard';
@@ -7,7 +7,9 @@ import type { ContentType, ReleaseStatus } from '@/types/content';
 import { searchGLTitles } from '@/lib/providers';
 import { usePaginatedTitles } from '@/hooks/usePaginatedTitles';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { useStatusCounts } from '@/hooks/useStatusCounts';
 import { PageHeading } from '@/components/layout/PageHeading';
+import { FilterGroup, FilterPanel, FilterRow } from '@/components/catalog/FilterRail';
 import { cn } from '@/lib/utils/format';
 
 interface CategoryPageProps {
@@ -35,44 +37,7 @@ const SORT_OPTIONS: { value: SortValue; label: string }[] = [
   { value: 'UPDATED_AT', label: 'Recently updated' },
 ];
 
-/**
- * Per-status result totals, cached for the browser session so moving between
- * category pages does not re-query the providers for numbers it already has.
- */
-const COUNT_CACHE = new Map<string, number>();
-
-function FilterRow({
-  label,
-  count,
-  active,
-  onClick,
-}: {
-  label: string;
-  count?: number;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        'flex w-full items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-left text-xs transition-colors',
-        active
-          ? 'border-rose-500/35 bg-rose-500/10 text-rose-200'
-          : 'border-transparent text-ink-300 hover:border-ink-700 hover:bg-ink-850 hover:text-ink-100'
-      )}
-    >
-      <span className="truncate">{label}</span>
-      {typeof count === 'number' && (
-        <span className={cn('shrink-0 text-[11px] tabular-nums', active ? 'text-rose-200/80' : 'text-ink-500')}>
-          {count.toLocaleString()}
-        </span>
-      )}
-    </button>
-  );
-}
+const STATUS_VALUES = STATUS_OPTIONS.map((option) => option.value);
 
 function ActiveChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
@@ -88,15 +53,6 @@ function ActiveChip({ label, onRemove }: { label: string; onRemove: () => void }
   );
 }
 
-function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="border-t border-ink-800/70 pt-3">
-      <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-500">{title}</p>
-      <div className="space-y-0.5">{children}</div>
-    </div>
-  );
-}
-
 export function CategoryPage({ contentType, title }: CategoryPageProps) {
   usePageMeta({
     title,
@@ -108,7 +64,7 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<StatusValue>('ALL');
   const [sort, setSort] = useState<SortValue>('POPULARITY');
-  const [counts, setCounts] = useState<Partial<Record<StatusValue, number>>>({});
+  const counts = useStatusCounts(contentType, STATUS_VALUES);
 
   const feed = usePaginatedTitles(
     (page) =>
@@ -123,41 +79,6 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
       ),
     `${contentType}|${status}|${sort}`
   );
-
-  // Totals for each status, one query at a time so the providers are not hit in a burst.
-  useEffect(() => {
-    let cancelled = false;
-    const next: Partial<Record<StatusValue, number>> = {};
-    for (const option of STATUS_OPTIONS) {
-      const cached = COUNT_CACHE.get(`${contentType}|${option.value}`);
-      if (typeof cached === 'number') next[option.value] = cached;
-    }
-    if (Object.keys(next).length > 0) setCounts(next);
-
-    (async () => {
-      for (const option of STATUS_OPTIONS) {
-        const key = `${contentType}|${option.value}`;
-        if (COUNT_CACHE.has(key)) continue;
-        try {
-          const result = await searchGLTitles(
-            { contentType, status: option.value === 'ALL' ? undefined : option.value, sort: 'POPULARITY' },
-            1,
-            1
-          );
-          const total = result.total ?? 0;
-          COUNT_CACHE.set(key, total);
-          if (cancelled) return;
-          setCounts((prev) => ({ ...prev, [option.value]: total }));
-        } catch {
-          // A failed count is not a page failure — the rail simply omits it.
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [contentType]);
 
   const displayed = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -203,21 +124,7 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
 
       <div className="grid gap-6 lg:grid-cols-[248px_minmax(0,1fr)]">
         <aside className={cn('lg:sticky lg:top-24 lg:self-start', showFilters ? 'block' : 'hidden lg:block')}>
-          <div className="rounded-2xl border border-ink-800 bg-ink-900/60 p-4 backdrop-blur-sm">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-400">
-                <SlidersHorizontal className="h-3 w-3" /> Filter works
-              </h2>
-              {hasFilters && (
-                <button
-                  onClick={resetFilters}
-                  className="inline-flex items-center gap-1 text-[11px] text-rose-300 hover:text-rose-200"
-                >
-                  <X className="h-3 w-3" /> Reset
-                </button>
-              )}
-            </div>
-
+          <FilterPanel onReset={hasFilters ? resetFilters : undefined}>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-500" />
               <input
@@ -252,11 +159,7 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
                 ))}
               </FilterGroup>
             </div>
-
-            <p className="mt-3 border-t border-ink-800/70 pt-3 text-[10px] leading-relaxed text-ink-500">
-              Counts come from the live catalogue query and update as providers respond.
-            </p>
-          </div>
+          </FilterPanel>
         </aside>
 
         <div className="min-w-0">
