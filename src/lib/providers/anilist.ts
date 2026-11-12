@@ -6,7 +6,8 @@ import { GL_ALLOWED_CLASSIFICATIONS } from './classify';
 
 const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
 const REQUEST_TIMEOUT = 15000;
-const REQUEST_DELAY = 350;
+// AniList allows ~90 requests a minute; 700ms leaves headroom for retries.
+const REQUEST_DELAY = 700;
 
 const env = (import.meta as { env?: Record<string, string> }).env || {};
 const isBrowser = typeof window !== 'undefined';
@@ -96,13 +97,24 @@ function timeoutFetch(url: string, options: RequestInit, ms: number): Promise<Re
 let lastRequestTime = 0;
 
 /** Only needed when we talk to AniList ourselves; the edge proxy paces upstream. */
-async function paceAnilistRequest(): Promise<void> {
-  const now = Date.now();
-  const elapsed = now - lastRequestTime;
-  if (elapsed < REQUEST_DELAY) {
-    await new Promise((r) => setTimeout(r, REQUEST_DELAY - elapsed));
-  }
-  lastRequestTime = Date.now();
+/**
+ * Spaces AniList requests. This has to be a queue rather than a timestamp
+ * check: the homepage fires several queries at once, and concurrent callers all
+ * read the same stale `lastRequestTime` and fired together — which is what
+ * tripped the 429s that made whole rails vanish.
+ */
+let requestQueue: Promise<void> = Promise.resolve();
+
+function paceAnilistRequest(): Promise<void> {
+  const turn = requestQueue.then(async () => {
+    const elapsed = Date.now() - lastRequestTime;
+    if (elapsed < REQUEST_DELAY) {
+      await new Promise((r) => setTimeout(r, REQUEST_DELAY - elapsed));
+    }
+    lastRequestTime = Date.now();
+  });
+  requestQueue = turn.catch(() => undefined);
+  return turn;
 }
 
 /** Error carrying the HTTP status, so callers can tell 404/5xx from a GraphQL error. */
