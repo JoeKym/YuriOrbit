@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Children, type ReactNode } from 'react';
 import { SlidersHorizontal, X } from 'lucide-react';
 import { cn } from '@/lib/utils/format';
 
@@ -54,12 +54,17 @@ export function ActiveFilterBar({
   children,
   onClearAll,
   count,
+  emptyLabel,
 }: {
   children: ReactNode;
   onClearAll?: () => void;
   /** Number applied, shown as a badge so the strip still reads on small screens. */
   count?: number;
+  /** Shown instead of the chips when nothing is applied. */
+  emptyLabel?: ReactNode;
 }) {
+  const hasChips = Children.count(children) > 0;
+
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-ink-800 bg-ink-900/40 px-3 py-2">
       <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-500">
@@ -70,8 +75,12 @@ export function ActiveFilterBar({
           </span>
         )}
       </span>
-      {children}
-      {onClearAll && (
+      {hasChips ? (
+        children
+      ) : (
+        <span className="text-[11px] text-ink-500">{emptyLabel ?? 'None applied'}</span>
+      )}
+      {hasChips && onClearAll && (
         <button
           type="button"
           onClick={onClearAll}
