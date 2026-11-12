@@ -201,9 +201,14 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
         </aside>
 
         <div className="min-w-0">
-          {hasFilters && (
-            <ActiveFilterBar count={activeFilterCount} onClearAll={resetFilters}>
-              {query.trim() && (
+          {/* Always present, so the summary is visible on load whether or not
+              anything is filtered. */}
+          <ActiveFilterBar
+            count={activeFilterCount}
+            onClearAll={resetFilters}
+            emptyLabel={`None — showing every ${title.toLowerCase()} title, most popular first.`}
+          >
+            {query.trim() && (
                 <ActiveFilterChip
                   label={`Search: ${query.trim()}`}
                   onRemove={() => setFilterParam('q', undefined)}
@@ -221,8 +226,7 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
                   onRemove={() => setFilterParam('sort', undefined)}
                 />
               )}
-            </ActiveFilterBar>
-          )}
+          </ActiveFilterBar>
 
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs text-ink-400">
