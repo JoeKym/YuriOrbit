@@ -11,7 +11,7 @@ const FORMATS: ContentType[] = ['MANGA', 'MANHWA', 'MANHUA', 'WEBTOON', 'LIGHT_N
 /** Providers wired into src/lib/providers. */
 const SOURCES = ['AniList', 'MangaDex', 'Jikan (MAL)', 'TMDB'];
 
-// One count query per day per browser session, shared by the homepage strip and About.
+// One count query per browser per day, shared by the homepage strip and About.
 const STORAGE_KEY = 'yuriorbit:catalog-title-count:v1';
 const TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -28,14 +28,14 @@ const isFresh = (savedAt: number) => Date.now() - savedAt <= TTL_MS;
 function readStoredCount(): StoredCount | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = window.sessionStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<StoredCount>;
     const count = Number(parsed?.count);
     const savedAt = Number(parsed?.savedAt);
     if (!Number.isFinite(count) || count <= 0 || !Number.isFinite(savedAt)) return null;
     if (!isFresh(savedAt)) {
-      window.sessionStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(STORAGE_KEY);
       return null;
     }
     return { count, savedAt };
@@ -47,7 +47,7 @@ function readStoredCount(): StoredCount | null {
 
 function storeCount(value: number) {
   try {
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({ count: value, savedAt: Date.now() } satisfies StoredCount)
     );
@@ -56,7 +56,7 @@ function storeCount(value: number) {
   }
 }
 
-/** Reads the cached count (memory first, then sessionStorage) if still fresh. */
+/** Reads the cached count (memory first, then localStorage) if still fresh. */
 function readCachedCount(): number | null {
   if (cachedTitleCount !== null && isFresh(cachedAt)) return cachedTitleCount;
   cachedTitleCount = null;
