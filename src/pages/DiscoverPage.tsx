@@ -516,18 +516,21 @@ export function DiscoverPage() {
           </aside>
 
           <div className="min-w-0">
-            {/* Applied filters sit above the toolbar so they are visible on load. */}
-            {activeFilters.length > 0 && (
-              <ActiveFilterBar count={activeFilters.length} onClearAll={clearAllFilters}>
-                {activeFilters.map((f) => (
-                  <ActiveFilterChip
-                    key={f.key}
-                    label={f.label}
-                    onRemove={() => updateFilter(f.key, undefined)}
-                  />
-                ))}
-              </ActiveFilterBar>
-            )}
+            {/* Always present, so the summary is visible on load whether or not
+                anything is filtered. */}
+            <ActiveFilterBar
+              count={activeFilters.length}
+              onClearAll={clearAllFilters}
+              emptyLabel="None — showing every confirmed GL title, most popular first."
+            >
+              {activeFilters.map((f) => (
+                <ActiveFilterChip
+                  key={f.key}
+                  label={f.label}
+                  onRemove={() => updateFilter(f.key, undefined)}
+                />
+              ))}
+            </ActiveFilterBar>
 
             {/* Toolbar: mobile filter toggle, active chips, view mode */}
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
