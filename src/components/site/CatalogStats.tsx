@@ -11,36 +11,62 @@ const FORMATS: ContentType[] = ['MANGA', 'MANHWA', 'MANHUA', 'WEBTOON', 'LIGHT_N
 /** Providers wired into src/lib/providers. */
 const SOURCES = ['AniList', 'MangaDex', 'Jikan (MAL)', 'TMDB'];
 
-// One count query per browser session, shared by the homepage strip and About.
-const STORAGE_KEY = 'yuriorbit:catalog-title-count';
-let cachedTitleCount: number | null = null;
+// One count query per day per browser session, shared by the homepage strip and About.
+const STORAGE_KEY = 'yuriorbit:catalog-title-count:v1';
+const TTL_MS = 24 * 60 * 60 * 1000;
 
-function readStoredCount(): number | null {
+interface StoredCount {
+  count: number;
+  savedAt: number;
+}
+
+let cachedTitleCount: number | null = null;
+let cachedAt = 0;
+
+const isFresh = (savedAt: number) => Date.now() - savedAt <= TTL_MS;
+
+function readStoredCount(): StoredCount | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = window.sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = Number.parseInt(raw, 10);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    const parsed = JSON.parse(raw) as Partial<StoredCount>;
+    const count = Number(parsed?.count);
+    const savedAt = Number(parsed?.savedAt);
+    if (!Number.isFinite(count) || count <= 0 || !Number.isFinite(savedAt)) return null;
+    if (!isFresh(savedAt)) {
+      window.sessionStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return { count, savedAt };
   } catch {
-    // Private mode or blocked storage: fall back to querying.
+    // Private mode, blocked storage or a legacy plain-number value: re-query.
     return null;
   }
 }
 
 function storeCount(value: number) {
   try {
-    window.sessionStorage.setItem(STORAGE_KEY, String(value));
+    window.sessionStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ count: value, savedAt: Date.now() } satisfies StoredCount)
+    );
   } catch {
     // Storage is a nicety; the in-memory cache still covers this page view.
   }
 }
 
-/** Reads the session cache (memory first, then sessionStorage) once. */
+/** Reads the cached count (memory first, then sessionStorage) if still fresh. */
 function readCachedCount(): number | null {
-  if (cachedTitleCount !== null) return cachedTitleCount;
+  if (cachedTitleCount !== null && isFresh(cachedAt)) return cachedTitleCount;
+  cachedTitleCount = null;
+  cachedAt = 0;
+
   const stored = readStoredCount();
-  if (stored !== null) cachedTitleCount = stored;
+  if (stored) {
+    cachedTitleCount = stored.count;
+    cachedAt = stored.savedAt;
+  }
   return cachedTitleCount;
 }
 
@@ -77,7 +103,8 @@ export function CatalogStats({ className }: { className?: string }) {
   const [counting, setCounting] = useState(titleCount === null);
 
   useEffect(() => {
-    if (cachedTitleCount !== null) return;
+    // A stale entry is treated as absent so the tile refreshes at most daily.
+    if (cachedTitleCount !== null && isFresh(cachedAt)) return;
     let cancelled = false;
 
     (async () => {
@@ -89,6 +116,7 @@ export function CatalogStats({ className }: { className?: string }) {
         if (cancelled) return;
         const total = result.total ?? 0;
         cachedTitleCount = total;
+        cachedAt = Date.now();
         storeCount(total);
         setTitleCount(total);
       } catch {
