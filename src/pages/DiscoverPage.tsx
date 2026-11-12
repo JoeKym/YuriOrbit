@@ -20,6 +20,7 @@ import type {
   ContentTitle,
   ContentFilter,
   ContentType,
+  PaginatedResult,
   ReleaseStatus,
   SourceProvider,
   GLClassification
@@ -37,6 +38,7 @@ import { cn, formatScore, getFallbackCover } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { useWatchRegion } from '@/hooks/useWatchRegion';
 import { useStatusCounts } from '@/hooks/useStatusCounts';
+import { MAX_RESTORED_PAGES, readListState, writeListState } from '@/lib/catalog/list-state';
 import {
   ActiveFilterBar,
   ActiveFilterChip,
@@ -72,6 +74,13 @@ const STATUS_OPTIONS: { value: ReleaseStatus | 'ALL'; label: string }[] = [
 ];
 
 const STATUS_VALUES = STATUS_OPTIONS.map((option) => option.value);
+
+/** Stable key for the current filter combination, regardless of param order. */
+function canonicalQuery(params: URLSearchParams): string {
+  return new URLSearchParams(
+    Array.from(params.entries()).sort(([a], [b]) => a.localeCompare(b))
+  ).toString();
+}
 
 export function DiscoverPage() {
   usePageMeta({ title: 'Discover', description: 'Discover Girls\' Love anime, manga, manhwa, webtoons, novels, and dramas on YuriOrbit.', path: '/discover' });
@@ -129,24 +138,45 @@ export function DiscoverPage() {
 
   const [reloadKey, setReloadKey] = useState(0);
 
+  const listKey = `discover|${canonicalQuery(searchParams)}`;
+  const mountKey = useRef(listKey);
+  const remembered = useRef(readListState(listKey));
+  const scrollRestored = useRef(false);
+
   useEffect(() => {
     let cancelled = false;
+    // Only the filter combination the visitor left restores its depth.
+    const restorePages = listKey === mountKey.current ? remembered.current.pages : 1;
+    const pagesToLoad = Math.min(Math.max(restorePages, 1), MAX_RESTORED_PAGES);
+
+    const keepGL = (items: ContentTitle[]) =>
+      items.filter((t) =>
+        filter.classification === 'ALL'
+          ? true
+          : GL_ALLOWED_CLASSIFICATIONS.includes(t.glClassification)
+      );
 
     async function loadData() {
       setLoading(true);
       setError(false);
       try {
-        const result = await searchGLTitles(filter, 1, 24);
-        if (cancelled) return;
+        const collected: ContentTitle[] = [];
+        let last: PaginatedResult | null = null;
+        let loaded = 0;
 
-        const filtered = result.items.filter((t) =>
-          filter.classification === 'ALL'
-            ? true
-            : GL_ALLOWED_CLASSIFICATIONS.includes(t.glClassification)
-        );
+        for (let nextPage = 1; nextPage <= pagesToLoad; nextPage += 1) {
+          const result = await searchGLTitles(filter, nextPage, 24);
+          if (cancelled) return;
+          collected.push(...keepGL(result.items));
+          last = result;
+          loaded = nextPage;
+          if (!result.hasNextPage) break;
+        }
 
-        setTitles(filtered);
-        setHasNextPage(result.hasNextPage);
+        if (!last) return;
+        setTitles(collected);
+        setPage(loaded);
+        setHasNextPage(last.hasNextPage);
       } catch {
         if (!cancelled) setError(true);
       } finally {
@@ -159,6 +189,39 @@ export function DiscoverPage() {
       cancelled = true;
     };
   }, [filter, reloadKey]);
+
+  const pageRef = useRef(page);
+  pageRef.current = page;
+
+  // Remember how many pages are open for this filter combination. Skip while
+  // loading so the placeholder depth cannot overwrite what is being restored.
+  useEffect(() => {
+    if (loading) return;
+    writeListState(listKey, { pages: page, scrollY: readListState(listKey).scrollY });
+  }, [listKey, page, loading]);
+
+  // Save the reading position when leaving or backgrounding the page.
+  useEffect(() => {
+    const save = () => {
+      writeListState(listKey, { pages: pageRef.current, scrollY: window.scrollY });
+    };
+    window.addEventListener('pagehide', save);
+    return () => {
+      window.removeEventListener('pagehide', save);
+      save();
+    };
+  }, [listKey]);
+
+  // ScrollToTop resets the window on navigation; put the visitor back once the
+  // remembered pages have rendered.
+  useEffect(() => {
+    if (loading || scrollRestored.current) return;
+    scrollRestored.current = true;
+    const target = remembered.current.scrollY;
+    if (target > 0) {
+      requestAnimationFrame(() => window.scrollTo({ top: target }));
+    }
+  }, [loading]);
 
   const loadMore = async () => {
     if (loadingMore || !hasNextPage) return;
