@@ -7,6 +7,7 @@ import type { ContentType, ReleaseStatus } from '@/types/content';
 import { searchGLTitles } from '@/lib/providers';
 import { usePaginatedTitles } from '@/hooks/usePaginatedTitles';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { PageHeading } from '@/components/layout/PageHeading';
 import { cn } from '@/lib/utils/format';
 
 interface CategoryPageProps {
@@ -63,10 +64,12 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="mb-1 font-display text-3xl font-semibold text-ink-50">{title}</h1>
-          <p className="text-sm text-ink-400">Browse curated {title.toLowerCase()} across our connected catalogues.</p>
-        </div>
+        <PageHeading
+          eyebrow="Curated GL catalogue"
+          title="GL"
+          accent={title.replace(/^GL\s+/, '')}
+          description={`Browse curated ${title.toLowerCase()} across our connected catalogues.`}
+        />
         <button
           onClick={() => setShowFilters((v) => !v)}
           className={cn(

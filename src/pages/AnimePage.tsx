@@ -8,6 +8,7 @@ import { searchGLTitles } from '@/lib/providers';
 import { usePaginatedTitles } from '@/hooks/usePaginatedTitles';
 import { cn } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { PageHeading } from '@/components/layout/PageHeading';
 
 type AnimeTab = 'ALL' | 'TV' | 'MOVIE';
 
@@ -67,12 +68,12 @@ export function AnimePage() {
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="mb-1 font-display text-3xl font-semibold text-ink-50">GL Anime</h1>
-          <p className="text-sm text-ink-400">
-            Yuri and Girls' Love anime — TV series, OVAs, ONAs and films across connected catalogues.
-          </p>
-        </div>
+        <PageHeading
+          eyebrow="Screen & animation"
+          title="GL"
+          accent="Anime"
+          description="Yuri and Girls' Love anime — TV series, OVAs, ONAs and films across connected catalogues."
+        />
         <button
           onClick={() => setShowFilters((v) => !v)}
           className={cn(
