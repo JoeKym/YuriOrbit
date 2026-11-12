@@ -13,6 +13,8 @@ function dedupe(titles: ContentTitle[]): ContentTitle[] {
 
 export interface PaginatedFeed {
   titles: ContentTitle[];
+  /** Result total reported by the providers on the first page (0 when unknown). */
+  total: number;
   loading: boolean;
   loadingMore: boolean;
   error: boolean;
@@ -34,6 +36,7 @@ export function usePaginatedTitles(
   fetchRef.current = fetchPage;
 
   const [titles, setTitles] = useState<ContentTitle[]>([]);
+  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -48,6 +51,7 @@ export function usePaginatedTitles(
     setError(false);
     setHasNextPage(false);
     setTitles([]);
+    setTotal(0);
     setPage(1);
 
     fetchRef
@@ -55,6 +59,7 @@ export function usePaginatedTitles(
       .then((result) => {
         if (cancelled) return;
         setTitles(dedupe(result.items));
+        setTotal(result.total ?? 0);
         setHasNextPage(result.hasNextPage);
       })
       .catch(() => {
@@ -88,5 +93,5 @@ export function usePaginatedTitles(
 
   const reload = useCallback(() => setReloadKey((key) => key + 1), []);
 
-  return { titles, loading, loadingMore, error, hasNextPage, loadMore, reload };
+  return { titles, total, loading, loadingMore, error, hasNextPage, loadMore, reload };
 }
