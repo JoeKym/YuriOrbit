@@ -8,6 +8,7 @@ import { GL_ALLOWED_CLASSIFICATIONS } from '@/lib/providers/classify';
 import { ContentCard, ContentCardSkeleton } from '@/components/content/ContentCard';
 import { cn } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { PageHeading } from '@/components/layout/PageHeading';
 
 const FEATURED_GENRES = [
   'Romance',
@@ -126,8 +127,12 @@ export function GenresPage() {
     <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="mb-1 font-display text-3xl font-semibold text-ink-50">Genre Explorer</h1>
-          <p className="text-sm text-ink-400">Browse GL titles by genre, or use filters to narrow the view.</p>
+          <PageHeading
+            eyebrow="Curated GL catalogue"
+            title="Genre"
+            accent="Explorer"
+            description="Browse GL titles by genre, or use filters to narrow the view."
+          />
         </div>
         <button
           onClick={() => setShowFilters((v) => !v)}

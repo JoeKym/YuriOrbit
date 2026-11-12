@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Heart, Compass, BookOpen, Shield, Globe, Sparkles, Film, Eye } from 'lucide-react';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { PageHeading } from '@/components/layout/PageHeading';
 
 export function AboutPage() {
   usePageMeta({
@@ -14,8 +15,13 @@ export function AboutPage() {
         <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 to-lavender-600 mb-4 shadow-lg shadow-rose-500/20">
           <Heart className="h-7 w-7 text-white" fill="white" />
         </div>
-        <h1 className="font-display text-4xl font-semibold text-ink-50">YuriOrbit</h1>
-        <p className="mt-2 text-lg text-ink-300">The premier discovery platform for Girls' Love & Yuri.</p>
+        <PageHeading
+          align="center"
+          eyebrow="About the project"
+          title="Yuri"
+          accent="Orbit"
+          description="The premier discovery platform for Girls' Love & Yuri."
+        />
       </div>
 
       <div className="prose prose-invert max-w-none">

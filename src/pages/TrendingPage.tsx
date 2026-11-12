@@ -6,6 +6,7 @@ import { LoadMoreButton } from '@/components/content/LoadMoreButton';
 import { searchGLTitles } from '@/lib/providers';
 import { usePaginatedTitles } from '@/hooks/usePaginatedTitles';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { PageHeading } from '@/components/layout/PageHeading';
 import { cn } from '@/lib/utils/format';
 import type { ContentType } from '@/types/content';
 
@@ -45,10 +46,12 @@ export function TrendingPage() {
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="mb-1 font-display text-3xl font-semibold text-ink-50">Trending GL</h1>
-          <p className="text-sm text-ink-400">Popular Girls' Love titles right now, with filters as an alternate view.</p>
-        </div>
+        <PageHeading
+          eyebrow="This orbit's pulse"
+          title="Trending"
+          accent="GL"
+          description="Popular Girls' Love titles right now, with filters as an alternate view."
+        />
         <button
           onClick={() => setShowFilters((v) => !v)}
           className={cn(
