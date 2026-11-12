@@ -195,6 +195,42 @@ export async function getGLByContentType(
 
 // ─── Search (unified across providers) ────────────────────────────────────────
 
+/**
+ * Formats whose upstream queries are precise enough to enforce locally.
+ *
+ * `MANGA` is the reason this exists: AniList answers it with
+ * `type: MANGA, format_in: [MANGA, ONE_SHOT]` and no country filter, then our
+ * normaliser relabels Korean results MANHWA and Chinese ones MANHUA. MangaDex
+ * does add `originalLanguage: ['ja']`, but the merged list was never checked
+ * against the requested format, so a "Manga" page showed manhwa and manhua.
+ *
+ * `WEBTOON` is deliberately absent: no provider returns that label (AniList has
+ * no webtoon format, so its results normalise to MANGA/MANHWA/MANHUA), and a
+ * strict check would empty the page.
+ */
+const ENFORCED_CONTENT_TYPES = new Set<ContentTitle['contentType']>([
+  'MANGA',
+  'MANHWA',
+  'MANHUA',
+  'LIGHT_NOVEL',
+  'MOVIE',
+  'TV',
+  'DRAMA',
+]);
+
+function matchesContentType(
+  title: ContentTitle,
+  wanted: ContentTitle['contentType']
+): boolean {
+  if (title.contentType === wanted) return true;
+  // TMDB does not separate live-action drama from TV series, so the two labels
+  // are interchangeable for screen formats.
+  const screenPair =
+    (wanted === 'TV' || wanted === 'DRAMA') &&
+    (title.contentType === 'TV' || title.contentType === 'DRAMA');
+  return screenPair;
+}
+
 export type SearchFilterDropReason = 'MATURITY' | 'MODERATION';
 export type SearchFilterDropReporter = (title: ContentTitle, reason: SearchFilterDropReason) => void;
 
@@ -243,8 +279,15 @@ export async function searchGLTitles(
     return false;
   });
 
+  // Drop rows a provider returned outside the format that was asked for, before
+  // dedupe decides which source represents a title.
+  const typedItems =
+    filter.contentType && filter.contentType !== 'ALL' && ENFORCED_CONTENT_TYPES.has(filter.contentType)
+      ? glItems.filter((title) => matchesContentType(title, filter.contentType as ContentTitle['contentType']))
+      : glItems;
+
   // Cross-provider duplicates collapse into one canonical entry here.
-  const mature = visible(canonicalizeTitles(glItems), (title) =>
+  const mature = visible(canonicalizeTitles(typedItems), (title) =>
     onFilterDropped?.(title, 'MATURITY')
   );
   const deduped = await withoutBlocked(mature, (title) =>
