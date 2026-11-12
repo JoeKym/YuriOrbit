@@ -75,6 +75,12 @@ const STATUS_OPTIONS: { value: ReleaseStatus | 'ALL'; label: string }[] = [
 
 const STATUS_VALUES = STATUS_OPTIONS.map((option) => option.value);
 
+/**
+ * Keys where "ALL" is a real choice, not "no filter". `gl=ALL` means include
+ * subtext / GL-adjacent titles, so it must survive into the URL.
+ */
+const KEYS_THAT_KEEP_ALL = new Set(['gl']);
+
 /** Stable key for the current filter combination, regardless of param order. */
 function canonicalQuery(params: URLSearchParams): string {
   return new URLSearchParams(
@@ -111,8 +117,9 @@ export function DiscoverPage() {
 
   const updateFilter = useCallback((key: string, value: string | undefined) => {
     const next = new URLSearchParams(searchParams);
-    if (value && value !== 'ALL' && value.trim() !== '') {
-      next.set(key, value);
+    const keep = Boolean(value && value.trim() !== '' && (value !== 'ALL' || KEYS_THAT_KEEP_ALL.has(key)));
+    if (keep) {
+      next.set(key, value as string);
     } else {
       next.delete(key);
     }
@@ -395,7 +402,7 @@ export function DiscoverPage() {
                   <FilterRow
                     label="Confirmed GL only"
                     active={filter.classification !== 'ALL'}
-                    onClick={() => updateFilter('gl', 'CONFIRMED_GL')}
+                    onClick={() => updateFilter('gl', undefined)}
                   />
                   <FilterRow
                     label="Include subtext & GL-adjacent"

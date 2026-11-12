@@ -113,7 +113,7 @@ export function FilterPanel({
   note?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-ink-800 bg-ink-900/60 p-4 backdrop-blur-sm">
+    <div className="overscroll-contain rounded-2xl border border-ink-800 bg-ink-900/60 p-4 backdrop-blur-sm lg:max-h-[calc(100vh-11rem)] lg:overflow-y-auto">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-400">
           <SlidersHorizontal className="h-3 w-3" /> Filter works
