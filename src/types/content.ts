@@ -150,6 +150,11 @@ export interface PaginatedResult {
   page: number;
   perPage: number;
   total?: number;
+  /**
+   * The provider stopped counting at its own cap, so `total` means "at least"
+   * and must not be shown as a figure.
+   */
+  totalCapped?: boolean;
   hasNextPage: boolean;
 }
 
