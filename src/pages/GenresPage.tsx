@@ -9,6 +9,7 @@ import { ContentCard, ContentCardSkeleton } from '@/components/content/ContentCa
 import { cn } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { PageHeading } from '@/components/layout/PageHeading';
+import { useListRestoreEffects } from '@/hooks/useListRestore';
 
 const FEATURED_GENRES = [
   'Romance',
@@ -81,6 +82,10 @@ export function GenresPage() {
       cancelled = true;
     };
   }, [reloadKey]);
+
+  // This page renders every genre rail from one fetch, so there is no page
+  // depth to restore — only the reading position.
+  useListRestoreEffects({ listKey: 'genres', pages: 1, loading });
 
   const allTitles = useMemo(() => {
     const seen = new Set<string>();

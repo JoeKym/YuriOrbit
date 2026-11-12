@@ -7,6 +7,7 @@ import { searchGLTitles } from '@/lib/providers';
 import { usePaginatedTitles } from '@/hooks/usePaginatedTitles';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { PageHeading } from '@/components/layout/PageHeading';
+import { useListRestoreEffects, useRestoredPageDepth } from '@/hooks/useListRestore';
 import { cn } from '@/lib/utils/format';
 import type { ContentType } from '@/types/content';
 
@@ -30,10 +31,16 @@ export function TrendingPage() {
   const [query, setQuery] = useState('');
   const [format, setFormat] = useState<ContentType | 'ALL'>('ALL');
 
+  const listKey = `trending|${format}`;
+  const restorePages = useRestoredPageDepth(listKey);
+
   const feed = usePaginatedTitles(
     (page) => searchGLTitles({ sort: 'TRENDING', contentType: format === 'ALL' ? undefined : format }, page, PER_PAGE),
-    `trending|${format}`
+    listKey,
+    { initialPages: restorePages }
   );
+
+  useListRestoreEffects({ listKey, pages: feed.page, loading: feed.loading });
 
   const displayed = useMemo(() => {
     const q = query.trim().toLowerCase();
