@@ -15,6 +15,8 @@ export interface PaginatedFeed {
   titles: ContentTitle[];
   /** Result total reported by the providers on the first page (0 when unknown). */
   total: number;
+  /** Highest page currently loaded (1 before any "load more"). */
+  page: number;
   loading: boolean;
   loadingMore: boolean;
   error: boolean;
@@ -30,10 +32,16 @@ export interface PaginatedFeed {
  */
 export function usePaginatedTitles(
   fetchPage: (page: number) => Promise<PaginatedResult>,
-  resetKey: string
+  resetKey: string,
+  options?: { initialPages?: number }
 ): PaginatedFeed {
   const fetchRef = useRef(fetchPage);
   fetchRef.current = fetchPage;
+
+  // Pages to load up front. Listing pages pass a remembered count so a visitor
+  // returning to a filtered list lands back where they were; anything beyond a
+  // sane cap is dropped rather than replayed as a request storm.
+  const initialPages = Math.min(Math.max(options?.initialPages ?? 1, 1), 10);
 
   const [titles, setTitles] = useState<ContentTitle[]>([]);
   const [total, setTotal] = useState(0);
@@ -54,20 +62,35 @@ export function usePaginatedTitles(
     setTotal(0);
     setPage(1);
 
-    fetchRef
-      .current(1)
-      .then((result) => {
+    (async () => {
+      const collected: ContentTitle[] = [];
+      let reportedTotal = 0;
+      let lastResult: PaginatedResult | null = null;
+      let loadedPages = 0;
+
+      try {
+        for (let nextPage = 1; nextPage <= initialPages; nextPage += 1) {
+          const result = await fetchRef.current(nextPage);
+          if (cancelled) return;
+          if (nextPage === 1) reportedTotal = result.total ?? 0;
+          collected.push(...result.items);
+          lastResult = result;
+          loadedPages = nextPage;
+          if (!result.hasNextPage) break;
+        }
+      } catch {
+        if (!cancelled && loadedPages === 0) setError(true);
+      } finally {
         if (cancelled) return;
-        setTitles(dedupe(result.items));
-        setTotal(result.total ?? 0);
-        setHasNextPage(result.hasNextPage);
-      })
-      .catch(() => {
-        if (!cancelled) setError(true);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+        if (lastResult) {
+          setTitles(dedupe(collected));
+          setTotal(reportedTotal);
+          setHasNextPage(lastResult.hasNextPage);
+          setPage(loadedPages);
+        }
+        setLoading(false);
+      }
+    })();
 
     return () => {
       cancelled = true;
@@ -93,5 +116,5 @@ export function usePaginatedTitles(
 
   const reload = useCallback(() => setReloadKey((key) => key + 1), []);
 
-  return { titles, total, loading, loadingMore, error, hasNextPage, loadMore, reload };
+  return { titles, total, page, loading, loadingMore, error, hasNextPage, loadMore, reload };
 }

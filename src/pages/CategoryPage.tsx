@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { AlertCircle, RotateCcw, Search, SlidersHorizontal, X } from 'lucide-react';
 import { ContentCard, ContentCardSkeleton } from '@/components/content/ContentCard';
@@ -53,6 +53,50 @@ function parseSort(value: string | null): SortValue {
   return SORT_OPTIONS.some((option) => option.value === value) ? (value as SortValue) : 'POPULARITY';
 }
 
+/**
+ * How far into a filtered list the visitor had read, kept per filter
+ * combination so returning from a title page lands in the same place.
+ */
+interface ListState {
+  pages: number;
+  scrollY: number;
+}
+
+const LIST_STATE_PREFIX = 'yuriorbit:catalog-list:';
+const MAX_RESTORED_PAGES = 10;
+
+const listStateKey = (listKey: string) => `${LIST_STATE_PREFIX}${listKey}`;
+
+function readListState(listKey: string): ListState {
+  const fallback: ListState = { pages: 1, scrollY: 0 };
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const raw = window.sessionStorage.getItem(listStateKey(listKey));
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw) as Partial<ListState>;
+    const pages = Number.isFinite(parsed.pages)
+      ? Math.min(Math.max(Math.trunc(parsed.pages as number), 1), MAX_RESTORED_PAGES)
+      : 1;
+    const scrollY = Number.isFinite(parsed.scrollY) ? Math.max(parsed.scrollY as number, 0) : 0;
+    return { pages, scrollY };
+  } catch {
+    return fallback;
+  }
+}
+
+function writeListState(listKey: string, state: ListState) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (state.pages <= 1 && state.scrollY <= 0) {
+      window.sessionStorage.removeItem(listStateKey(listKey));
+      return;
+    }
+    window.sessionStorage.setItem(listStateKey(listKey), JSON.stringify(state));
+  } catch {
+    // Storage is a nicety; the list still works without it.
+  }
+}
+
 export function CategoryPage({ contentType, title }: CategoryPageProps) {
   usePageMeta({
     title,
@@ -87,6 +131,11 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
     [searchParams, setSearchParams]
   );
 
+  const listKey = `${contentType}|${status}|${sort}`;
+  const mountKey = useRef(listKey);
+  const remembered = useRef(readListState(listKey));
+  const scrollRestored = useRef(false);
+
   const feed = usePaginatedTitles(
     (page) =>
       searchGLTitles(
@@ -98,8 +147,45 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
         page,
         PER_PAGE
       ),
-    `${contentType}|${status}|${sort}`
+    listKey,
+    // Only the filter combination the visitor left restores its page depth;
+    // changing a filter starts from page 1.
+    { initialPages: listKey === mountKey.current ? remembered.current.pages : 1 }
   );
+
+  const pageRef = useRef(feed.page);
+  pageRef.current = feed.page;
+
+  // Remember how many pages are open for this filter combination. Skip while the
+  // feed is still loading, otherwise the page 1 placeholder would overwrite the
+  // depth that is about to be restored.
+  useEffect(() => {
+    if (feed.loading) return;
+    writeListState(listKey, { pages: feed.page, scrollY: readListState(listKey).scrollY });
+  }, [listKey, feed.page, feed.loading]);
+
+  // Save the reading position when leaving or backgrounding the page.
+  useEffect(() => {
+    const save = () => {
+      writeListState(listKey, { pages: pageRef.current, scrollY: window.scrollY });
+    };
+    window.addEventListener('pagehide', save);
+    return () => {
+      window.removeEventListener('pagehide', save);
+      save();
+    };
+  }, [listKey]);
+
+  // ScrollToTop resets the window on navigation; put the visitor back once the
+  // remembered pages have rendered.
+  useEffect(() => {
+    if (feed.loading || scrollRestored.current) return;
+    scrollRestored.current = true;
+    const target = remembered.current.scrollY;
+    if (target > 0) {
+      requestAnimationFrame(() => window.scrollTo({ top: target }));
+    }
+  }, [feed.loading]);
 
   const displayed = useMemo(() => {
     const q = query.trim().toLowerCase();
