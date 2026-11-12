@@ -2,14 +2,16 @@ import { useEffect, useState } from 'react';
 import { BookOpen, Database, Layers } from 'lucide-react';
 import type { ContentType } from '@/types/content';
 import { searchGLTitles } from '@/lib/providers';
+import { cn } from '@/lib/utils/format';
 
 /** Formats the catalogue actually surfaces in navigation. */
 const FORMATS: ContentType[] = ['MANGA', 'MANHWA', 'MANHUA', 'WEBTOON', 'LIGHT_NOVEL', 'TV', 'MOVIE', 'DRAMA'];
 
+
 /** Providers wired into src/lib/providers. */
 const SOURCES = ['AniList', 'MangaDex', 'Jikan (MAL)', 'TMDB'];
 
-// One count pass per browser session; the About page is the only consumer.
+// One count query per browser session, shared by the homepage strip and About.
 let cachedTitleCount: number | null = null;
 
 function Tile({
@@ -40,7 +42,7 @@ function Tile({
  * marketing numbers. Format and source counts are structural; the title total is
  * a live query summed across formats (skipped silently when a provider fails).
  */
-export function CatalogStats() {
+export function CatalogStats({ className }: { className?: string }) {
   const [titleCount, setTitleCount] = useState<number | null>(cachedTitleCount);
   const [counting, setCounting] = useState(cachedTitleCount === null);
 
@@ -49,26 +51,20 @@ export function CatalogStats() {
     let cancelled = false;
 
     (async () => {
-      let sum = 0;
-      let answered = 0;
-
-      // Sequential on purpose: a burst across formats trips provider rate limits.
-      for (const format of FORMATS) {
-        try {
-          const result = await searchGLTitles({ contentType: format }, 1, 1);
-          sum += result.total ?? 0;
-          answered += 1;
-        } catch {
-          // Skip a format that fails; the tile still reports what answered.
-        }
+      try {
+        // One cross-format query instead of one per format. The provider layer
+        // reports the larger of the per-source totals, which is the same figure
+        // the catalogue pages show as "titles catalogued".
+        const result = await searchGLTitles({}, 1, 1);
+        if (cancelled) return;
+        const total = result.total ?? 0;
+        cachedTitleCount = total;
+        setTitleCount(total);
+      } catch {
+        // Leave the tile blank rather than claiming a number we could not read.
+      } finally {
+        if (!cancelled) setCounting(false);
       }
-
-      if (cancelled) return;
-      if (answered > 0) {
-        cachedTitleCount = sum;
-        setTitleCount(sum);
-      }
-      setCounting(false);
     })();
 
     return () => {
@@ -77,12 +73,18 @@ export function CatalogStats() {
   }, []);
 
   return (
-    <div className="mt-10 grid gap-3 sm:grid-cols-3">
+    <div className={cn('grid gap-3 sm:grid-cols-3', className ?? 'mt-10')}>
       <Tile
         icon={BookOpen}
-        value={counting ? '—' : (titleCount ?? 0).toLocaleString()}
+        value={titleCount === null ? '—' : titleCount.toLocaleString()}
         label="Titles catalogued"
-        hint={counting ? 'Counting live catalogue…' : 'Summed from live provider queries'}
+        hint={
+          titleCount !== null
+            ? 'Live provider total across all formats'
+            : counting
+              ? 'Counting live catalogue…'
+              : 'Provider counts unavailable right now'
+        }
       />
       <Tile
         icon={Layers}

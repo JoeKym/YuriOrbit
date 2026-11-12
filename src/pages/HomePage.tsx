@@ -4,6 +4,7 @@ import { Hero } from '@/components/home/Hero';
 import { TestimonialsSection } from '@/components/site/TestimonialsSection';
 import { Carousel } from '@/components/content/Carousel';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { CatalogStats } from '@/components/site/CatalogStats';
 import type { ContentTitle, ContentType } from '@/types/content';
 import { GL_ALLOWED_CLASSIFICATIONS } from '@/lib/providers/classify';
 import { getTrendingGL, getPopularGL, getRecentGL, getCompletedGL, getGLByContentType } from '@/lib/providers';
@@ -235,6 +236,10 @@ export function HomePage() {
   return (
     <div>
       <Hero titles={heroDeck} loading={loading && heroDeck.length === 0} />
+
+      <div className="mx-auto max-w-[1600px] px-4 pt-8 md:px-6">
+        <CatalogStats className="mt-0" />
+      </div>
 
       <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
         {error && (
