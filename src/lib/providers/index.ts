@@ -177,20 +177,27 @@ export async function getGLByContentType(
   const cached = getCached<ContentTitle[]>(cacheKey);
   if (cached && cached.length > 0) return withoutBlocked(cached);
 
+  // A rail asks for a fixed window, but classification happens afterwards. Ask
+  // for a wider slice so rows that get dropped (weak Yuri tag, moderation,
+  // maturity) cannot push qualifying titles off the rail — without this, raising
+  // the content filter *shrank* the Manhwa rail, because adult titles took the
+  // same slots while failing classification.
+  const fetchSize = Math.min(perPage * 3, 60);
+
   let results: ContentTitle[];
   if (contentType === 'MOVIE') {
     const tmdbResults = await tmdbGetGLMovies().catch(() => []);
-    results = tmdbResults.length > 0 ? tmdbResults : await anilistByType('MOVIE', perPage);
+    results = tmdbResults.length > 0 ? tmdbResults : await anilistByType('MOVIE', fetchSize);
   } else if (contentType === 'TV' || contentType === 'DRAMA') {
     const tmdbResults = await tmdbGetGLDramas().catch(() => []);
-    results = tmdbResults.length > 0 ? tmdbResults : await anilistByType('TV', perPage);
+    results = tmdbResults.length > 0 ? tmdbResults : await anilistByType('TV', fetchSize);
   } else {
-    results = await anilistByType(contentType, perPage);
+    results = await anilistByType(contentType, fetchSize);
   }
 
   const final = await withoutBlocked(visible(canonicalizeTitles(results.filter(isGL))));
   if (final.length > 0) setCached(cacheKey, final);
-  return final;
+  return final.slice(0, perPage);
 }
 
 // ─── Search (unified across providers) ────────────────────────────────────────
