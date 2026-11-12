@@ -298,6 +298,12 @@ export async function mangadexSearchGL(
   perPage = 24,
   onGlDropped?: (title: ContentTitle) => void
 ): Promise<PaginatedResult> {
+  // MangaDex has no "upcoming" status, and an unmapped status used to fall
+  // through to an unfiltered query — every title, counted as "upcoming".
+  if (filter.status === 'NOT_YET_RELEASED') {
+    return { items: [], page, perPage, total: 0, hasNextPage: false };
+  }
+
   const limit = Math.min(perPage, 100);
   const offset = (page - 1) * limit;
 

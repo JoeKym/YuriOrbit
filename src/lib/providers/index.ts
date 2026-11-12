@@ -268,7 +268,9 @@ export async function searchGLTitles(
   for (const r of results) {
     if (r.status === 'fulfilled') {
       items.push(...r.value.items);
-      total = Math.max(total, r.value.total || 0);
+      // A capped total (AniList stops at 5000) is a floor, not a count, so it
+      // must not win the max or the rail would read the same number everywhere.
+      if (!r.value.totalCapped) total = Math.max(total, r.value.total || 0);
       hasNextPage = hasNextPage || r.value.hasNextPage;
     }
   }

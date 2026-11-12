@@ -37,9 +37,12 @@ export async function loadStatusCount(
       1,
       1
     );
-    const total = result.total ?? 0;
-    CACHE.set(key, total);
-    return total;
+    // Providers that cannot answer precisely leave total empty or zero (a
+    // capped AniList total is dropped upstream). An unknown count is hidden in
+    // the rail rather than shown as 0.
+    if (!result.total) return undefined;
+    CACHE.set(key, result.total);
+    return result.total;
   } catch {
     // A failed count is not a page failure — the rail just omits the number.
     return undefined;

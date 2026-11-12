@@ -193,6 +193,12 @@ function buildPageQuery(sortEnum: string): string {
 }`;
 }
 
+/**
+ * AniList stops counting at 5000 and reports that number for every larger
+ * query, so anything at or above it is a floor, not a count.
+ */
+const ANILIST_TOTAL_CAP = 5000;
+
 async function fetchFiltered(vars: MediaFilterVars, sortEnum: string): Promise<PaginatedResult> {
   const query = buildPageQuery(sortEnum);
   const data = await anilistQuery(query, { ...vars, isAdult: vars.isAdult ?? adultFilter() } as unknown as Record<string, unknown>) as {
@@ -204,6 +210,7 @@ async function fetchFiltered(vars: MediaFilterVars, sortEnum: string): Promise<P
     page: data.Page.pageInfo.currentPage,
     perPage: data.Page.pageInfo.perPage,
     total: data.Page.pageInfo.total,
+    totalCapped: data.Page.pageInfo.total >= ANILIST_TOTAL_CAP,
     hasNextPage: data.Page.pageInfo.hasNextPage,
   };
 }
