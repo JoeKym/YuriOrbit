@@ -320,7 +320,10 @@ export async function getPopularGL(perPage = 20): Promise<ContentTitle[]> {
 }
 
 export async function getRecentGL(perPage = 20): Promise<ContentTitle[]> {
-  return fetchGLBase({}, 'START_DATE_DESC', perPage);
+  // Start-date descending also returns announcements and cancelled works, which
+  // then showed up under "Recently Released" as Upcoming / Coming Soon /
+  // Canceled cards. Only things that actually came out belong in that row.
+  return fetchGLBase({ status_in: ['RELEASING', 'FINISHED'] }, 'START_DATE_DESC', perPage);
 }
 
 export async function getCompletedGL(perPage = 20): Promise<ContentTitle[]> {
