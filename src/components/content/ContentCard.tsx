@@ -141,38 +141,45 @@ export function ContentCard({ title, className, showAvailability = false }: Cont
 
         {/* Bottom Metadata & Title (Resting State) */}
         <div className="absolute bottom-0 left-0 right-0 p-3 flex flex-col justify-end transition-transform duration-300 group-hover:-translate-y-1">
-          {/* Status Indicator & Format details */}
-          <div className="flex items-center gap-2 mb-1 text-[11px] font-medium text-ink-300">
+          {/* Status indicator, then the chapter/episode and genre group, which
+              truncates as a unit so a word is never sliced by the card edge. */}
+          <div className="mb-1 flex min-w-0 items-center gap-1.5 text-[10px] font-medium text-ink-300">
             {statusInfo.label && (
-              <span className="flex items-center gap-1">
+              <span className="flex shrink-0 items-center gap-1">
                 <span className={cn('h-1.5 w-1.5 rounded-full', statusInfo.dotClass)} />
-                <span className="text-[10px] text-ink-300">{statusInfo.label}</span>
+                <span className="text-ink-300">{statusInfo.label}</span>
               </span>
             )}
-            {countLabel && (
-              <>
-                <span className="text-ink-600">•</span>
-                <span className="text-[10px] text-ink-400">{countLabel}</span>
-              </>
-            )}
-            {primaryGenre && (
-              <>
-                <span className="text-ink-600">•</span>
-                <span className="text-[10px] text-rose-400 font-semibold truncate">{primaryGenre}</span>
-              </>
+            {(countLabel || primaryGenre) && (
+              <span className="flex min-w-0 items-center gap-1.5">
+                {countLabel && (
+                  <>
+                    {statusInfo.label && <span className="shrink-0 text-ink-600">·</span>}
+                    <span className="shrink-0 text-ink-400">{countLabel}</span>
+                  </>
+                )}
+                {primaryGenre && (
+                  <>
+                    {(statusInfo.label || countLabel) && (
+                      <span className="shrink-0 text-ink-600">·</span>
+                    )}
+                    <span className="min-w-0 truncate font-semibold text-rose-400">{primaryGenre}</span>
+                  </>
+                )}
+              </span>
             )}
           </div>
 
           {/* Title Header */}
-          <h3 className="line-clamp-2 text-sm font-semibold text-ink-50 leading-snug tracking-tight group-hover:text-rose-200 transition-colors">
+          <h3 className="line-clamp-2 break-words text-sm font-semibold text-ink-50 leading-snug tracking-tight transition-colors group-hover:text-rose-200">
             {title.title}
           </h3>
 
           {/* Year & Metric line */}
-          <div className="mt-1 flex items-center justify-between text-[11px] text-ink-400">
-            {title.releaseYear ? <span>{title.releaseYear}</span> : <span />}
+          <div className="mt-1 flex min-w-0 items-center justify-between gap-2 text-[11px] text-ink-400">
+            {title.releaseYear ? <span className="shrink-0">{title.releaseYear}</span> : <span />}
             {popularFormatted && (
-              <span className="text-[10px] text-ink-400 font-mono">
+              <span className="truncate text-[10px] font-mono text-ink-400">
                 {popularFormatted} readers
               </span>
             )}
@@ -201,7 +208,7 @@ export function ContentCard({ title, className, showAvailability = false }: Cont
             </div>
 
             {/* Title */}
-            <h4 className="line-clamp-1 text-sm font-bold text-white leading-tight">
+            <h4 className="line-clamp-2 break-words text-sm font-bold leading-tight text-white">
               {title.title}
             </h4>
 
