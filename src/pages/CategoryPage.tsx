@@ -74,6 +74,20 @@ function FilterRow({
   );
 }
 
+function ActiveChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onRemove}
+      className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-[11px] text-rose-200 transition-colors hover:border-rose-400/50 hover:bg-rose-500/15"
+    >
+      {label}
+      <X className="h-3 w-3 opacity-70" />
+      <span className="sr-only">Remove filter</span>
+    </button>
+  );
+}
+
 function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="border-t border-ink-800/70 pt-3">
@@ -246,6 +260,28 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
         </aside>
 
         <div className="min-w-0">
+          {hasFilters && (
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-ink-800 bg-ink-900/40 px-3 py-2">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-500">Active filters</span>
+              {query.trim() && (
+                <ActiveChip label={`Search: ${query.trim()}`} onRemove={() => setQuery('')} />
+              )}
+              {status !== 'ALL' && (
+                <ActiveChip label={`Status: ${statusLabel}`} onRemove={() => setStatus('ALL')} />
+              )}
+              {sort !== 'POPULARITY' && (
+                <ActiveChip label={`Sort: ${sortLabel}`} onRemove={() => setSort('POPULARITY')} />
+              )}
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="ml-auto text-[11px] font-medium text-ink-400 transition-colors hover:text-rose-300"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs text-ink-400">
               {feed.loading ? (
