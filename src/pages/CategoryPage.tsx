@@ -197,6 +197,8 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
   }, [feed.titles, query]);
 
   const hasFilters = !!query.trim() || status !== 'ALL' || sort !== 'POPULARITY';
+  const activeFilterCount =
+    (query.trim() ? 1 : 0) + (status !== 'ALL' ? 1 : 0) + (sort !== 'POPULARITY' ? 1 : 0);
 
   const resetFilters = () => {
     setSearchInput('');
@@ -277,7 +279,7 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
 
         <div className="min-w-0">
           {hasFilters && (
-            <ActiveFilterBar onClearAll={resetFilters}>
+            <ActiveFilterBar count={activeFilterCount} onClearAll={resetFilters}>
               {query.trim() && (
                 <ActiveFilterChip
                   label={`Search: ${query.trim()}`}
