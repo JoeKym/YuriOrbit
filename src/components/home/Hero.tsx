@@ -166,7 +166,7 @@ export function Hero({ titles, loading }: { titles: ContentTitle[]; loading?: bo
       <div className="absolute inset-0 bg-gradient-to-r from-ink-950 via-ink-950/70 to-transparent" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(232,77,138,0.18),transparent_65%)]" />
 
-      <div className="relative mx-auto flex max-w-[1600px] flex-col gap-8 px-4 pb-8 pt-14 md:flex-row md:items-end md:gap-12 md:px-6 md:pb-10 md:pt-20">
+      <div className="relative mx-auto flex max-w-page flex-col gap-8 px-4 pb-8 pt-14 md:flex-row md:items-end md:gap-12 md:px-6 md:pb-10 md:pt-20">
         <div key={slide.id} className="max-w-2xl animate-fade-in">
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-[11px] font-medium text-rose-200">
@@ -310,7 +310,7 @@ export function Hero({ titles, loading }: { titles: ContentTitle[]; loading?: bo
       </div>
 
       {/* Current level, so the filter is never a surprise */}
-      <div className="relative mx-auto max-w-[1600px] px-4 pb-6 md:px-6 md:pb-7">
+      <div className="relative mx-auto max-w-page px-4 pb-6 md:px-6 md:pb-7">
         <p className="text-[10px] uppercase tracking-wider text-ink-400">
           Content filter: {level.toLowerCase()} · change it in{' '}
           <Link to="/settings" className="text-ink-400 underline decoration-dotted hover:text-ink-200">

@@ -14,19 +14,20 @@ import {
 import { useAuth } from '@/lib/auth/AuthContext';
 import { FEEDBACK_FALLBACK_EMAIL, submitFeedback } from '@/lib/feedback';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 export function ContactPage() {
   usePageMeta({ title: 'Contact', description: 'Contact YuriOrbit for questions, corrections, partnerships, or support. Use Appeals for moderation actions.', path: '/contact' });
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
-      <div className="text-center mb-10">
-        <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 to-lavender-600 mb-4 mx-auto">
-          <Mail className="h-7 w-7 text-white" fill="white" />
-        </div>
-        <h1 className="font-display text-4xl font-semibold text-ink-50">Contact</h1>
-        <p className="mt-2 text-lg text-ink-300">Get in touch with us</p>
-      </div>
+    <div className="mx-auto max-w-prose px-4 py-12 md:px-6">
+      <PageHeader
+        eyebrow="Support"
+        title="Contact"
+        description="Get in touch with us."
+        align="center"
+        className="mb-10"
+      />
 
       <div className="prose prose-invert max-w-none">
         <p className="text-ink-300 leading-relaxed mb-2">

@@ -43,7 +43,7 @@ export function TestimonialsSection({
   const items = compact ? reviews.slice(0, 3) : reviews;
 
   return (
-    <section className={cn('mx-auto max-w-[1600px] px-4 md:px-6', compact ? 'py-8' : 'py-12')}>
+    <section className={cn('mx-auto max-w-page px-4 md:px-6', compact ? 'py-8' : 'py-12')}>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-display text-2xl font-semibold text-ink-50 md:text-3xl">{title}</h2>

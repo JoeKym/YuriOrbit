@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 export function PrivacyPage() {
   usePageMeta({
@@ -9,9 +10,13 @@ export function PrivacyPage() {
   });
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
-      <h1 className="mb-2 font-display text-3xl font-semibold text-ink-50">Privacy Policy</h1>
-      <p className="mb-8 text-sm text-ink-400">Last updated: November 2026</p>
+    <div className="mx-auto max-w-prose px-4 py-12 md:px-6">
+      <PageHeader
+        eyebrow="Legal"
+        title="Privacy Policy"
+        description="Last updated: November 2026"
+        className="mb-8"
+      />
 
       <div className="space-y-6 leading-relaxed text-ink-300">
         <section>

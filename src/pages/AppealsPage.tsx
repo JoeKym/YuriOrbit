@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertCircle, CheckCircle, Loader2, Scale, Send, ShieldAlert } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, Send, ShieldAlert } from 'lucide-react';
 import { submitFeedback, FEEDBACK_FALLBACK_EMAIL } from '@/lib/feedback';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 type AppealCategory = 'appeal' | 'appeal_account' | 'appeal_content' | 'takedown';
 
@@ -72,17 +73,15 @@ export function AppealsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
-      <div className="mb-8 text-center">
-        <div className="mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 to-lavender-600">
-          <Scale className="h-7 w-7 text-white" />
-        </div>
-        <h1 className="font-display text-3xl font-semibold text-ink-50 md:text-4xl">Appeals & Moderation Review</h1>
-        <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-ink-300">
-          Submit an appeal if you believe an account or content moderation action was made in error. Appeals are reviewed
-          by the admin team. Submitting an appeal does not guarantee reversal.
-        </p>
-      </div>
+    <div className="mx-auto max-w-prose px-4 py-12 md:px-6">
+      <PageHeader
+        eyebrow="Moderation"
+        title="Appeals &"
+        accent="Moderation Review"
+        description="Submit an appeal if you believe an account or content moderation action was made in error. Appeals are reviewed by the admin team. Submitting an appeal does not guarantee reversal."
+        align="center"
+        className="mb-8"
+      />
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2">
         <div className="card-surface p-4">

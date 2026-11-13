@@ -59,7 +59,7 @@ export function AnimePage() {
   const hasFilters = !!query.trim() || status !== 'ALL' || sort !== 'POPULARITY';
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
+    <div className="mx-auto max-w-page px-4 py-8 md:px-6">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <PageHeader
           eyebrow="Screen & animation"

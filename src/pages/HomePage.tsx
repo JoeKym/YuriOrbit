@@ -251,11 +251,11 @@ export function HomePage() {
     <div>
       <Hero titles={heroDeck} loading={loading && heroDeck.length === 0} />
 
-      <div className="mx-auto max-w-[1600px] px-4 pt-8 md:px-6">
+      <div className="mx-auto max-w-page px-4 pt-8 md:px-6">
         <CatalogStats className="mt-0" />
       </div>
 
-      <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
+      <div className="mx-auto max-w-page px-4 py-8 md:px-6">
         {error && (
           <div className="mb-6 flex flex-col items-start justify-between gap-3 rounded-xl border border-error-500/30 bg-error-500/5 p-4 sm:flex-row sm:items-center">
             <span className="flex items-center gap-2 text-sm text-error-400">

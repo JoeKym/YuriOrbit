@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/layout/PageHeader';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { BookOpen, Calendar, Heart, Lock, Star, UserX } from 'lucide-react';
@@ -85,11 +86,12 @@ export function UserProfilePage() {
     return (
       <div className="mx-auto max-w-xl px-4 py-20 text-center">
         <UserX className="mx-auto mb-4 h-10 w-10 text-ink-600" />
-        <h1 className="font-display text-2xl font-semibold text-ink-50">Profiles aren't enabled yet</h1>
-        <p className="mt-2 text-sm text-ink-400">
-          This deployment does not have the profile tables yet. Apply the Supabase migration to switch
-          public profiles on.
-        </p>
+        <PageHeader
+          variant="compact"
+          align="center"
+          title="Profiles aren't enabled yet"
+          description="This deployment does not have the profile tables yet. Apply the Supabase migration to switch public profiles on."
+        />
         <Link to="/discover" className="btn-primary mt-6">
           Back to Discover
         </Link>
@@ -100,8 +102,7 @@ export function UserProfilePage() {
   if (error) {
     return (
       <div className="mx-auto max-w-xl px-4 py-20 text-center">
-        <h1 className="font-display text-2xl font-semibold text-ink-50">Could not load profile</h1>
-        <p className="mt-2 text-sm text-ink-400">{error}</p>
+        <PageHeader variant="compact" align="center" title="Could not load profile" description={error} />
         <Link to="/discover" className="btn-secondary mt-6">
           Back to Discover
         </Link>
@@ -112,10 +113,12 @@ export function UserProfilePage() {
   if (!profile) {
     return (
       <div className="mx-auto max-w-xl px-4 py-20 text-center">
-        <h1 className="font-display text-2xl font-semibold text-ink-50">@{username} not found</h1>
-        <p className="mt-2 text-sm text-ink-400">
-          No YuriOrbit member has claimed that username, or their profile is private.
-        </p>
+        <PageHeader
+          variant="compact"
+          align="center"
+          title={`@${username} not found`}
+          description="No YuriOrbit member has claimed that username, or their profile is private."
+        />
         <Link to="/discover" className="btn-primary mt-6">
           Back to Discover
         </Link>

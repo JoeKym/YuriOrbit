@@ -117,7 +117,7 @@ export function SearchPage() {
   };
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
+    <div className="mx-auto max-w-page px-4 py-8 md:px-6">
       <PageHeader
         eyebrow="Search the catalogue"
         title={query ? 'Results for' : 'Search'}

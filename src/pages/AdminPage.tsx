@@ -34,6 +34,7 @@ import { ContentModerationTab } from '@/components/admin/ContentModerationTab';
 import { ReviewsTab } from '@/components/admin/ReviewsTab';
 import { BarChart3, Scale, ShieldAlert, Quote } from 'lucide-react';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 type TabKey = 'overview' | 'traffic' | 'users' | 'appeals' | 'moderation' | 'reviews' | 'library' | 'redirects' | 'gl-overrides' | 'feedback' | 'contact' | 'featured' | 'settings' | 'audit';
 
@@ -113,18 +114,22 @@ export function AdminPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[1400px] px-4 py-8 md:px-6">
+    <div className="mx-auto max-w-content px-4 py-8 md:px-6">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500 to-lavender-600">
             <Shield className="h-5 w-5 text-white" />
           </div>
-          <div>
-            <h1 className="font-display text-2xl font-semibold text-ink-50">Admin console</h1>
-            <p className="text-xs text-ink-400">
-              Signed in as <span className="text-rose-300">{user?.email}</span>
-            </p>
-          </div>
+          <PageHeader
+            variant="compact"
+            eyebrow="Operations"
+            title="Admin console"
+            description={
+              <>
+                Signed in as <span className="text-rose-300">{user?.email}</span>
+              </>
+            }
+          />
         </div>
         <Link to="/" className="btn-ghost text-xs">
           <Compass className="h-3.5 w-3.5" /> View site

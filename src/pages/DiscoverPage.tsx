@@ -326,7 +326,7 @@ export function DiscoverPage() {
           this height pinning it would cover a third of the viewport and slide
           under the navbar. The sidebar filters stay sticky instead. */}
       <div className="border-b border-ink-850 bg-ink-900/60 backdrop-blur-md">
-        <div className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6 md:px-6">
+        <div className="mx-auto max-w-page px-4 py-4 sm:px-6 md:px-6">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
             <PageHeader
               title="Discover"
@@ -387,7 +387,7 @@ export function DiscoverPage() {
       </div>
 
       {/* Main Container */}
-      <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 md:px-6">
+      <div className="mx-auto max-w-page px-4 py-6 sm:px-6 md:px-6">
         <div className="grid gap-6 lg:grid-cols-[248px_minmax(0,1fr)]">
           <aside
             className={cn(

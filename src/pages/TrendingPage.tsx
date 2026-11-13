@@ -137,7 +137,7 @@ export function TrendingPage() {
   const gridClass = 'grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5';
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
+    <div className="mx-auto max-w-page px-4 py-8 md:px-6">
       <PageHeader
         eyebrow="This orbit's pulse"
         title="Trending"

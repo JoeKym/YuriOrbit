@@ -10,6 +10,7 @@ import { usePageMeta } from '@/hooks/usePageMeta';
 import { AvailabilityBadge } from '@/components/content/AvailabilityBadge';
 import { countNewChapters, loadChapterProgress } from '@/lib/content/chapter-updates';
 import { Badge, Button, buttonClasses, Chip, Dialog, EmptyState } from '@/components/ui';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 const STATUS_FILTERS: (LibraryStatus | 'ALL')[] = ['ALL', 'CURRENT', 'PLANNED', 'COMPLETED', 'FAVOURITE', 'ON_HOLD', 'DROPPED'];
 
@@ -96,8 +97,12 @@ export function LibraryPage() {
 
   if (library.length === 0) {
     return (
-      <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
-        <h1 className="mb-1 font-display text-3xl font-semibold text-ink-50">My Library</h1>
+      <div className="mx-auto max-w-page px-4 py-8 md:px-6">
+        <PageHeader
+          title="My Library"
+          description="Everything you've saved, in one place."
+          className="mb-6"
+        />
         {!isAuthenticated && !isLoading && (
           <div className="mb-6 flex items-center gap-3 rounded-xl border border-rose-500/20 bg-rose-500/5 p-4">
             <LogIn className="h-5 w-5 flex-shrink-0 text-rose-400" />
@@ -123,20 +128,22 @@ export function LibraryPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
+    <div className="mx-auto max-w-page px-4 py-8 md:px-6">
       <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-3xl font-semibold text-ink-50">My Library</h1>
-          <p className="mt-1 text-sm text-ink-400">
-            {library.length} title{library.length !== 1 ? 's' : ''} saved
-            {updatesCount > 0 && (
-              <span className="text-rose-300">
-                {' · '}
-                {updatesCount} with new chapter{updatesCount === 1 ? '' : 's'}
-              </span>
-            )}
-          </p>
-        </div>
+        <PageHeader
+          title="My Library"
+          description={
+            <>
+              {library.length} title{library.length !== 1 ? 's' : ''} saved
+              {updatesCount > 0 && (
+                <span className="text-rose-300">
+                  {' · '}
+                  {updatesCount} with new chapter{updatesCount === 1 ? '' : 's'}
+                </span>
+              )}
+            </>
+          }
+        />
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={handleExport} icon={<Download className="h-3.5 w-3.5" />}>
             Export

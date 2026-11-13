@@ -70,6 +70,14 @@ export default {
           600: '#dc2626',
         },
       },
+      // Page containers: stop hand-writing `max-w-[1600px]` per page.
+      maxWidth: {
+        page: '1600px',
+        content: '1400px',
+        reading: '1200px',
+        prose: '720px',
+        narrow: '640px',
+      },
       fontFamily: {
         display: ['"Cormorant Garamond"', 'serif'],
         sans: ['Inter', 'system-ui', 'sans-serif'],

@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Settings as SettingsIcon,
   Trash2,
   Download,
   Upload,
@@ -39,6 +38,7 @@ import { resetMaturityPreference } from '@/lib/content/maturity-preference';
 import { THEMES, type ThemeId, getStoredTheme, applyTheme, THEME_STORAGE_KEY } from '@/lib/theme/themes';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { cn } from '@/lib/utils/format';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 export function SettingsPage() {
   usePageMeta({
@@ -325,10 +325,12 @@ export function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 md:px-6">
-      <div className="mb-6 flex items-center gap-3">
-        <SettingsIcon className="h-6 w-6 text-rose-400" />
-        <h1 className="font-display text-3xl font-semibold text-ink-50">Settings</h1>
-      </div>
+      <PageHeader
+        eyebrow="Account"
+        title="Settings"
+        description="Appearance, reader, data and content filters — saved on this device."
+        className="mb-6"
+      />
 
       {feedback && (
         <div
