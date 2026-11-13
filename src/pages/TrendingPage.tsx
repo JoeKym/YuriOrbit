@@ -31,7 +31,8 @@ const TYPE_OPTIONS: { value: FormatValue; label: string }[] = [
   { value: 'MANHUA', label: 'Manhua' },
   { value: 'WEBTOON', label: 'Webtoons' },
   { value: 'LIGHT_NOVEL', label: 'Novels' },
-  { value: 'TV', label: 'Anime/TV' },
+  { value: 'ANIME', label: 'Anime' },
+  { value: 'TV', label: 'TV Series' },
   { value: 'MOVIE', label: 'Movies' },
   { value: 'DRAMA', label: 'Dramas' },
 ];

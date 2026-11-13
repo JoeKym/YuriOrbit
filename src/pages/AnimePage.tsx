@@ -10,40 +10,33 @@ import { cn } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { PageHeading } from '@/components/layout/PageHeading';
 
-type AnimeTab = 'ALL' | 'TV' | 'MOVIE';
+type AnimeTab = 'ALL' | 'SERIES' | 'FILM';
 
 const TABS: { value: AnimeTab; label: string; icon: typeof Tv }[] = [
   { value: 'ALL', label: 'Everything', icon: Sparkles },
-  { value: 'TV', label: 'Series & OVA', icon: Tv },
-  { value: 'MOVIE', label: 'Films', icon: Film },
+  { value: 'SERIES', label: 'Series & OVA', icon: Tv },
+  { value: 'FILM', label: 'Films', icon: Film },
 ];
 
 const PER_PAGE = 24;
 
-/** One page of anime for a tab. "Everything" merges series and films. */
+/** One page of anime for a tab — all of it comes from the ANIME content type. */
 async function fetchAnimePage(
   tab: AnimeTab,
   page: number,
   status: ReleaseStatus | 'ALL',
   sort: 'POPULARITY' | 'TRENDING' | 'SCORE' | 'UPDATED_AT'
 ): Promise<PaginatedResult> {
-  const base = { status: status === 'ALL' ? undefined : status, sort };
-  if (tab !== 'ALL') {
-    return searchGLTitles({ contentType: tab as ContentType, ...base }, page, PER_PAGE);
-  }
-
-  const [series, films] = await Promise.all([
-    searchGLTitles({ contentType: 'TV', ...base }, page, PER_PAGE / 2),
-    searchGLTitles({ contentType: 'MOVIE', ...base }, page, PER_PAGE / 2),
-  ]);
-
-  return {
-    items: [...series.items, ...films.items],
+  return searchGLTitles(
+    {
+      contentType: 'ANIME',
+      animeFormat: tab === 'ALL' ? undefined : tab,
+      status: status === 'ALL' ? undefined : status,
+      sort,
+    },
     page,
-    perPage: PER_PAGE,
-    total: (series.total ?? 0) + (films.total ?? 0),
-    hasNextPage: series.hasNextPage || films.hasNextPage,
-  };
+    PER_PAGE
+  );
 }
 
 export function AnimePage() {
