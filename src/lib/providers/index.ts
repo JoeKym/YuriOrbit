@@ -270,6 +270,7 @@ export async function searchGLTitles(
 
   const items: ContentTitle[] = [];
   let total = 0;
+  let totalFloor = 0;
   let hasNextPage = false;
 
   for (const r of results) {
@@ -277,7 +278,8 @@ export async function searchGLTitles(
       items.push(...r.value.items);
       // A capped total (AniList stops at 5000) is a floor, not a count, so it
       // must not win the max or the rail would read the same number everywhere.
-      if (!r.value.totalCapped) total = Math.max(total, r.value.total || 0);
+      if (r.value.totalCapped) totalFloor = Math.max(totalFloor, r.value.total || 0);
+      else total = Math.max(total, r.value.total || 0);
       hasNextPage = hasNextPage || r.value.hasNextPage;
     }
   }
@@ -308,6 +310,7 @@ export async function searchGLTitles(
     page,
     perPage,
     total,
+    totalFloor: totalFloor > total ? totalFloor : undefined,
     hasNextPage,
   };
 }

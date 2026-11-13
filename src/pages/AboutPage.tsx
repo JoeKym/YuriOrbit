@@ -3,6 +3,8 @@ import { Heart, Compass, BookOpen, Shield, Globe, Sparkles, Film, Eye } from 'lu
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { PageHeading } from '@/components/layout/PageHeading';
 import { CatalogStats } from '@/components/site/CatalogStats';
+import { HowItWorksFlow } from '@/components/site/HowItWorksFlow';
+import { FormatDistribution } from '@/components/site/FormatDistribution';
 
 export function AboutPage() {
   usePageMeta({
@@ -39,6 +41,10 @@ export function AboutPage() {
       </div>
 
       <CatalogStats />
+
+      <FormatDistribution />
+
+      <HowItWorksFlow />
 
       <div className="mt-10 grid gap-4 sm:grid-cols-2">
         <div className="card-surface p-5">

@@ -159,8 +159,16 @@ export function HomePage() {
         data['historical'] = pool.filter((t) => t.genres.includes('Historical')).slice(0, 20);
         data['slowBurn'] = pool.filter((t) => t.tags.some((tag) => tag.name.toLowerCase().includes('slow burn'))).slice(0, 20);
 
-        data['recent'] = recent.length > 0 ? recent : pool.slice(0, 20);
-        data['completed'] = completed.length > 0 ? completed : pool.filter((t) => t.status === 'FINISHED').slice(0, 20);
+        // Fallbacks must stay distinct from the other rails: copying `pool` here
+        // made "Recently Released" a carbon copy of "Trending Now" whenever the
+        // upstream call failed.
+        const releasedPool = pool.filter((t) => t.status === 'RELEASING' || t.status === 'FINISHED');
+        data['recent'] =
+          recent.length > 0
+            ? recent
+            : [...releasedPool].sort((a, b) => (b.releaseYear ?? 0) - (a.releaseYear ?? 0)).slice(0, 20);
+        data['completed'] =
+          completed.length > 0 ? completed : pool.filter((t) => t.status === 'FINISHED').slice(0, 20);
 
         const hasAny = Object.entries(data).some(([key, arr]) => key !== 'pool' && arr.length > 0);
         if (!hasAny) setError(true);
