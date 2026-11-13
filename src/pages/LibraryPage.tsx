@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, BookOpen, CheckCircle, Clock, XCircle, Pause, Trash2, Download, Star, LogIn, Cloud, HardDrive, BookMarked } from 'lucide-react';
 import { useLibrary } from '@/hooks/useLibrary';
@@ -26,7 +26,8 @@ export function LibraryPage() {
 
   const { library, removeFromLibrary, clearLibrary, isAuthenticated } = useLibrary();
   const { isLoading } = useAuth();
-  const [filter, setFilter] = useState<LibraryStatus | 'ALL'>('ALL');
+  // 'UPDATES' is a view rather than a saved status, so it is not in STATUS_FILTERS.
+  const [filter, setFilter] = useState<LibraryStatus | 'ALL' | 'UPDATES'>('ALL');
   const [sort, setSort] = useState<'recent' | 'title' | 'rating'>('recent');
   const [latestChapters, setLatestChapters] = useState<Record<string, number>>({});
 
@@ -61,8 +62,16 @@ export function LibraryPage() {
     };
   }, [trackedIds]);
 
+  const newChaptersFor = (entry: (typeof library)[number]) =>
+    countNewChapters(entry.progress, latestChapters[entry.titleId]);
+  const updatesCount = library.filter((entry) => newChaptersFor(entry) > 0).length;
+
   const filtered = library
-    .filter((e) => filter === 'ALL' || e.status === filter)
+    .filter((e) => {
+      if (filter === 'ALL') return true;
+      if (filter === 'UPDATES') return newChaptersFor(e) > 0;
+      return e.status === filter;
+    })
     .sort((a, b) => {
       if (sort === 'title') return a.title.localeCompare(b.title);
       if (sort === 'rating') return (b.rating || 0) - (a.rating || 0);
@@ -109,7 +118,15 @@ export function LibraryPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="font-display text-3xl font-semibold text-ink-50">My Library</h1>
-          <p className="mt-1 text-sm text-ink-400">{library.length} title{library.length !== 1 ? 's' : ''} saved</p>
+          <p className="mt-1 text-sm text-ink-400">
+            {library.length} title{library.length !== 1 ? 's' : ''} saved
+            {updatesCount > 0 && (
+              <span className="text-rose-300">
+                {' · '}
+                {updatesCount} with new chapter{updatesCount === 1 ? '' : 's'}
+              </span>
+            )}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={handleExport} className="btn-secondary text-xs">
@@ -126,13 +143,29 @@ export function LibraryPage() {
 
       <div className="mb-6 flex flex-wrap items-center gap-2">
         {STATUS_FILTERS.map((s) => (
-          <button
-            key={s}
-            onClick={() => setFilter(s)}
-            className={cn('chip transition-colors', filter === s && 'chip-active')}
-          >
-            {getLibraryStatusFilterLabel(s)}
-          </button>
+          <Fragment key={s}>
+            <button
+              onClick={() => setFilter(s)}
+              className={cn('chip transition-colors', filter === s && 'chip-active')}
+            >
+              {getLibraryStatusFilterLabel(s)}
+            </button>
+            {s === 'ALL' && updatesCount > 0 && (
+              <button
+                onClick={() => setFilter('UPDATES')}
+                className={cn(
+                  'chip inline-flex items-center gap-1.5 transition-colors',
+                  filter === 'UPDATES' && 'chip-active'
+                )}
+              >
+                <BookMarked className="h-3 w-3" />
+                New chapters
+                <span className="rounded-full bg-rose-500/20 px-1.5 text-[10px] font-semibold text-rose-200">
+                  {updatesCount}
+                </span>
+              </button>
+            )}
+          </Fragment>
         ))}
         <select
           value={sort}
@@ -147,14 +180,18 @@ export function LibraryPage() {
 
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <p className="text-sm text-ink-400">No titles in this category.</p>
+          <p className="text-sm text-ink-400">
+            {filter === 'UPDATES'
+              ? 'Nothing new right now — every tracked title is up to date.'
+              : 'No titles in this category.'}
+          </p>
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((entry) => {
             const Icon = STATUS_ICONS[entry.status];
             const latestChapter = latestChapters[entry.titleId];
-            const newChapters = countNewChapters(entry.progress, latestChapter);
+            const newChapters = newChaptersFor(entry);
             const total = latestChapter ?? entry.totalProgress;
             return (
               <div key={entry.id} className="flex gap-3 rounded-xl border border-ink-800 bg-ink-900 p-3 transition-all duration-200 hover:border-ink-700">
