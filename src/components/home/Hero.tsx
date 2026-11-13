@@ -150,6 +150,10 @@ export function Hero({ titles, loading }: { titles: ContentTitle[]; loading?: bo
           <img
             src={item.bannerImage || item.coverImage || getFallbackCover(item.title)}
             alt=""
+            width={1600}
+            height={900}
+            fetchPriority="high"
+            decoding="async"
             className="h-full w-full object-cover object-center animate-hero-zoom"
             onError={(event) => {
               (event.target as HTMLImageElement).style.display = 'none';
@@ -240,6 +244,9 @@ export function Hero({ titles, loading }: { titles: ContentTitle[]; loading?: bo
               key={`poster-${slide.id}`}
               src={slide.coverImage || getFallbackCover(slide.title)}
               alt={slide.title}
+              width={160}
+              height={224}
+              decoding="async"
               className="relative h-56 w-40 rounded-2xl object-cover shadow-card-hover ring-1 ring-white/10 animate-fade-in"
               onError={(event) => {
                 (event.target as HTMLImageElement).src = getFallbackCover(slide.title);

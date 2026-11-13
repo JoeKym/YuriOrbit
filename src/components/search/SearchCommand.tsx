@@ -219,7 +219,10 @@ export function SearchCommand({ variant = 'desktop', onNavigate }: SearchCommand
                         <img
                           src={hit.title.coverImage || getFallbackCover(hit.title.title)}
                           alt=""
+                          width={32}
+                          height={44}
                           loading="lazy"
+                          decoding="async"
                           className="h-11 w-8 flex-shrink-0 rounded object-cover"
                           onError={(event) => {
                             (event.target as HTMLImageElement).src = getFallbackCover(hit.title.title);

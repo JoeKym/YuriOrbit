@@ -265,6 +265,9 @@ export function Navbar() {
                     <img
                       src={user.picture}
                       alt={user.givenName || 'User'}
+                      width={24}
+                      height={24}
+                      decoding="async"
                       className="h-6 w-6 rounded-full object-cover ring-1 ring-rose-500/40"
                     />
                   ) : (
@@ -478,6 +481,9 @@ export function Navbar() {
                       <img
                         src={user.picture}
                         alt={user.givenName || 'User'}
+                        width={32}
+                        height={32}
+                        decoding="async"
                         className="h-8 w-8 rounded-full object-cover"
                       />
                     ) : (

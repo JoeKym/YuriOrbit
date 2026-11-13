@@ -96,7 +96,10 @@ export function AvailabilityBadge({
                 key={provider.id}
                 src={provider.logoUrl}
                 alt={provider.name}
+                width={16}
+                height={16}
                 loading="lazy"
+                decoding="async"
                 className={cn('rounded-sm object-cover', compact ? 'h-3 w-3' : 'h-4 w-4')}
               />
             ) : (
