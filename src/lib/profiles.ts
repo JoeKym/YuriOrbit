@@ -173,6 +173,65 @@ export async function saveWatchRegion(
 }
 
 /**
+ * The library's chapter-update switches, stored on the profile so they follow the
+ * account rather than the browser.
+ */
+export interface ChapterUpdateProfilePrefs {
+  showBadges: boolean;
+  onlyReading: boolean;
+}
+
+/**
+ * Read those switches, or `null` when they cannot be read at all — a signed-out
+ * visitor, or a deployment that has not applied the 20261113120000 migration. A
+ * `null` answer leaves the browser-local preferences in charge instead of
+ * failing the page.
+ */
+export async function fetchChapterUpdatePrefs(userId: string): Promise<ChapterUpdateProfilePrefs | null> {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('chapter_badges, chapter_updates_reading_only')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const row = data as { chapter_badges?: boolean | null; chapter_updates_reading_only?: boolean | null };
+  return {
+    showBadges: row.chapter_badges ?? true,
+    onlyReading: row.chapter_updates_reading_only ?? false,
+  };
+}
+
+/** Persist those switches on the visitor's own profile row. */
+export async function saveChapterUpdatePrefs(
+  userId: string,
+  prefs: ChapterUpdateProfilePrefs
+): Promise<ProfileResult<null>> {
+  if (!supabase) return { data: null, error: null, needsSetup: true };
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      chapter_badges: prefs.showBadges,
+      chapter_updates_reading_only: prefs.onlyReading,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId);
+
+  if (error) {
+    // A deployment without the migration keeps these switches local; that is a
+    // fallback, not an error worth interrupting the toggle for.
+    if (isMissingSchema(error)) return { data: null, error: null, needsSetup: true };
+    return { data: null, error: error.message, needsSetup: false };
+  }
+
+  return { data: null, error: null, needsSetup: false };
+}
+
+/**
  * Columns a public profile may show. `notes` is private and must never be
  * requested here — the public-library view does not expose it either.
  */

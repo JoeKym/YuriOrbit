@@ -26,3 +26,6 @@ dist-ssr
 # transient dev-server preview config (per-chat hostname)
 vite.preview.local.config.ts
 artifacts/
+
+# Supabase CLI scratch
+supabase/.temp/
