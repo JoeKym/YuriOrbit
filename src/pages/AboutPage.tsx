@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Heart, Compass, BookOpen, Shield, Globe, Sparkles, Film, Eye } from 'lucide-react';
 import { usePageMeta } from '@/hooks/usePageMeta';
-import { PageHeading } from '@/components/layout/PageHeading';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { CatalogStats } from '@/components/site/CatalogStats';
 import { HowItWorksFlow } from '@/components/site/HowItWorksFlow';
 import { FormatDistribution } from '@/components/site/FormatDistribution';
@@ -18,7 +18,7 @@ export function AboutPage() {
         <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 to-lavender-600 mb-4 shadow-lg shadow-rose-500/20">
           <Heart className="h-7 w-7 text-white" fill="white" />
         </div>
-        <PageHeading
+        <PageHeader
           align="center"
           eyebrow="About the project"
           title="Yuri"

@@ -8,7 +8,7 @@ import { searchGLTitles } from '@/lib/providers';
 import { usePaginatedTitles } from '@/hooks/usePaginatedTitles';
 import { cn } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
-import { PageHeading } from '@/components/layout/PageHeading';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 type AnimeTab = 'ALL' | 'SERIES' | 'FILM';
 
@@ -61,7 +61,7 @@ export function AnimePage() {
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <PageHeading
+        <PageHeader
           eyebrow="Screen & animation"
           title="GL"
           accent="Anime"

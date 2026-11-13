@@ -12,7 +12,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { usePageMeta } from '@/hooks/usePageMeta';
-import { PageHeading } from '@/components/layout/PageHeading';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 interface FaqItem {
   q: string;
@@ -256,7 +256,7 @@ export function FaqPage() {
         <div className="mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 to-lavender-600">
           <HelpCircle className="h-7 w-7 text-white" />
         </div>
-        <PageHeading
+        <PageHeader
           align="center"
           eyebrow="Platform transparency & knowledge base"
           title="Frequently Asked"

@@ -9,7 +9,8 @@ import { usePaginatedTitles } from '@/hooks/usePaginatedTitles';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { useStatusCounts } from '@/hooks/useStatusCounts';
 import { useListRestoreEffects, useRestoredPageDepth } from '@/hooks/useListRestore';
-import { PageHeading } from '@/components/layout/PageHeading';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Button } from '@/components/ui';
 import {
   ActiveFilterBar,
   ActiveFilterChip,
@@ -133,25 +134,25 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <PageHeading
-          eyebrow="Curated GL catalogue"
-          title="GL"
-          accent={title.replace(/^GL\s+/, '')}
-          description={`Browse curated ${title.toLowerCase()} across our connected catalogues.`}
-        />
-        <button
-          onClick={() => setShowFilters((v) => !v)}
-          className={cn(
-            'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium lg:hidden',
-            showFilters || hasFilters
-              ? 'border-rose-500/40 bg-rose-500/10 text-rose-300'
-              : 'border-ink-700 bg-ink-900 text-ink-200 hover:bg-ink-850'
-          )}
-        >
-          <SlidersHorizontal className="h-3.5 w-3.5" /> Filters
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Curated GL catalogue"
+        title="GL"
+        accent={title.replace(/^GL\s+/, '')}
+        description={`Browse curated ${title.toLowerCase()} across our connected catalogues.`}
+        className="mb-6"
+        actions={
+          <Button
+            variant="secondary"
+            size="sm"
+            className="lg:hidden"
+            aria-expanded={showFilters}
+            onClick={() => setShowFilters((v) => !v)}
+            icon={<SlidersHorizontal className="h-3.5 w-3.5" />}
+          >
+            Filters{hasFilters ? ' · active' : ''}
+          </Button>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-[248px_minmax(0,1fr)]">
         <aside className={cn('lg:sticky lg:top-24 lg:self-start', showFilters ? 'block' : 'hidden lg:block')}>

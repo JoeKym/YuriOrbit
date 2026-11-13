@@ -39,6 +39,8 @@ import { usePageMeta } from '@/hooks/usePageMeta';
 import { useWatchRegion } from '@/hooks/useWatchRegion';
 import { useStatusCounts } from '@/hooks/useStatusCounts';
 import { useListRestoreEffects, useRestoredPageDepth } from '@/hooks/useListRestore';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Chip } from '@/components/ui';
 import {
   ActiveFilterBar,
   ActiveFilterChip,
@@ -320,20 +322,20 @@ export function DiscoverPage() {
   return (
     <div className="min-h-screen bg-ink-950 text-ink-100 pb-20">
       {/* Top Banner & Search Section */}
-      <div className="border-b border-ink-850 bg-ink-900/60 backdrop-blur-md sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-display font-bold text-ink-50 flex items-center gap-2">
-                <span>Discover Yuri & Girls' Love</span>
-              </h1>
-              <p className="text-xs text-ink-400 mt-0.5">
-                Explore curated manga, manhwa, anime, webtoons, light novels, and dramas
-              </p>
-            </div>
+      {/* Not sticky: the bar carries the title, search and format pills, and at
+          this height pinning it would cover a third of the viewport and slide
+          under the navbar. The sidebar filters stay sticky instead. */}
+      <div className="border-b border-ink-850 bg-ink-900/60 backdrop-blur-md">
+        <div className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6 md:px-6">
+          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+            <PageHeader
+              title="Discover"
+              accent="Yuri & Girls' Love"
+              description="Explore curated manga, manhwa, anime, webtoons, light novels, and dramas"
+            />
 
             {/* Search Input Bar */}
-            <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-md">
+            <form onSubmit={handleSearchSubmit} className="relative w-full max-w-md flex-1">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400" />
               <input
                 type="text"
@@ -367,21 +369,17 @@ export function DiscoverPage() {
                 (!filter.contentType && cat.value === 'ALL');
 
               return (
-                <button
+                <Chip
                   key={cat.value}
+                  selected={isActive}
                   onClick={() =>
                     updateFilter('type', cat.value === 'ALL' ? undefined : cat.value)
                   }
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-200',
-                    isActive
-                      ? 'bg-rose-500 text-white shadow-sm shadow-rose-500/20 font-semibold'
-                      : 'bg-ink-850/80 text-ink-300 hover:bg-ink-800 hover:text-ink-100 border border-ink-800/80'
-                  )}
+                  icon={<Icon className="h-3.5 w-3.5" />}
+                  className="whitespace-nowrap"
                 >
-                  <Icon className="h-3.5 w-3.5" />
-                  <span>{cat.label}</span>
-                </button>
+                  {cat.label}
+                </Chip>
               );
             })}
           </div>
@@ -389,11 +387,11 @@ export function DiscoverPage() {
       </div>
 
       {/* Main Container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 md:px-6">
         <div className="grid gap-6 lg:grid-cols-[248px_minmax(0,1fr)]">
           <aside
             className={cn(
-              'lg:sticky lg:top-[168px] lg:self-start',
+              'lg:sticky lg:top-24 lg:self-start',
               showFilters ? 'block' : 'hidden lg:block'
             )}
           >

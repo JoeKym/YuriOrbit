@@ -8,7 +8,8 @@ import { GL_ALLOWED_CLASSIFICATIONS } from '@/lib/providers/classify';
 import { ContentCard, ContentCardSkeleton } from '@/components/content/ContentCard';
 import { cn } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
-import { PageHeading } from '@/components/layout/PageHeading';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Button, EmptyState } from '@/components/ui';
 import { useListRestoreEffects } from '@/hooks/useListRestore';
 import {
   ActiveFilterBar,
@@ -208,25 +209,25 @@ export function GenresPage() {
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <PageHeading
-          eyebrow="Curated GL catalogue"
-          title="Genre"
-          accent="Explorer"
-          description="Browse GL titles by genre, or use filters to narrow the view."
-        />
-        <button
-          onClick={() => setShowFilters((v) => !v)}
-          className={cn(
-            'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-colors lg:hidden',
-            showFilters || hasActiveFilters
-              ? 'border-rose-500/40 bg-rose-500/10 text-rose-300'
-              : 'border-ink-700 bg-ink-900 text-ink-200 hover:bg-ink-850'
-          )}
-        >
-          <SlidersHorizontal className="h-3.5 w-3.5" /> Filters
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Curated GL catalogue"
+        title="Genre"
+        accent="Explorer"
+        description="Browse GL titles by genre, or use filters to narrow the view."
+        className="mb-6"
+        actions={
+          <Button
+            variant="secondary"
+            size="sm"
+            className="lg:hidden"
+            aria-expanded={showFilters}
+            onClick={() => setShowFilters((v) => !v)}
+            icon={<SlidersHorizontal className="h-3.5 w-3.5" />}
+          >
+            Filters{hasActiveFilters ? ' · active' : ''}
+          </Button>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-[248px_minmax(0,1fr)]">
         <aside className={cn('lg:sticky lg:top-24 lg:self-start', showFilters ? 'block' : 'hidden lg:block')}>
@@ -375,9 +376,11 @@ export function GenresPage() {
           ) : hasActiveFilters ? (
             <section>
               {filteredTitles.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-ink-800 p-8 text-center text-sm text-ink-400">
-                  No titles match these filters. Try clearing or broadening them.
-                </div>
+                <EmptyState
+                  icon={Search}
+                  title="No titles match these filters"
+                  description="Try clearing or broadening them."
+                />
               ) : (
                 <div className={gridClass}>
                   {filteredTitles.map((t) => (
