@@ -5,10 +5,11 @@ import { useLibrary } from '@/hooks/useLibrary';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { CONTENT_TYPE_LABELS, type LibraryStatus } from '@/types/content';
 import { getLibraryStatusLabel, getLibraryStatusFilterLabel } from '@/lib/utils/status';
-import { cn, getFallbackCover } from '@/lib/utils/format';
+import { getFallbackCover } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { AvailabilityBadge } from '@/components/content/AvailabilityBadge';
 import { countNewChapters, loadChapterProgress } from '@/lib/content/chapter-updates';
+import { Badge, Button, buttonClasses, Chip, Dialog, EmptyState } from '@/components/ui';
 
 const STATUS_FILTERS: (LibraryStatus | 'ALL')[] = ['ALL', 'CURRENT', 'PLANNED', 'COMPLETED', 'FAVOURITE', 'ON_HOLD', 'DROPPED'];
 
@@ -31,6 +32,7 @@ export function LibraryPage() {
   const [filter, setFilter] = useState<LibraryStatus | 'ALL' | 'UPDATES'>('ALL');
   const [sort, setSort] = useState<'recent' | 'title' | 'rating'>('recent');
   const [latestChapters, setLatestChapters] = useState<Record<string, number>>({});
+  const [confirmClear, setConfirmClear] = useState(false);
 
   // The entries list is only read inside the effect below; keying the effect on
   // the tracked ids keeps a progress edit from re-asking MangaDex. Which entries
@@ -103,15 +105,19 @@ export function LibraryPage() {
               <p className="text-sm font-medium text-ink-100">Sign in to sync your library</p>
               <p className="text-xs text-ink-400">Your titles will be available across all your devices.</p>
             </div>
-            <Link to="/auth" className="btn-primary text-xs">Sign in</Link>
+            <Link to="/auth" className={buttonClasses('primary', 'sm')}>Sign in</Link>
           </div>
         )}
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <BookOpen className="mb-4 h-12 w-12 text-ink-600" />
-          <p className="text-lg font-medium text-ink-200">Your library is empty</p>
-          <p className="mt-1 text-sm text-ink-400">Start adding titles to your library by browsing the catalogue.</p>
-          <Link to="/discover" className="btn-primary mt-4">Discover GL</Link>
-        </div>
+        <EmptyState
+          icon={BookOpen}
+          title="Your library is empty"
+          description="Start adding titles to your library by browsing the catalogue."
+          action={
+            <Link to="/discover" className={buttonClasses('primary', 'md')}>
+              Discover GL
+            </Link>
+          }
+        />
       </div>
     );
   }
@@ -132,15 +138,17 @@ export function LibraryPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={handleExport} className="btn-secondary text-xs">
-            <Download className="h-3.5 w-3.5" /> Export
-          </button>
-          <button
-            onClick={() => { if (confirm('Remove all titles from your library? This cannot be undone.')) clearLibrary(); }}
-            className="btn-ghost text-xs text-error-400"
+          <Button variant="secondary" size="sm" onClick={handleExport} icon={<Download className="h-3.5 w-3.5" />}>
+            Export
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => setConfirmClear(true)}
+            icon={<Trash2 className="h-3.5 w-3.5" />}
           >
-            <Trash2 className="h-3.5 w-3.5" /> Clear all
-          </button>
+            Clear all
+          </Button>
         </div>
       </div>
 
@@ -163,26 +171,18 @@ export function LibraryPage() {
       <div className="mb-6 flex flex-wrap items-center gap-2">
         {STATUS_FILTERS.map((s) => (
           <Fragment key={s}>
-            <button
-              onClick={() => setFilter(s)}
-              className={cn('chip transition-colors', filter === s && 'chip-active')}
-            >
+            <Chip selected={filter === s} onClick={() => setFilter(s)}>
               {getLibraryStatusFilterLabel(s)}
-            </button>
+            </Chip>
             {s === 'ALL' && updatesCount > 0 && (
-              <button
+              <Chip
+                selected={filter === 'UPDATES'}
                 onClick={() => setFilter('UPDATES')}
-                className={cn(
-                  'chip inline-flex items-center gap-1.5 transition-colors',
-                  filter === 'UPDATES' && 'chip-active'
-                )}
+                icon={<BookMarked className="h-3 w-3" />}
+                count={updatesCount}
               >
-                <BookMarked className="h-3 w-3" />
                 New chapters
-                <span className="rounded-full bg-rose-500/20 px-1.5 text-[10px] font-semibold text-rose-200">
-                  {updatesCount}
-                </span>
-              </button>
+              </Chip>
             )}
           </Fragment>
         ))}
@@ -198,13 +198,15 @@ export function LibraryPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <p className="text-sm text-ink-400">
-            {filter === 'UPDATES'
-              ? 'Nothing new right now — every tracked title is up to date.'
-              : 'No titles in this category.'}
-          </p>
-        </div>
+        <EmptyState
+          icon={filter === 'UPDATES' ? BookMarked : BookOpen}
+          title={filter === 'UPDATES' ? 'Nothing new right now' : 'No titles in this category'}
+          description={
+            filter === 'UPDATES'
+              ? 'Every tracked title is up to date.'
+              : 'Try another status filter to see the rest of your library.'
+          }
+        />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((entry) => {
@@ -245,9 +247,10 @@ export function LibraryPage() {
                     </p>
                   )}
                   {newChapters > 0 && (
-                    <p className="mt-1 inline-flex items-center gap-1 rounded-full border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold text-rose-300">
-                      <BookMarked className="h-3 w-3" />
-                      {newChapters} new chapter{newChapters === 1 ? '' : 's'}
+                    <p className="mt-1">
+                      <Badge variant="update" icon={<BookMarked className="h-3 w-3" />}>
+                        {newChapters} new chapter{newChapters === 1 ? '' : 's'}
+                      </Badge>
                     </p>
                   )}
                   {entry.rating && (
@@ -289,6 +292,31 @@ export function LibraryPage() {
           </>
         )}
       </div>
+
+      <Dialog
+        open={confirmClear}
+        onClose={() => setConfirmClear(false)}
+        title="Remove all titles?"
+        description="This clears the saved library in this browser and cannot be undone. Export first if you want a backup."
+        tone="danger"
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setConfirmClear(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => {
+                clearLibrary();
+                setConfirmClear(false);
+              }}
+            >
+              Remove all
+            </Button>
+          </>
+        }
+      />
     </div>
   );
 }
