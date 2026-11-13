@@ -163,6 +163,10 @@ export function TitleDetailPage() {
         <img
           src={title.coverImage || getFallbackCover(title.title)}
           alt={title.title}
+          width={112}
+          height={160}
+          loading="lazy"
+          decoding="async"
           className="mb-5 h-40 w-28 rounded-xl object-cover opacity-40 blur-sm"
         />
         <p className="mb-1 text-[11px] uppercase tracking-wider text-rose-300">
@@ -220,6 +224,10 @@ export function TitleDetailPage() {
           <img
             src={title.bannerImage}
             alt=""
+            width={1600}
+            height={288}
+            fetchPriority="high"
+            decoding="async"
             className="h-full w-full object-cover"
             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
@@ -235,11 +243,15 @@ export function TitleDetailPage() {
 
         <div className="flex flex-col gap-6 md:flex-row">
           <div className="flex-shrink-0">
-            <div className="relative w-40 md:w-56 overflow-hidden rounded-xl shadow-card">
+            <div className="relative aspect-[2/3] w-40 overflow-hidden rounded-xl bg-ink-850 shadow-card md:w-56">
               <img
                 src={title.coverImage || getFallbackCover(title.title)}
                 alt={title.title}
-                className="w-full object-cover"
+                width={224}
+                height={336}
+                fetchPriority="high"
+                decoding="async"
+                className="h-full w-full object-cover"
                 onError={(e) => { (e.target as HTMLImageElement).src = getFallbackCover(title.title); }}
               />
             </div>
@@ -496,7 +508,10 @@ export function TitleDetailPage() {
                     <img
                       src={rel.coverImage || getFallbackCover(rel.title)}
                       alt={rel.title}
+                      width={128}
+                      height={171}
                       loading="lazy"
+                      decoding="async"
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   </div>

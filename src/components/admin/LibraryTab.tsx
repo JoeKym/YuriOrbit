@@ -128,6 +128,10 @@ export function LibraryTab() {
                           <img
                             src={entry.cover_image || getFallbackCover(entry.title)}
                             alt=""
+                            width={24}
+                            height={36}
+                            loading="lazy"
+                            decoding="async"
                             className="h-9 w-6 rounded bg-ink-850 object-cover"
                             onError={(e) => {
                               (e.target as HTMLImageElement).src = getFallbackCover(entry.title);

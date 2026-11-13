@@ -171,7 +171,7 @@ export function ProfileEditor({ userId, profile, initialNeedsSetup, onSaved, onC
       <div className="mb-5 flex flex-wrap items-center gap-4">
         <div className="relative h-20 w-20 flex-shrink-0">
           {avatarUrl ? (
-            <img src={avatarUrl} alt="Avatar preview" className="h-20 w-20 rounded-2xl border-2 border-ink-800 object-cover" />
+            <img src={avatarUrl} alt="Avatar preview" width={80} height={80} loading="lazy" decoding="async" className="h-20 w-20 rounded-2xl border-2 border-ink-800 object-cover" />
           ) : (
             <div className="flex h-20 w-20 items-center justify-center rounded-2xl border-2 border-ink-800 bg-gradient-to-tr from-rose-500 to-lavender-500 text-2xl font-bold text-white">
               {previewInitial}

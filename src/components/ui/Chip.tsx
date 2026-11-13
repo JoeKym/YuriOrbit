@@ -31,7 +31,7 @@ export function Chip({ selected = false, count, icon, className, children, type 
       {count !== undefined && (
         <span
           className={cn(
-            'rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none',
+            'rounded-full px-1.5 py-0.5 text-micro font-semibold leading-none',
             selected ? 'bg-rose-500/25 text-rose-100' : 'bg-ink-700/60 text-ink-200'
           )}
         >

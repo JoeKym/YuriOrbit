@@ -145,6 +145,10 @@ export function FeaturedTab() {
             <img
               src={preview.coverImage || getFallbackCover(preview.title)}
               alt=""
+              width={44}
+              height={64}
+              loading="lazy"
+              decoding="async"
               className="h-16 w-11 rounded object-cover"
             />
             <div className="min-w-0">
@@ -176,6 +180,10 @@ export function FeaturedTab() {
                 <img
                   src={item.cover_image || getFallbackCover(item.title)}
                   alt=""
+                  width={40}
+                  height={56}
+                  loading="lazy"
+                  decoding="async"
                   className="h-14 w-10 rounded object-cover"
                 />
                 <div className="min-w-0 flex-1">

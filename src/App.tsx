@@ -50,11 +50,17 @@ export default function App() {
         <ScrollToTop />
         <TrafficTracker />
         <div className="flex min-h-screen flex-col bg-ink-950">
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-rose-600 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
+          >
+            Skip to content
+          </a>
           <AnnouncementBanner />
           <Navbar />
           <MaintenanceGate>
             <AccountModerationGate>
-            <main className="flex-1">
+            <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/discover" element={<DiscoverPage />} />
