@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Trash2,
   Download,
@@ -18,6 +18,7 @@ import {
   Palette,
   UserX,
   Loader2,
+  BookMarked,
 } from 'lucide-react';
 import { useLibrary } from '@/hooks/useLibrary';
 import { useMaturity } from '@/hooks/useMaturity';
@@ -39,6 +40,17 @@ import { THEMES, type ThemeId, getStoredTheme, applyTheme, THEME_STORAGE_KEY } f
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { cn } from '@/lib/utils/format';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { Tabs, tabPanelProps } from '@/components/ui';
+import { useChapterUpdatePrefs } from '@/lib/content/chapter-update-prefs';
+import { clearChapterProgressCache } from '@/lib/content/chapter-updates';
+
+const SETTINGS_TABS = [
+  { id: 'appearance', label: 'Appearance', icon: Sliders },
+  { id: 'reading', label: 'Reading', icon: BookOpen },
+  { id: 'library', label: 'Library', icon: BookMarked },
+  { id: 'content', label: 'Content', icon: ShieldAlert },
+  { id: 'account', label: 'Account', icon: UserRound },
+];
 
 export function SettingsPage() {
   usePageMeta({
@@ -54,6 +66,15 @@ export function SettingsPage() {
   const [pendingLevel, setPendingLevel] = useState<MaturityLevel | null>(null);
   const [theme, setTheme] = useState<ThemeId>(() => getStoredTheme());
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [chapterPrefs, updateChapterPrefs] = useChapterUpdatePrefs();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const tab = SETTINGS_TABS.some((item) => item.id === tabParam) ? (tabParam as string) : 'appearance';
+  const handleTabChange = (id: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', id);
+    setSearchParams(next, { replace: true });
+  };
 
   // Persistent settings state
   const [reducedMotion, setReducedMotion] = useState<boolean>(() => {
@@ -328,7 +349,7 @@ export function SettingsPage() {
       <PageHeader
         eyebrow="Account"
         title="Settings"
-        description="Appearance, reader, data and content filters — saved on this device."
+        description="Appearance, reading, library, content and account — saved on this device."
         className="mb-6"
       />
 
@@ -350,360 +371,287 @@ export function SettingsPage() {
         </div>
       )}
 
-      <div className="space-y-6">
-        {/* Appearance & Accessibility */}
-        <section className="card-surface p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <Sliders className="h-4 w-4 text-rose-400" />
-            <h2 className="text-lg font-semibold text-ink-50">Appearance & Motion</h2>
-          </div>
-          <p className="mb-4 text-xs text-ink-400">Personalize display style and interface animations.</p>
+      <Tabs
+        items={SETTINGS_TABS}
+        value={tab}
+        onChange={handleTabChange}
+        label="Settings sections"
+        className="mb-6"
+      />
 
-          <div className="space-y-5">
-            <div>
-              <label className="mb-2 flex items-center gap-1.5 text-xs font-medium text-ink-300">
-                <Palette className="h-3.5 w-3.5 text-rose-400" /> Theme
-              </label>
-              <p className="mb-3 text-micro text-ink-400">GL-aligned color themes. Saved on this device.</p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {THEMES.map((t) => {
-                  const selected = t.id === theme;
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => handleThemeChange(t.id)}
-                      className={cn(
-                        'flex items-start gap-3 rounded-xl border p-3 text-left transition-colors',
-                        selected
-                          ? 'border-rose-500/50 bg-rose-500/10'
-                          : 'border-ink-800 bg-ink-900/60 hover:border-ink-700 hover:bg-ink-850'
-                      )}
-                      aria-pressed={selected}
-                    >
-                      <span className="mt-0.5 flex shrink-0 -space-x-1">
-                        {t.swatches.map((c, i) => (
-                          <span
-                            key={i}
-                            className="inline-block h-4 w-4 rounded-full ring-2 ring-ink-900"
-                            style={{ backgroundColor: c }}
-                          />
-                        ))}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="flex items-center gap-1.5 text-sm font-medium text-ink-100">
-                          {t.name}
-                          {selected && <CheckCircle2 className="h-3.5 w-3.5 text-rose-400" />}
+      {tab === 'appearance' && (
+        <div {...tabPanelProps('appearance')} className="space-y-6">
+          {/* Appearance & Accessibility */}
+          <section className="card-surface p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <Sliders className="h-4 w-4 text-rose-400" />
+              <h2 className="text-lg font-semibold text-ink-50">Appearance & Motion</h2>
+            </div>
+            <p className="mb-4 text-xs text-ink-400">Personalize display style and interface animations.</p>
+
+            <div className="space-y-5">
+              <div>
+                <label className="mb-2 flex items-center gap-1.5 text-xs font-medium text-ink-300">
+                  <Palette className="h-3.5 w-3.5 text-rose-400" /> Theme
+                </label>
+                <p className="mb-3 text-micro text-ink-400">GL-aligned color themes. Saved on this device.</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {THEMES.map((t) => {
+                    const selected = t.id === theme;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => handleThemeChange(t.id)}
+                        className={cn(
+                          'flex items-start gap-3 rounded-xl border p-3 text-left transition-colors',
+                          selected
+                            ? 'border-rose-500/50 bg-rose-500/10'
+                            : 'border-ink-800 bg-ink-900/60 hover:border-ink-700 hover:bg-ink-850'
+                        )}
+                        aria-pressed={selected}
+                      >
+                        <span className="mt-0.5 flex shrink-0 -space-x-1">
+                          {t.swatches.map((c, i) => (
+                            <span
+                              key={i}
+                              className="inline-block h-4 w-4 rounded-full ring-2 ring-ink-900"
+                              style={{ backgroundColor: c }}
+                            />
+                          ))}
                         </span>
-                        <span className="mt-0.5 block text-micro leading-relaxed text-ink-400">{t.description}</span>
-                      </span>
-                    </button>
-                  );
-                })}
+                        <span className="min-w-0">
+                          <span className="flex items-center gap-1.5 text-sm font-medium text-ink-100">
+                            {t.name}
+                            {selected && <CheckCircle2 className="h-3.5 w-3.5 text-rose-400" />}
+                          </span>
+                          <span className="mt-0.5 block text-micro leading-relaxed text-ink-400">{t.description}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
 
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={reducedMotion}
-                onChange={(e) => setReducedMotion(e.target.checked)}
-                className="h-4 w-4 rounded border-ink-600 bg-ink-800 text-rose-500 focus:ring-rose-500"
-              />
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={reducedMotion}
+                  onChange={(e) => setReducedMotion(e.target.checked)}
+                  className="h-4 w-4 rounded border-ink-600 bg-ink-800 text-rose-500 focus:ring-rose-500"
+                />
+                <div>
+                  <span className="text-sm font-medium text-ink-200 block">Reduce animations and transitions</span>
+                  <span className="text-xs text-ink-400">Minimizes smooth scrolling and carousel movement</span>
+                </div>
+              </label>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {tab === 'reading' && (
+        <div {...tabPanelProps('reading')} className="space-y-6">
+          {/* Reader Preferences */}
+          <section className="card-surface p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <BookOpen className="h-4 w-4 text-rose-400" />
+              <h2 className="text-lg font-semibold text-ink-50">Reader Preferences</h2>
+            </div>
+            <p className="mb-4 text-xs text-ink-400">Default settings for the MangaDex chapter reader.</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <span className="text-sm font-medium text-ink-200 block">Reduce animations and transitions</span>
-                <span className="text-xs text-ink-400">Minimizes smooth scrolling and carousel movement</span>
-              </div>
-            </label>
-          </div>
-        </section>
-
-        {/* Content filter */}
-        <section className="card-surface p-5">
-          <div className="mb-1 flex items-center gap-2">
-            <ShieldAlert className="h-4 w-4 text-rose-400" />
-            <h2 className="text-lg font-semibold text-ink-50">Content filter</h2>
-          </div>
-          <p className="mb-4 text-xs text-ink-400">
-            The highest rating you want to see anywhere on YuriOrbit — home, search, every format page.
-            Anything above it is hidden, and explicit titles need a one-time 18+ confirmation.
-          </p>
-
-          <div className="grid gap-2 sm:grid-cols-2">
-            {MATURITY_LEVELS.map((option) => {
-              const selected = option === maturityLevel;
-              const locked = requiresAdultConfirmation(option) && !adultAcknowledged;
-              return (
-                <button
-                  key={option}
-                  onClick={() => {
-                    if (locked) {
-                      setPendingLevel(option);
-                      return;
-                    }
-                    setLevel(option);
-                  }}
-                  className={cn(
-                    'rounded-xl border px-3 py-2.5 text-left transition-colors',
-                    selected
-                      ? 'border-rose-500/50 bg-rose-500/10'
-                      : 'border-ink-800 bg-ink-900/60 hover:border-ink-700 hover:bg-ink-850'
-                  )}
-                  aria-pressed={selected}
+                <label className="mb-1.5 block text-xs font-medium text-ink-300">Default Reading Width</label>
+                <select
+                  value={readerWidth}
+                  onChange={(e) => setReaderWidth(e.target.value as 'narrow' | 'normal' | 'wide' | 'full')}
+                  className="input-field text-xs"
                 >
-                  <span className="flex items-center gap-1.5 text-sm font-medium text-ink-100">
-                    {locked && <Lock className="h-3 w-3 text-ink-400" />}
-                    {MATURITY_LABELS[option]}
-                    {requiresAdultConfirmation(option) && (
-                      <span className="rounded bg-rose-500/15 px-1.5 py-0.5 text-micro font-semibold text-rose-300">18+</span>
-                    )}
-                    {selected && <CheckCircle2 className="ml-auto h-3.5 w-3.5 text-rose-400" />}
-                  </span>
-                  <span className="mt-0.5 block text-micro leading-relaxed text-ink-400">
-                    {MATURITY_DESCRIPTIONS[option]}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <p className="mt-3 text-micro text-ink-400">
-            Currently showing:{' '}
-            <span className="text-ink-300">
-              {MATURITY_LEVELS.slice(0, maturityRank(maturityLevel) + 1).join(', ').toLowerCase()}
-            </span>
-          </p>
-
-          {pendingLevel && (
-            <div className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/5 p-4">
-              <p className="text-sm font-medium text-ink-100">This unlocks 18+ content</p>
-              <p className="mt-1 text-xs leading-relaxed text-ink-300">
-                Choosing {MATURITY_LABELS[pendingLevel]} shows sexually explicit titles from every provider, and can
-                surface them in search and on the home page. Confirm you are 18 or older to continue.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  className="btn-primary text-xs"
-                  onClick={() => {
-                    acknowledge();
-                    setLevel(pendingLevel);
-                    setPendingLevel(null);
-                  }}
-                >
-                  I am 18 or older
-                </button>
-                <button className="btn-secondary text-xs" onClick={() => setPendingLevel(null)}>
-                  Cancel
-                </button>
+                  <option value="narrow">Narrow (Phone width)</option>
+                  <option value="normal">Normal (Tablet / standard)</option>
+                  <option value="wide">Wide (Desktop)</option>
+                  <option value="full">Full (Window width)</option>
+                </select>
               </div>
-            </div>
-          )}
 
-          <p className="mt-3 text-micro leading-relaxed text-ink-400">
-            The filter is a browsing preference, not a verification of your age. Clear this site's storage to reset it.
-          </p>
-        </section>
-
-        {/* Public profile — edited on /profile */}
-        <section className="card-surface p-5">
-          <div className="mb-1 flex items-center gap-2">
-            <UserRound className="h-4 w-4 text-rose-400" />
-            <h2 className="text-lg font-semibold text-ink-50">Public profile</h2>
-          </div>
-          <p className="mb-4 text-xs text-ink-400">
-            Username, display name, bio, avatar and visibility live on your profile page.
-          </p>
-          <Link to="/profile" className="btn-secondary text-xs">
-            <Pencil className="h-3.5 w-3.5" /> Go to profile
-          </Link>
-        </section>
-
-        {/* Reader Preferences */}
-        <section className="card-surface p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <BookOpen className="h-4 w-4 text-rose-400" />
-            <h2 className="text-lg font-semibold text-ink-50">Reader Preferences</h2>
-          </div>
-          <p className="mb-4 text-xs text-ink-400">Default settings for the MangaDex chapter reader.</p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-ink-300">Default Reading Width</label>
-              <select
-                value={readerWidth}
-                onChange={(e) => setReaderWidth(e.target.value as 'narrow' | 'normal' | 'wide' | 'full')}
-                className="input-field text-xs"
-              >
-                <option value="narrow">Narrow (Phone width)</option>
-                <option value="normal">Normal (Tablet / standard)</option>
-                <option value="wide">Wide (Desktop)</option>
-                <option value="full">Full (Window width)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-ink-300">Reader Background</label>
-              <select
-                value={readerBg}
-                onChange={(e) => setReaderBg(e.target.value as 'dark' | 'sepia' | 'light')}
-                className="input-field text-xs"
-              >
-                <option value="dark">Dark Canvas (OLED black)</option>
-                <option value="sepia">Warm Sepia</option>
-                <option value="light">Paper Light</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="mt-4 pt-4 border-t border-ink-800/80">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={dataSaver}
-                onChange={(e) => setDataSaver(e.target.checked)}
-                className="h-4 w-4 rounded border-ink-600 bg-ink-800 text-rose-500 focus:ring-rose-500"
-              />
               <div>
-                <span className="text-sm font-medium text-ink-200 block">Data Saver Mode</span>
-                <span className="text-xs text-ink-400">Request compressed chapter images from MangaDex for faster loading</span>
+                <label className="mb-1.5 block text-xs font-medium text-ink-300">Reader Background</label>
+                <select
+                  value={readerBg}
+                  onChange={(e) => setReaderBg(e.target.value as 'dark' | 'sepia' | 'light')}
+                  className="input-field text-xs"
+                >
+                  <option value="dark">Dark Canvas (OLED black)</option>
+                  <option value="sepia">Warm Sepia</option>
+                  <option value="light">Paper Light</option>
+                </select>
               </div>
-            </label>
-          </div>
-        </section>
+            </div>
 
-        {/* Streaming availability */}
-        <section className="card-surface p-5">
-          <div className="mb-1 flex items-center gap-2">
-            <Globe className="h-4 w-4 text-rose-400" />
-            <h2 className="text-lg font-semibold text-ink-50">Streaming availability</h2>
-          </div>
-          <p className="mb-4 text-xs text-ink-400">
-            Which country's streaming services appear under Where to Watch and on Discover and
-            Search cards.
-            {isAuthenticated
-              ? ' Synced to your profile.'
-              : ' Saved in this browser until you sign in.'}
-          </p>
+            <div className="mt-4 pt-4 border-t border-ink-800/80">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={dataSaver}
+                  onChange={(e) => setDataSaver(e.target.checked)}
+                  className="h-4 w-4 rounded border-ink-600 bg-ink-800 text-rose-500 focus:ring-rose-500"
+                />
+                <div>
+                  <span className="text-sm font-medium text-ink-200 block">Data Saver Mode</span>
+                  <span className="text-xs text-ink-400">Request compressed chapter images from MangaDex for faster loading</span>
+                </div>
+              </label>
+            </div>
+          </section>
 
-          <div className="max-w-md">
-            <label
-              className="mb-1.5 block text-xs font-medium text-ink-300"
-              htmlFor="settings-watch-region"
-            >
-              Region
-            </label>
-            <select
-              id="settings-watch-region"
-              value={watchRegion ?? 'auto'}
-              onChange={(e) => handleWatchRegionChange(e.target.value)}
-              className="input-field text-xs"
-            >
-              <option value="auto">Detect automatically ({regionName(tmdbPreferredRegion())})</option>
-              {(watchRegion && !REGION_OPTIONS.some((option) => option.code === watchRegion)
-                ? [{ code: watchRegion, name: regionName(watchRegion) }, ...REGION_OPTIONS]
-                : REGION_OPTIONS
-              ).map((option) => (
-                <option key={option.code} value={option.code}>
-                  {option.name}
-                </option>
-              ))}
-            </select>
-            <p className="mt-2 text-micro text-ink-400">
-              Availability comes from TMDB's watch-provider data. Choosing a region turns off the
-              US fallback, so an empty list means nothing is streaming there.
+          {/* Streaming availability */}
+          <section className="card-surface p-5">
+            <div className="mb-1 flex items-center gap-2">
+              <Globe className="h-4 w-4 text-rose-400" />
+              <h2 className="text-lg font-semibold text-ink-50">Streaming availability</h2>
+            </div>
+            <p className="mb-4 text-xs text-ink-400">
+              Which country's streaming services appear under Where to Watch and on Discover and
+              Search cards.
+              {isAuthenticated
+                ? ' Synced to your profile.'
+                : ' Saved in this browser until you sign in.'}
             </p>
-          </div>
-        </section>
 
-        {/* Data Management */}
-        <section className="card-surface p-5">
-          <h2 className="mb-1 text-lg font-semibold text-ink-50">Data Management & Backup</h2>
-          <p className="mb-4 text-xs text-ink-400">
-            When signed in, your library is synced to your account and available across devices. When not signed in, data is stored locally in your browser.
-          </p>
-
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleImport}
-            accept=".json,application/json"
-            className="hidden"
-          />
-
-          <div className="flex flex-wrap gap-2.5">
-            <button onClick={handleExport} className="btn-secondary text-xs flex items-center gap-1.5">
-              <Download className="h-3.5 w-3.5" /> Export Data Backup
-            </button>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="btn-secondary text-xs flex items-center gap-1.5"
-            >
-              <Upload className="h-3.5 w-3.5" /> Import Data Backup
-            </button>
-            <button
-              onClick={() => {
-                if (confirm('Clear all local library data? This will reset your saved bookmarks and reading progress.')) {
-                  clearLibrary();
-                  showFeedback('Local library data has been cleared.');
-                }
-              }}
-              className="btn-secondary text-xs text-error-400 hover:text-error-300 flex items-center gap-1.5"
-            >
-              <Trash2 className="h-3.5 w-3.5" /> Clear Local Library
-            </button>
-          </div>
-
-          <div className="mt-4 flex items-center gap-4 text-xs text-ink-400">
-            <span>Library Items: <strong className="text-ink-200">{library.length}</strong></span>
-          </div>
-        </section>
-
-        {/* Storage Mode Notice */}
-        <section className="card-surface p-5">
-          <div className="flex gap-3">
-            <Info className="h-5 w-5 flex-shrink-0 text-lavender-400" />
-            <div>
-              <h2 className="mb-1 text-sm font-semibold text-ink-50">Cloud-Synced Library</h2>
-              <p className="text-xs text-ink-400 leading-relaxed">
-                Sign in to sync your library across devices. Your saved titles, reading progress, ratings, and notes are stored securely in your account. When not signed in, data stays in your browser. Use Export to keep a backup.
+            <div className="max-w-md">
+              <label
+                className="mb-1.5 block text-xs font-medium text-ink-300"
+                htmlFor="settings-watch-region"
+              >
+                Region
+              </label>
+              <select
+                id="settings-watch-region"
+                value={watchRegion ?? 'auto'}
+                onChange={(e) => handleWatchRegionChange(e.target.value)}
+                className="input-field text-xs"
+              >
+                <option value="auto">Detect automatically ({regionName(tmdbPreferredRegion())})</option>
+                {(watchRegion && !REGION_OPTIONS.some((option) => option.code === watchRegion)
+                  ? [{ code: watchRegion, name: regionName(watchRegion) }, ...REGION_OPTIONS]
+                  : REGION_OPTIONS
+                ).map((option) => (
+                  <option key={option.code} value={option.code}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-micro text-ink-400">
+                Availability comes from TMDB's watch-provider data. Choosing a region turns off the
+                US fallback, so an empty list means nothing is streaming there.
               </p>
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
+      )}
 
-        {/* Danger Zone */}
-        <section className="rounded-2xl border border-rose-500/25 bg-rose-500/[0.03] p-5">
-          <div className="mb-1 flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-rose-400" />
-            <h2 className="text-lg font-semibold text-ink-50">Danger zone</h2>
-          </div>
-          <p className="mb-4 text-xs leading-relaxed text-ink-400">
-            Irreversible actions for data on this device and, when signed in, your account. Export a backup first if you might need it later.
-          </p>
-
-          <div className="space-y-3">
-            <div className="flex flex-col gap-3 rounded-xl border border-ink-800/80 bg-ink-950/30 p-3.5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-ink-100">Reset settings to defaults</p>
-                <p className="mt-0.5 text-xs text-ink-400">
-                  Restores appearance, theme, reader preferences, data saver, and content filter. Does not touch your library.
+      {tab === 'library' && (
+        <div {...tabPanelProps('library')} className="space-y-6">
+          {/* Storage Mode Notice */}
+          <section className="card-surface p-5">
+            <div className="flex gap-3">
+              <Info className="h-5 w-5 flex-shrink-0 text-lavender-400" />
+              <div>
+                <h2 className="mb-1 text-sm font-semibold text-ink-50">Cloud-Synced Library</h2>
+                <p className="text-xs text-ink-400 leading-relaxed">
+                  Sign in to sync your library across devices. Your saved titles, reading progress, ratings, and notes are stored securely in your account. When not signed in, data stays in your browser. Use Export to keep a backup.
                 </p>
               </div>
-              <button
-                onClick={handleResetSettings}
-                className="btn-secondary shrink-0 text-xs border-rose-500/30 text-rose-300 hover:border-rose-500/50 hover:text-rose-200 flex items-center gap-1.5"
-              >
-                <RotateCcw className="h-3.5 w-3.5" /> Reset settings
-              </button>
+            </div>
+          </section>
+
+          {/* Chapter updates — what the library badge tracks */}
+          <section className="card-surface p-5">
+            <div className="mb-1 flex items-center gap-2">
+              <BookMarked className="h-4 w-4 text-rose-400" />
+              <h2 className="text-lg font-semibold text-ink-50">Chapter updates</h2>
+            </div>
+            <p className="mb-4 text-xs text-ink-400">
+              What the library&rsquo;s &ldquo;New chapters&rdquo; badge tracks. Only manga, manhwa, manhua and
+              webtoons have numbered releases to compare against.
+            </p>
+
+            <div className="space-y-3">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={chapterPrefs.showBadges}
+                  onChange={(e) => updateChapterPrefs({ showBadges: e.target.checked })}
+                  className="mt-0.5 h-4 w-4 rounded border-ink-600 bg-ink-800 text-rose-500 focus:ring-rose-500"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-ink-200">Show new-chapter badges</span>
+                  <span className="block text-xs text-ink-400">
+                    Adds the &ldquo;N new chapters&rdquo; chip to library cards and the New chapters filter.
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={chapterPrefs.onlyReading}
+                  onChange={(e) => updateChapterPrefs({ onlyReading: e.target.checked })}
+                  className="mt-0.5 h-4 w-4 rounded border-ink-600 bg-ink-800 text-rose-500 focus:ring-rose-500"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-ink-200">Only flag what I&rsquo;m reading</span>
+                  <span className="block text-xs text-ink-400">
+                    Skips Completed, Planned, On Hold and Dropped titles when checking for new releases.
+                  </span>
+                </span>
+              </label>
             </div>
 
-            <div className="flex flex-col gap-3 rounded-xl border border-ink-800/80 bg-ink-950/30 p-3.5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-ink-100">Clear local library</p>
-                <p className="mt-0.5 text-xs text-ink-400">
-                  Removes saved titles and reading progress stored in this browser. Cloud-synced data (if signed in) is not deleted.
-                </p>
-              </div>
+            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-ink-800/80 pt-4">
+              <button
+                onClick={() => {
+                  clearChapterProgressCache();
+                  showFeedback('Chapter data will be refreshed on your next library visit.');
+                }}
+                className="btn-secondary text-xs"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Refresh chapter data
+              </button>
+              {chapterPrefs.showBadges && (
+                <Link to="/library?filter=UPDATES" className="btn-ghost text-xs">
+                  <BookMarked className="h-3.5 w-3.5" /> Open new chapters
+                </Link>
+              )}
+            </div>
+          </section>
+
+          {/* Data Management */}
+          <section className="card-surface p-5">
+            <h2 className="mb-1 text-lg font-semibold text-ink-50">Data Management & Backup</h2>
+            <p className="mb-4 text-xs text-ink-400">
+              When signed in, your library is synced to your account and available across devices. When not signed in, data is stored locally in your browser.
+            </p>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImport}
+              accept=".json,application/json"
+              className="hidden"
+            />
+
+            <div className="flex flex-wrap gap-2.5">
+              <button onClick={handleExport} className="btn-secondary text-xs flex items-center gap-1.5">
+                <Download className="h-3.5 w-3.5" /> Export Data Backup
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="btn-secondary text-xs flex items-center gap-1.5"
+              >
+                <Upload className="h-3.5 w-3.5" /> Import Data Backup
+              </button>
               <button
                 onClick={() => {
                   if (confirm('Clear all local library data? This will reset your saved bookmarks and reading progress.')) {
@@ -711,54 +659,214 @@ export function SettingsPage() {
                     showFeedback('Local library data has been cleared.');
                   }
                 }}
-                className="btn-secondary shrink-0 text-xs text-error-400 hover:text-error-300 border-rose-500/30 flex items-center gap-1.5"
+                className="btn-secondary text-xs text-error-400 hover:text-error-300 flex items-center gap-1.5"
               >
-                <Trash2 className="h-3.5 w-3.5" /> Clear library
+                <Trash2 className="h-3.5 w-3.5" /> Clear Local Library
               </button>
             </div>
 
-            <div className="flex flex-col gap-3 rounded-xl border border-rose-500/20 bg-rose-500/[0.04] p-3.5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-ink-100">Clear all local data</p>
-                <p className="mt-0.5 text-xs text-ink-400">
-                  Removes local library and resets all settings on this device. Export a backup first if needed.
-                </p>
-              </div>
-              <button
-                onClick={handleClearAllLocalData}
-                className="btn-secondary shrink-0 text-xs border-rose-500/40 bg-rose-500/10 text-rose-200 hover:bg-rose-500/15 flex items-center gap-1.5"
-              >
-                <Trash2 className="h-3.5 w-3.5" /> Clear all local data
-              </button>
+            <div className="mt-4 flex items-center gap-4 text-xs text-ink-400">
+              <span>Library Items: <strong className="text-ink-200">{library.length}</strong></span>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {tab === 'content' && (
+        <div {...tabPanelProps('content')} className="space-y-6">
+          {/* Content filter */}
+          <section className="card-surface p-5">
+            <div className="mb-1 flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 text-rose-400" />
+              <h2 className="text-lg font-semibold text-ink-50">Content filter</h2>
+            </div>
+            <p className="mb-4 text-xs text-ink-400">
+              The highest rating you want to see anywhere on YuriOrbit — home, search, every format page.
+              Anything above it is hidden, and explicit titles need a one-time 18+ confirmation.
+            </p>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              {MATURITY_LEVELS.map((option) => {
+                const selected = option === maturityLevel;
+                const locked = requiresAdultConfirmation(option) && !adultAcknowledged;
+                return (
+                  <button
+                    key={option}
+                    onClick={() => {
+                      if (locked) {
+                        setPendingLevel(option);
+                        return;
+                      }
+                      setLevel(option);
+                    }}
+                    className={cn(
+                      'rounded-xl border px-3 py-2.5 text-left transition-colors',
+                      selected
+                        ? 'border-rose-500/50 bg-rose-500/10'
+                        : 'border-ink-800 bg-ink-900/60 hover:border-ink-700 hover:bg-ink-850'
+                    )}
+                    aria-pressed={selected}
+                  >
+                    <span className="flex items-center gap-1.5 text-sm font-medium text-ink-100">
+                      {locked && <Lock className="h-3 w-3 text-ink-400" />}
+                      {MATURITY_LABELS[option]}
+                      {requiresAdultConfirmation(option) && (
+                        <span className="rounded bg-rose-500/15 px-1.5 py-0.5 text-micro font-semibold text-rose-300">18+</span>
+                      )}
+                      {selected && <CheckCircle2 className="ml-auto h-3.5 w-3.5 text-rose-400" />}
+                    </span>
+                    <span className="mt-0.5 block text-micro leading-relaxed text-ink-400">
+                      {MATURITY_DESCRIPTIONS[option]}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
-            <div className="flex flex-col gap-3 rounded-xl border border-error-500/30 bg-error-500/[0.06] p-3.5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-ink-100">Delete account</p>
-                <p className="mt-0.5 text-xs text-ink-400">
-                  {isAuthenticated
-                    ? 'Permanently deletes your account and cloud library data. You will be signed out. This cannot be undone.'
-                    : 'Sign in to permanently delete your account and associated cloud data.'}
+            <p className="mt-3 text-micro text-ink-400">
+              Currently showing:{' '}
+              <span className="text-ink-300">
+                {MATURITY_LEVELS.slice(0, maturityRank(maturityLevel) + 1).join(', ').toLowerCase()}
+              </span>
+            </p>
+
+            {pendingLevel && (
+              <div className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/5 p-4">
+                <p className="text-sm font-medium text-ink-100">This unlocks 18+ content</p>
+                <p className="mt-1 text-xs leading-relaxed text-ink-300">
+                  Choosing {MATURITY_LABELS[pendingLevel]} shows sexually explicit titles from every provider, and can
+                  surface them in search and on the home page. Confirm you are 18 or older to continue.
                 </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    className="btn-primary text-xs"
+                    onClick={() => {
+                      acknowledge();
+                      setLevel(pendingLevel);
+                      setPendingLevel(null);
+                    }}
+                  >
+                    I am 18 or older
+                  </button>
+                  <button className="btn-secondary text-xs" onClick={() => setPendingLevel(null)}>
+                    Cancel
+                  </button>
+                </div>
               </div>
-              {isAuthenticated ? (
+            )}
+
+            <p className="mt-3 text-micro leading-relaxed text-ink-400">
+              The filter is a browsing preference, not a verification of your age. Clear this site's storage to reset it.
+            </p>
+          </section>
+
+          {/* Public profile — edited on /profile */}
+          <section className="card-surface p-5">
+            <div className="mb-1 flex items-center gap-2">
+              <UserRound className="h-4 w-4 text-rose-400" />
+              <h2 className="text-lg font-semibold text-ink-50">Public profile</h2>
+            </div>
+            <p className="mb-4 text-xs text-ink-400">
+              Username, display name, bio, avatar and visibility live on your profile page.
+            </p>
+            <Link to="/profile" className="btn-secondary text-xs">
+              <Pencil className="h-3.5 w-3.5" /> Go to profile
+            </Link>
+          </section>
+        </div>
+      )}
+
+      {tab === 'account' && (
+        <div {...tabPanelProps('account')} className="space-y-6">
+          {/* Danger Zone */}
+          <section className="rounded-2xl border border-rose-500/25 bg-rose-500/[0.03] p-5">
+            <div className="mb-1 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-rose-400" />
+              <h2 className="text-lg font-semibold text-ink-50">Danger zone</h2>
+            </div>
+            <p className="mb-4 text-xs leading-relaxed text-ink-400">
+              Irreversible actions for data on this device and, when signed in, your account. Export a backup first if you might need it later.
+            </p>
+
+            <div className="space-y-3">
+              <div className="flex flex-col gap-3 rounded-xl border border-ink-800/80 bg-ink-950/30 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-ink-100">Reset settings to defaults</p>
+                  <p className="mt-0.5 text-xs text-ink-400">
+                    Restores appearance, theme, reader preferences, data saver, and content filter. Does not touch your library.
+                  </p>
+                </div>
                 <button
-                  onClick={handleDeleteAccount}
-                  disabled={deletingAccount}
-                  className="btn-secondary shrink-0 text-xs border-error-500/50 bg-error-500/10 text-error-200 hover:bg-error-500/20 disabled:opacity-60 flex items-center gap-1.5"
+                  onClick={handleResetSettings}
+                  className="btn-secondary shrink-0 text-xs border-rose-500/30 text-rose-300 hover:border-rose-500/50 hover:text-rose-200 flex items-center gap-1.5"
                 >
-                  {deletingAccount ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserX className="h-3.5 w-3.5" />}
-                  {deletingAccount ? 'Deleting…' : 'Delete account'}
+                  <RotateCcw className="h-3.5 w-3.5" /> Reset settings
                 </button>
-              ) : (
-                <Link to="/auth?next=/settings" className="btn-secondary shrink-0 text-xs flex items-center gap-1.5">
-                  Sign in
-                </Link>
-              )}
+              </div>
+
+              <div className="flex flex-col gap-3 rounded-xl border border-ink-800/80 bg-ink-950/30 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-ink-100">Clear local library</p>
+                  <p className="mt-0.5 text-xs text-ink-400">
+                    Removes saved titles and reading progress stored in this browser. Cloud-synced data (if signed in) is not deleted.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    if (confirm('Clear all local library data? This will reset your saved bookmarks and reading progress.')) {
+                      clearLibrary();
+                      showFeedback('Local library data has been cleared.');
+                    }
+                  }}
+                  className="btn-secondary shrink-0 text-xs text-error-400 hover:text-error-300 border-rose-500/30 flex items-center gap-1.5"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Clear library
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-3 rounded-xl border border-rose-500/20 bg-rose-500/[0.04] p-3.5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-ink-100">Clear all local data</p>
+                  <p className="mt-0.5 text-xs text-ink-400">
+                    Removes local library and resets all settings on this device. Export a backup first if needed.
+                  </p>
+                </div>
+                <button
+                  onClick={handleClearAllLocalData}
+                  className="btn-secondary shrink-0 text-xs border-rose-500/40 bg-rose-500/10 text-rose-200 hover:bg-rose-500/15 flex items-center gap-1.5"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Clear all local data
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-3 rounded-xl border border-error-500/30 bg-error-500/[0.06] p-3.5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-ink-100">Delete account</p>
+                  <p className="mt-0.5 text-xs text-ink-400">
+                    {isAuthenticated
+                      ? 'Permanently deletes your account and cloud library data. You will be signed out. This cannot be undone.'
+                      : 'Sign in to permanently delete your account and associated cloud data.'}
+                  </p>
+                </div>
+                {isAuthenticated ? (
+                  <button
+                    onClick={handleDeleteAccount}
+                    disabled={deletingAccount}
+                    className="btn-secondary shrink-0 text-xs border-error-500/50 bg-error-500/10 text-error-200 hover:bg-error-500/20 disabled:opacity-60 flex items-center gap-1.5"
+                  >
+                    {deletingAccount ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserX className="h-3.5 w-3.5" />}
+                    {deletingAccount ? 'Deleting…' : 'Delete account'}
+                  </button>
+                ) : (
+                  <Link to="/auth?next=/settings" className="btn-secondary shrink-0 text-xs flex items-center gap-1.5">
+                    Sign in
+                  </Link>
+                )}
+              </div>
             </div>
-          </div>
-        </section>
-      </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

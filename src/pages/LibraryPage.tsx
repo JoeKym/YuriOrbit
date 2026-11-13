@@ -9,6 +9,7 @@ import { getFallbackCover } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { AvailabilityBadge } from '@/components/content/AvailabilityBadge';
 import { countNewChapters, loadChapterProgress } from '@/lib/content/chapter-updates';
+import { useChapterUpdatePrefs } from '@/lib/content/chapter-update-prefs';
 import { Badge, Button, buttonClasses, Chip, Dialog, EmptyState } from '@/components/ui';
 import { PageHeader } from '@/components/layout/PageHeader';
 
@@ -30,7 +31,11 @@ export function LibraryPage() {
     useLibrary();
   const { isLoading } = useAuth();
   // 'UPDATES' is a view rather than a saved status, so it is not in STATUS_FILTERS.
-  const [filter, setFilter] = useState<LibraryStatus | 'ALL' | 'UPDATES'>('ALL');
+  const [chapterPrefs] = useChapterUpdatePrefs();
+  const showUpdates = chapterPrefs.showBadges;
+  const [filter, setFilter] = useState<LibraryStatus | 'ALL' | 'UPDATES'>(() =>
+    new URLSearchParams(window.location.search).get('filter') === 'UPDATES' ? 'UPDATES' : 'ALL'
+  );
   const [sort, setSort] = useState<'recent' | 'title' | 'rating'>('recent');
   const [latestChapters, setLatestChapters] = useState<Record<string, number>>({});
   const [confirmClear, setConfirmClear] = useState(false);
@@ -41,16 +46,26 @@ export function LibraryPage() {
   // name the dominant upstream record rather than MangaDex.
   const libraryRef = useRef(library);
   libraryRef.current = library;
+  const onlyReading = chapterPrefs.onlyReading;
   const trackedIds = library
-    .filter((entry) => ['MANGA', 'MANHWA', 'MANHUA', 'WEBTOON'].includes(entry.contentType))
+    .filter(
+      (entry) =>
+        ['MANGA', 'MANHWA', 'MANHUA', 'WEBTOON'].includes(entry.contentType) &&
+        (!onlyReading || entry.status === 'CURRENT')
+    )
     .map((entry) => `${entry.titleId}:${entry.provider ?? ''}`)
     .join('|');
 
   useEffect(() => {
-    if (!trackedIds) return;
+    const tracked = libraryRef.current.filter(
+      (entry) =>
+        ['MANGA', 'MANHWA', 'MANHUA', 'WEBTOON'].includes(entry.contentType) &&
+        (!onlyReading || entry.status === 'CURRENT')
+    );
+    if (tracked.length === 0) return;
     let cancelled = false;
 
-    loadChapterProgress(libraryRef.current)
+    loadChapterProgress(tracked)
       .then((progress) => {
         if (cancelled) return;
         const next: Record<string, number> = {};
@@ -66,11 +81,16 @@ export function LibraryPage() {
     return () => {
       cancelled = true;
     };
-  }, [trackedIds]);
+  }, [trackedIds, onlyReading]);
 
   const newChaptersFor = (entry: (typeof library)[number]) =>
     countNewChapters(entry.progress, latestChapters[entry.titleId]);
-  const updatesCount = library.filter((entry) => newChaptersFor(entry) > 0).length;
+  /** Nothing is counted while badges are off, so no surface can show a stale total. */
+  const updatesCount = showUpdates ? library.filter((entry) => newChaptersFor(entry) > 0).length : 0;
+
+  useEffect(() => {
+    if (!showUpdates) setFilter((current) => (current === 'UPDATES' ? 'ALL' : current));
+  }, [showUpdates]);
 
   const filtered = library
     .filter((e) => {
@@ -256,7 +276,7 @@ export function LibraryPage() {
                       {total ? `/${total}` : ''}
                     </p>
                   )}
-                  {newChapters > 0 && (
+                  {showUpdates && newChapters > 0 && (
                     <p className="mt-1">
                       <Badge variant="update" icon={<BookMarked className="h-3 w-3" />}>
                         {newChapters} new chapter{newChapters === 1 ? '' : 's'}

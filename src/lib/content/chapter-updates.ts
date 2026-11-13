@@ -60,6 +60,15 @@ function writeCache(cache: Cache): void {
   }
 }
 
+/** Forget every cached lookup, so the next library visit asks again. */
+export function clearChapterProgressCache(): void {
+  try {
+    window.localStorage.removeItem(CACHE_KEY);
+  } catch {
+    // Storage blocked: there is nothing cached to clear.
+  }
+}
+
 /** Fresh entries only, pruned of anything past its TTL. */
 function freshCache(cache: Cache): Cache {
   const now = Date.now();
