@@ -66,7 +66,7 @@ function StatCard({
 }) {
   return (
     <div className="rounded-xl border border-ink-800 bg-ink-900/60 p-5">
-      <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-ink-400">
+      <div className="flex items-center gap-2 text-micro font-medium uppercase tracking-[0.16em] text-ink-400">
         <Icon className="h-4 w-4 text-rose-400/80" /> {label}
       </div>
       <p className="mt-3 font-display text-3xl font-semibold text-ink-50">{value}</p>
@@ -297,13 +297,13 @@ export function TrafficTab() {
       </div>
 
       <div className="flex flex-wrap gap-1.5 rounded-xl border border-ink-800 bg-ink-900/60 p-2">
-        <span className="px-2 py-1 text-[11px] text-ink-400">Time Range:</span>
+        <span className="px-2 py-1 text-micro text-ink-400">Time Range:</span>
         {RANGES.map((r) => (
           <button
             key={r.key}
             onClick={() => setRange(r.key)}
             className={cn(
-              'rounded-lg px-2.5 py-1 text-[11px] font-medium transition-colors',
+              'rounded-lg px-2.5 py-1 text-micro font-medium transition-colors',
               range === r.key
                 ? 'bg-rose-500/15 text-rose-200 ring-1 ring-rose-500/30'
                 : 'text-ink-400 hover:bg-ink-850 hover:text-ink-200'
@@ -346,7 +346,7 @@ export function TrafficTab() {
             <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-100">
               Traffic overview
             </h3>
-            <p className="mb-4 text-[11px] text-ink-400">
+            <p className="mb-4 text-micro text-ink-400">
               {RANGES.find((r) => r.key === range)?.label}
             </p>
             <TrafficChart data={data} since={bounds.since} until={bounds.until} bucket={bounds.bucket} />
@@ -370,7 +370,7 @@ export function TrafficTab() {
                       <div key={device.device}>
                         <div className="flex items-baseline justify-between">
                           <span className="font-display text-xl font-semibold text-ink-50">{pct}%</span>
-                          <span className="text-[11px] text-ink-400">{device.visits} visits</span>
+                          <span className="text-micro text-ink-400">{device.visits} visits</span>
                         </div>
                         <div className="mt-1 flex items-center justify-between text-xs text-ink-300">
                           <span>{device.device}</span>
@@ -388,7 +388,7 @@ export function TrafficTab() {
             <div className="rounded-xl border border-ink-800 bg-ink-900/60 p-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-ink-100">Live visitors</h3>
-                <span className="inline-flex items-center gap-1.5 text-[11px] text-success-400">
+                <span className="inline-flex items-center gap-1.5 text-micro text-success-400">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success-400" />
                   {data.live.length} active now
                 </span>
@@ -397,7 +397,7 @@ export function TrafficTab() {
                 <p className="mt-3 text-xs text-ink-400">No activity in the last 5 minutes.</p>
               ) : (
                 <table className="mt-4 w-full text-left text-xs">
-                  <thead className="text-[10px] uppercase tracking-wider text-ink-400">
+                  <thead className="text-micro uppercase tracking-wider text-ink-400">
                     <tr>
                       <th className="pb-2 font-medium">Session</th>
                       <th className="pb-2 font-medium">Page</th>
@@ -407,7 +407,7 @@ export function TrafficTab() {
                   <tbody>
                     {data.live.map((row) => (
                       <tr key={row.session} className="border-t border-ink-800/60">
-                        <td className="py-2 font-mono text-[11px] text-ink-300">{row.session.slice(0, 12)}</td>
+                        <td className="py-2 font-mono text-micro text-ink-300">{row.session.slice(0, 12)}</td>
                         <td className="max-w-[160px] truncate py-2 text-ink-300" title={row.path}>{row.path}</td>
                         <td className="py-2 text-right text-ink-400">
                           {new Date(row.lastSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -420,7 +420,7 @@ export function TrafficTab() {
             </div>
           </div>
 
-          <p className="text-[11px] text-ink-400">
+          <p className="text-micro text-ink-400">
             Time range uses this browser&rsquo;s timezone. Sessions are anonymous per-tab ids; no IP addresses or external trackers are used.
           </p>
         </>

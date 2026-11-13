@@ -88,7 +88,7 @@ function Field({
           </button>
         )}
       </div>
-      {hint && <p className="mt-1 text-[11px] text-ink-400">{hint}</p>}
+      {hint && <p className="mt-1 text-micro text-ink-400">{hint}</p>}
     </div>
   );
 }
@@ -430,7 +430,7 @@ export function AuthPage() {
               <button
                 type="button"
                 onClick={() => switchMode('forgot')}
-                className="text-[11px] font-medium text-rose-400 transition-colors hover:text-rose-300"
+                className="text-micro font-medium text-rose-400 transition-colors hover:text-rose-300"
               >
                 Forgot password?
               </button>
@@ -501,7 +501,7 @@ export function AuthPage() {
               {submitting ? 'Creating account…' : 'Create account'}
             </button>
 
-            <p className="text-center text-[11px] text-ink-400">
+            <p className="text-center text-micro text-ink-400">
               By signing up you agree to the{' '}
               <Link to="/terms" className="text-ink-300 underline-offset-2 hover:underline">terms</Link>{' '}
               and{' '}

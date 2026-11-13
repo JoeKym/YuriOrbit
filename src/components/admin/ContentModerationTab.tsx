@@ -141,14 +141,14 @@ export function ContentModerationTab() {
         {error && <div className="mb-3 rounded-lg border border-error-500/30 bg-error-500/5 p-3 text-xs text-error-300">{error}</div>}
         <div className="grid gap-3 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-[11px] text-ink-400">Title ID (e.g. anilist:123, mal:456, mangadex:...)</label>
+            <label className="mb-1 block text-micro text-ink-400">Title ID (e.g. anilist:123, mal:456, mangadex:...)</label>
             <div className="flex gap-2">
               <input value={lookupId} onChange={(e) => { setLookupId(e.target.value); setDraft((d) => ({ ...d, titleId: e.target.value })); }} placeholder="Paste title ID" className="input-field text-xs" />
               <button type="button" onClick={handleLookup} disabled={lookupBusy} className="btn-secondary shrink-0 text-xs">{lookupBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />} Lookup</button>
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-[11px] text-ink-400">Action</label>
+            <label className="mb-1 block text-micro text-ink-400">Action</label>
             <select value={draft.action} onChange={(e) => setDraft({ ...draft, action: e.target.value as Action })} className="input-field text-xs">
               <option value="takedown">Takedown (hide/remove listing)</option>
               <option value="suspended">Suspended (temporarily hidden)</option>
@@ -157,23 +157,23 @@ export function ContentModerationTab() {
           </div>
           {draft.action === 'suspended' && (
             <div>
-              <label className="mb-1 block text-[11px] text-ink-400">Suspension duration (hours)</label>
+              <label className="mb-1 block text-micro text-ink-400">Suspension duration (hours)</label>
               <input type="number" min={1} value={durationHours} onChange={(e) => setDurationHours(Number(e.target.value || 1))} className="input-field text-xs" />
-              <div className="mt-1 text-[10px] text-ink-400">Common: 24 (1 day), 72 (3 days), 168 (7 days). Auto-restores on expiry.</div>
+              <div className="mt-1 text-micro text-ink-400">Common: 24 (1 day), 72 (3 days), 168 (7 days). Auto-restores on expiry.</div>
             </div>
           )}
           <div>
-            <label className="mb-1 block text-[11px] text-ink-400">Title (optional)</label>
+            <label className="mb-1 block text-micro text-ink-400">Title (optional)</label>
             <input value={draft.title || ''} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Auto-filled on lookup or enter manually" className="input-field text-xs" />
           </div>
           <div>
-            <label className="mb-1 block text-[11px] text-ink-400">
+            <label className="mb-1 block text-micro text-ink-400">
               Reason <span className="text-rose-300">(required — shown to users)</span>
             </label>
             <input value={draft.reason || ''} onChange={(e) => setDraft({ ...draft, reason: e.target.value })} placeholder="e.g. valid rights request, policy violation, incorrect/unsafe listing" className="input-field text-xs" />
           </div>
           <div className="md:col-span-2">
-            <label className="mb-1 block text-[11px] text-ink-400">Internal note (optional)</label>
+            <label className="mb-1 block text-micro text-ink-400">Internal note (optional)</label>
             <textarea value={draft.note || ''} onChange={(e) => setDraft({ ...draft, note: e.target.value })} rows={2} className="input-field text-xs" placeholder="Internal context, ticket/reference, dates…" />
           </div>
         </div>
@@ -199,7 +199,7 @@ export function ContentModerationTab() {
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter actions…" className="input-field py-2 pl-9 text-xs" />
           </div>
           {gateNotice && (
-            <div className="basis-full rounded-lg border border-ink-700 bg-ink-850/60 p-2 text-[11px] text-ink-300">
+            <div className="basis-full rounded-lg border border-ink-700 bg-ink-850/60 p-2 text-micro text-ink-300">
               {gateNotice}
             </div>
           )}
@@ -225,12 +225,12 @@ export function ContentModerationTab() {
                   <tr key={item.titleId} className="border-b border-ink-800/60 last:border-0">
                     <td className="px-4 py-2.5">
                       <p className="font-medium text-ink-100">{item.title || item.titleId}</p>
-                      <p className="text-[10px] text-ink-400">{item.titleId}</p>
+                      <p className="text-micro text-ink-400">{item.titleId}</p>
                     </td>
                     <td className="px-4 py-2.5">
-                      <span className={cn('rounded-md border px-1.5 py-0.5 text-[10px] font-medium uppercase', item.action === 'takedown' ? 'border-error-500/30 bg-error-500/10 text-error-400' : item.action === 'suspended' ? 'border-warning-500/30 bg-warning-500/10 text-warning-400' : 'border-ink-700 bg-ink-850 text-ink-300')}>{item.action}</span>
+                      <span className={cn('rounded-md border px-1.5 py-0.5 text-micro font-medium uppercase', item.action === 'takedown' ? 'border-error-500/30 bg-error-500/10 text-error-400' : item.action === 'suspended' ? 'border-warning-500/30 bg-warning-500/10 text-warning-400' : 'border-ink-700 bg-ink-850 text-ink-300')}>{item.action}</span>
                       {item.action === 'suspended' && item.expiresAt && (
-                        <div className="mt-1 text-[10px] text-ink-400">
+                        <div className="mt-1 text-micro text-ink-400">
                           {Date.parse(item.expiresAt) > Date.now()
                             ? `Until ${new Date(item.expiresAt).toLocaleString()}`
                             : 'Expired'}

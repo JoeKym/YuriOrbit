@@ -166,7 +166,7 @@ export function Navbar() {
                 onMouseLeave={() => setFormatsOpen(false)}
                 className="absolute left-0 mt-2 w-64 rounded-xl border border-ink-800 bg-ink-900/95 p-2 shadow-2xl backdrop-blur-xl animate-fade-in-fast z-50"
               >
-                <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-ink-400">
+                <div className="px-2 py-1 text-micro font-semibold uppercase tracking-wider text-ink-400">
                   Girls' Love Formats
                 </div>
                 <div className="mt-1 space-y-0.5">
@@ -182,7 +182,7 @@ export function Navbar() {
                       )}
                     >
                       <span className="text-sm font-medium">{item.label}</span>
-                      <span className="text-[11px] text-ink-400">{item.desc}</span>
+                      <span className="text-micro text-ink-400">{item.desc}</span>
                     </Link>
                   ))}
                 </div>
@@ -271,7 +271,7 @@ export function Navbar() {
                       className="h-6 w-6 rounded-full object-cover ring-1 ring-rose-500/40"
                     />
                   ) : (
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-rose-500 to-lavender-500 text-[11px] font-bold text-white">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-rose-500 to-lavender-500 text-micro font-bold text-white">
                       {(user?.givenName?.[0] || user?.email?.[0] || 'U').toUpperCase()}
                     </div>
                   )}
@@ -291,7 +291,7 @@ export function Navbar() {
                       <p className="text-xs font-semibold text-ink-100 truncate">
                         {user?.givenName ? `${user.givenName} ${user?.familyName || ''}`.trim() : user?.email}
                       </p>
-                      <p className="text-[11px] text-ink-400 truncate">{user?.email}</p>
+                      <p className="text-micro text-ink-400 truncate">{user?.email}</p>
                     </div>
 
                     <div className="space-y-0.5">
@@ -449,7 +449,7 @@ export function Navbar() {
 
           {/* Formats Section */}
           <div className="pt-3 border-t border-ink-800/80 mb-3">
-            <span className="px-2 text-[11px] font-semibold uppercase tracking-wider text-ink-400">
+            <span className="px-2 text-micro font-semibold uppercase tracking-wider text-ink-400">
               Browse by Format
             </span>
             <div className="mt-2 grid grid-cols-2 gap-1.5">
@@ -495,7 +495,7 @@ export function Navbar() {
                       <p className="text-xs font-semibold text-ink-100">
                         {user?.givenName || user?.email?.split('@')[0]}
                       </p>
-                      <p className="text-[11px] text-ink-400">{user?.email}</p>
+                      <p className="text-micro text-ink-400">{user?.email}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

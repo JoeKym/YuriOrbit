@@ -186,7 +186,7 @@ export function FeedbackPage() {
             className="mt-1 block w-full rounded-md border border-ink-700 bg-ink-950 px-3 py-3 text-sm text-ink-300 resize-y min-h-[100px] focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent"
             placeholder="Describe the issue, request, feedback, or your review/testimonial..."
           />
-          <p className="mt-1 text-right text-[11px] text-ink-400">
+          <p className="mt-1 text-right text-micro text-ink-400">
             {message.length}/{MESSAGE_MAX}
           </p>
         </div>

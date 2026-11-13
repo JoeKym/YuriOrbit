@@ -169,23 +169,23 @@ export function Hero({ titles, loading }: { titles: ContentTitle[]; loading?: bo
       <div className="relative mx-auto flex max-w-page flex-col gap-8 px-4 pb-8 pt-14 md:flex-row md:items-end md:gap-12 md:px-6 md:pb-10 md:pt-20">
         <div key={slide.id} className="max-w-2xl animate-fade-in">
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-[11px] font-medium text-rose-200">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-micro font-medium text-rose-200">
               <Sparkles className="h-3 w-3" />
               {displayFormat(slide)}
             </span>
             {slide.releaseYear && (
-              <span className="rounded-full border border-ink-700/70 bg-ink-900/70 px-2.5 py-1 text-[11px] text-ink-300">
+              <span className="rounded-full border border-ink-700/70 bg-ink-900/70 px-2.5 py-1 text-micro text-ink-300">
                 {slide.releaseYear}
               </span>
             )}
             {slide.averageScore ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-200">
+              <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-micro font-medium text-amber-200">
                 <Star className="h-3 w-3 fill-amber-300 text-amber-300" />
                 {formatScore(slide.averageScore)}
               </span>
             ) : null}
             {maturityBadge && (
-              <span className={cn('inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium', maturityBadge.className)}>
+              <span className={cn('inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-micro font-medium', maturityBadge.className)}>
                 <ShieldAlert className="h-3 w-3" />
                 {maturityBadge.label}
               </span>
@@ -208,7 +208,7 @@ export function Hero({ titles, loading }: { titles: ContentTitle[]; loading?: bo
 
           <div className="mt-5 flex flex-wrap items-center gap-2">
             {slide.genres.slice(0, 4).map((genre) => (
-              <span key={genre} className="rounded-full border border-ink-600/70 bg-ink-950/70 px-2.5 py-0.5 text-[11px] text-ink-200 backdrop-blur-sm">
+              <span key={genre} className="rounded-full border border-ink-600/70 bg-ink-950/70 px-2.5 py-0.5 text-micro text-ink-200 backdrop-blur-sm">
                 {genre}
               </span>
             ))}
@@ -261,7 +261,7 @@ export function Hero({ titles, loading }: { titles: ContentTitle[]; loading?: bo
                   key={spot.key}
                   onClick={() => setSpotlight(spot.key)}
                   className={cn(
-                    'rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors',
+                    'rounded-full px-2.5 py-1 text-micro font-medium transition-colors',
                     spotlight === spot.key
                       ? 'bg-rose-500/20 text-rose-100 ring-1 ring-rose-400/40'
                       : 'bg-ink-900/70 text-ink-300 hover:bg-ink-850 hover:text-ink-100'
@@ -274,7 +274,7 @@ export function Hero({ titles, loading }: { titles: ContentTitle[]; loading?: bo
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="mr-1 text-[11px] tabular-nums text-ink-400">
+              <span className="mr-1 text-micro tabular-nums text-ink-400">
                 {String((index % deck.length) + 1).padStart(2, '0')} / {String(deck.length).padStart(2, '0')}
               </span>
               <button
@@ -311,7 +311,7 @@ export function Hero({ titles, loading }: { titles: ContentTitle[]; loading?: bo
 
       {/* Current level, so the filter is never a surprise */}
       <div className="relative mx-auto max-w-page px-4 pb-6 md:px-6 md:pb-7">
-        <p className="text-[10px] uppercase tracking-wider text-ink-400">
+        <p className="text-micro uppercase tracking-wider text-ink-400">
           Content filter: {level.toLowerCase()} · change it in{' '}
           <Link to="/settings" className="text-ink-400 underline decoration-dotted hover:text-ink-200">
             settings

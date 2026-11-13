@@ -327,7 +327,7 @@ export function GenresPage() {
                 </>
               )}
             </p>
-            <p className="text-[11px] uppercase tracking-[0.14em] text-ink-400">
+            <p className="text-micro uppercase tracking-[0.14em] text-ink-400">
               {hasActiveFilters ? 'Filtered results' : 'Featured genres'}
             </p>
           </div>

@@ -84,29 +84,29 @@ export function AppealsTab() {
           {reports.map((r) => (
             <li key={r.id} className="card-surface p-4">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-md border border-warning-500/30 bg-warning-500/10 px-1.5 py-0.5 text-[10px] font-medium text-warning-300"><Scale className="h-3 w-3" /> {CATEGORY_LABELS[r.category] || r.category}</span>
-                <span className={cn('rounded-md border px-1.5 py-0.5 text-[10px] font-medium capitalize', r.status === 'open' ? 'border-warning-500/30 bg-warning-500/10 text-warning-400' : r.status === 'resolved' ? 'border-success-500/30 bg-success-500/10 text-success-400' : 'border-ink-700 bg-ink-850 text-ink-400')}>{r.status}</span>
-                <span className="ml-auto text-[10px] text-ink-400">{new Date(r.created_at).toLocaleString()}</span>
+                <span className="inline-flex items-center gap-1 rounded-md border border-warning-500/30 bg-warning-500/10 px-1.5 py-0.5 text-micro font-medium text-warning-300"><Scale className="h-3 w-3" /> {CATEGORY_LABELS[r.category] || r.category}</span>
+                <span className={cn('rounded-md border px-1.5 py-0.5 text-micro font-medium capitalize', r.status === 'open' ? 'border-warning-500/30 bg-warning-500/10 text-warning-400' : r.status === 'resolved' ? 'border-success-500/30 bg-success-500/10 text-success-400' : 'border-ink-700 bg-ink-850 text-ink-400')}>{r.status}</span>
+                <span className="ml-auto text-micro text-ink-400">{new Date(r.created_at).toLocaleString()}</span>
               </div>
               {r.subject && <p className="mt-2 text-sm font-medium text-ink-100">{r.subject}</p>}
               <p className="mt-1 whitespace-pre-wrap break-words text-sm text-ink-200">{r.message}</p>
-              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-ink-400">
+              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-micro text-ink-400">
                 {r.contact_name && <span className="text-ink-200">{r.contact_name}</span>}
                 {r.contact_email && <a className="text-rose-300 hover:underline" href={`mailto:${r.contact_email}?subject=${encodeURIComponent(r.subject ? `Re: ${r.subject}` : 'Re: your appeal to YuriOrbit')}`}>{r.contact_email}</a>}
                 {r.user_email && r.user_email !== r.contact_email && <span>account: {r.user_email}</span>}
                 {r.resolved_by && <span className="text-ink-400">{r.status} by {r.resolved_by}</span>}
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                {r.contact_email && <a href={`mailto:${r.contact_email}?subject=${encodeURIComponent(r.subject ? `Re: ${r.subject}` : 'Re: your appeal to YuriOrbit')}`} className="btn-secondary px-2.5 py-1 text-[11px]">Reply</a>}
+                {r.contact_email && <a href={`mailto:${r.contact_email}?subject=${encodeURIComponent(r.subject ? `Re: ${r.subject}` : 'Re: your appeal to YuriOrbit')}`} className="btn-secondary px-2.5 py-1 text-micro">Reply</a>}
                 {r.status === 'open' ? (
                   <>
-                    <button onClick={() => changeStatus(r.id, 'resolved')} disabled={busyId === r.id} className="btn-secondary px-2.5 py-1 text-[11px] disabled:opacity-40"><Check className="h-3 w-3" /> Resolve</button>
-                    <button onClick={() => changeStatus(r.id, 'dismissed')} disabled={busyId === r.id} className="btn-ghost px-2.5 py-1 text-[11px] disabled:opacity-40"><CircleSlash className="h-3 w-3" /> Dismiss</button>
+                    <button onClick={() => changeStatus(r.id, 'resolved')} disabled={busyId === r.id} className="btn-secondary px-2.5 py-1 text-micro disabled:opacity-40"><Check className="h-3 w-3" /> Resolve</button>
+                    <button onClick={() => changeStatus(r.id, 'dismissed')} disabled={busyId === r.id} className="btn-ghost px-2.5 py-1 text-micro disabled:opacity-40"><CircleSlash className="h-3 w-3" /> Dismiss</button>
                   </>
                 ) : (
-                  <button onClick={() => changeStatus(r.id, 'open')} disabled={busyId === r.id} className="btn-secondary px-2.5 py-1 text-[11px] disabled:opacity-40"><RotateCcw className="h-3 w-3" /> Reopen</button>
+                  <button onClick={() => changeStatus(r.id, 'open')} disabled={busyId === r.id} className="btn-secondary px-2.5 py-1 text-micro disabled:opacity-40"><RotateCcw className="h-3 w-3" /> Reopen</button>
                 )}
-                <button onClick={() => handleDelete(r.id)} disabled={busyId === r.id} className="btn-ghost px-2.5 py-1 text-[11px] text-ink-400 hover:text-error-400 disabled:opacity-40"><Trash2 className="h-3 w-3" /> Delete</button>
+                <button onClick={() => handleDelete(r.id)} disabled={busyId === r.id} className="btn-ghost px-2.5 py-1 text-micro text-ink-400 hover:text-error-400 disabled:opacity-40"><Trash2 className="h-3 w-3" /> Delete</button>
               </div>
             </li>
           ))}

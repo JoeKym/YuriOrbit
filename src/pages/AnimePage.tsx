@@ -110,14 +110,14 @@ export function AnimePage() {
       {showFilters && (
         <div className="mb-6 grid gap-3 rounded-2xl border border-ink-800 bg-ink-900/60 p-4 md:grid-cols-4">
           <div className="md:col-span-2">
-            <label className="mb-1 block text-[11px] text-ink-400">Refine loaded titles</label>
+            <label className="mb-1 block text-micro text-ink-400">Refine loaded titles</label>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-400" />
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search anime…" className="input-field pl-9 text-xs" />
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-[11px] text-ink-400">Status</label>
+            <label className="mb-1 block text-micro text-ink-400">Status</label>
             <select value={status} onChange={(e) => setStatus(e.target.value as ReleaseStatus | 'ALL')} className="input-field text-xs">
               <option value="ALL">All statuses</option>
               <option value="RELEASING">Airing / Ongoing</option>
@@ -126,7 +126,7 @@ export function AnimePage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-[11px] text-ink-400">Sort</label>
+            <label className="mb-1 block text-micro text-ink-400">Sort</label>
             <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className="input-field text-xs">
               <option value="POPULARITY">Popularity</option>
               <option value="TRENDING">Trending</option>

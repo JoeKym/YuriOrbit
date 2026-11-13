@@ -469,7 +469,7 @@ export function DiscoverPage() {
                             updateFilter('genre', isSelected ? undefined : genre)
                           }
                           className={cn(
-                            'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
+                            'rounded-full border px-2.5 py-1 text-micro transition-colors',
                             isSelected
                               ? 'border-rose-500/40 bg-rose-500/15 text-rose-200'
                               : 'border-ink-700/60 bg-ink-850/60 text-ink-300 hover:border-rose-500/30 hover:text-ink-100'
@@ -517,7 +517,7 @@ export function DiscoverPage() {
                   <SlidersHorizontal className="h-3.5 w-3.5" />
                   <span>Filters</span>
                   {activeFilters.length > 0 && (
-                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
+                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-micro font-bold text-white">
                       {activeFilters.length}
                     </span>
                   )}
@@ -526,7 +526,7 @@ export function DiscoverPage() {
               </div>
 
               <div className="ml-auto flex items-center gap-3">
-                <span className="text-[11px] uppercase tracking-[0.14em] text-ink-400">
+                <span className="text-micro uppercase tracking-[0.14em] text-ink-400">
                   {loading ? 'Loading…' : `${visibleTitles.length} shown`}
                 </span>
                 {/* View Mode (Grid vs List) */}
@@ -695,7 +695,7 @@ function ListView({ titles }: { titles: ContentTitle[] }) {
                 {title.title}
               </h3>
               {title.averageScore && (
-                <div className="flex items-center gap-1 rounded bg-ink-800/80 px-1.5 py-0.5 text-[11px] font-medium text-amber-400">
+                <div className="flex items-center gap-1 rounded bg-ink-800/80 px-1.5 py-0.5 text-micro font-medium text-amber-400">
                   <Star className="h-3 w-3 fill-amber-400" />
                   <span>{formatScore(title.averageScore)}</span>
                 </div>
@@ -714,7 +714,7 @@ function ListView({ titles }: { titles: ContentTitle[] }) {
 
             <div className="mt-2 flex flex-wrap gap-1.5">
               {title.genres.slice(0, 4).map((g) => (
-                <span key={g} className="chip text-[10px] py-0.5 px-2">
+                <span key={g} className="chip text-micro py-0.5 px-2">
                   {g}
                 </span>
               ))}

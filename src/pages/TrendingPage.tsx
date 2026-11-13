@@ -233,7 +233,7 @@ export function TrendingPage() {
                 </>
               )}
             </p>
-            <p className="text-[11px] uppercase tracking-[0.14em] text-ink-400">Trending order</p>
+            <p className="text-micro uppercase tracking-[0.14em] text-ink-400">Trending order</p>
           </div>
 
           {feed.loading ? (

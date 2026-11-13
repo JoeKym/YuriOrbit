@@ -98,7 +98,7 @@ export function Tabs({ items, value, onChange, label, className }: TabsProps) {
             {Icon && <Icon className="h-3.5 w-3.5" />}
             {item.label}
             {item.count !== undefined && (
-              <span className="rounded-full bg-ink-700/60 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-ink-200">
+              <span className="rounded-full bg-ink-700/60 px-1.5 py-0.5 text-micro font-semibold leading-none text-ink-200">
                 {item.count}
               </span>
             )}

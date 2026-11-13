@@ -364,7 +364,7 @@ export function HowItWorksFlow() {
     <section className="mt-10 scroll-mt-24" ref={sectionRef}>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-rose-400">Under the hood</p>
+          <p className="text-micro font-semibold uppercase tracking-[0.18em] text-rose-400">Under the hood</p>
           <h2 className="mt-1 font-display text-2xl font-semibold text-ink-50">How YuriOrbit works</h2>
           <p className="mt-1 text-sm text-ink-400">
             One request, two branches — the catalogue you browse and the account behind it.
@@ -424,7 +424,7 @@ export function HowItWorksFlow() {
 
       <div className="rounded-xl border border-ink-800 bg-ink-900/60 p-3" aria-live="polite">
         <div key={`${scope}-${activeId}`} className="animate-fade-up">
-          <p className="text-[11px] font-semibold tracking-[0.08em] text-rose-300">
+          <p className="text-micro font-semibold tracking-[0.08em] text-rose-300">
             Step {currentIndex + 1} of {steps.length} · {active?.title}
           </p>
           <p className="mt-1 text-sm leading-relaxed text-ink-200">{active?.detail}</p>
@@ -526,7 +526,7 @@ export function HowItWorksFlow() {
             <g>
               <circle cx="323" cy="430" r="9" className="fill-ink-950" />
               <path d="M319 426l8 8M327 426l-8 8" stroke="rgb(244 63 94)" strokeWidth="2" strokeLinecap="round" />
-              <text x="323" y="412" textAnchor="middle" className="fill-rose-300 text-[10px]">
+              <text x="323" y="412" textAnchor="middle" className="fill-rose-300 text-micro">
                 provider error
               </text>
             </g>
@@ -534,10 +534,10 @@ export function HowItWorksFlow() {
 
           {scope === 'both' && (
             <>
-              <text x="322" y="212" textAnchor="middle" className="fill-ink-400 text-[10px] uppercase tracking-[0.14em]">
+              <text x="322" y="212" textAnchor="middle" className="fill-ink-400 text-micro uppercase tracking-[0.14em]">
                 catalogue
               </text>
-              <text x="558" y="212" textAnchor="middle" className="fill-ink-400 text-[10px] uppercase tracking-[0.14em]">
+              <text x="558" y="212" textAnchor="middle" className="fill-ink-400 text-micro uppercase tracking-[0.14em]">
                 account
               </text>
             </>
@@ -548,7 +548,7 @@ export function HowItWorksFlow() {
             y="330"
             transform="rotate(-90 828 330)"
             textAnchor="middle"
-            className="fill-ink-600 text-[10px] uppercase tracking-[0.18em]"
+            className="fill-ink-600 text-micro uppercase tracking-[0.18em]"
           >
             response
           </text>
@@ -604,7 +604,7 @@ export function HowItWorksFlow() {
                   x={node.x - 48}
                   y={node.y - 1}
                   className={cn(
-                    'text-[13px] font-semibold transition-colors duration-500',
+                    'text-body-sm font-semibold transition-colors duration-500',
                     state === 'active' ? 'fill-rose-100' : state === 'visited' ? 'fill-ink-100' : 'fill-ink-400'
                   )}
                 >
@@ -614,7 +614,7 @@ export function HowItWorksFlow() {
                   x={node.x - 48}
                   y={node.y + 16}
                   className={cn(
-                    'text-[11px] transition-colors duration-500',
+                    'text-micro transition-colors duration-500',
                     state === 'active' ? 'fill-rose-200/80' : 'fill-ink-400'
                   )}
                 >
@@ -654,7 +654,7 @@ export function HowItWorksFlow() {
                     scope === path ? 'border-rose-500/30 bg-rose-500/[0.04]' : 'border-ink-800 bg-ink-900/40'
                   )}
                 >
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-400">
+                  <p className="mb-2 text-micro font-semibold uppercase tracking-[0.14em] text-ink-400">
                     {path === 'catalogue' ? 'Catalogue path' : 'Account path'}
                   </p>
 
@@ -685,7 +685,7 @@ export function HowItWorksFlow() {
 
           {/* The answer comes back to the browser — the loop closes. */}
           <div className="mt-3 rounded-lg border border-ink-800 bg-ink-900/40 p-2.5">
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-400">
+            <p className="mb-2 text-micro font-semibold uppercase tracking-[0.14em] text-ink-400">
               Response
             </p>
 
@@ -734,7 +734,7 @@ export function HowItWorksFlow() {
           </button>
         </div>
 
-        <p className="text-[11px] text-ink-400">
+        <p className="text-micro text-ink-400">
           {outage
             ? 'Outage view: the catalogue path shows a broken link to the upstream APIs.'
             : 'Requests travel the middle of the graph; answers come back along the return lane.'}
@@ -784,13 +784,13 @@ function MobileNode({
         >
           {node.label}
         </p>
-        <p className={cn('truncate text-[10.5px]', state === 'active' ? 'text-rose-200/80' : 'text-ink-400')}>
+        <p className={cn('truncate text-micro', state === 'active' ? 'text-rose-200/80' : 'text-ink-400')}>
           {node.sub}
         </p>
       </div>
 
       {shared && (
-        <span className="ml-auto shrink-0 rounded-full border border-ink-700 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.1em] text-ink-400">
+        <span className="ml-auto shrink-0 rounded-full border border-ink-700 px-1.5 py-0.5 text-micro uppercase tracking-[0.1em] text-ink-400">
           shared
         </span>
       )}
@@ -820,9 +820,9 @@ function MobileConnector({
         )}
       />
       {broken ? (
-        <span className="absolute rounded-full bg-ink-950 px-1 text-[9px] font-semibold text-rose-300">✕</span>
+        <span className="absolute rounded-full bg-ink-950 px-1 text-micro font-semibold text-rose-300">✕</span>
       ) : (
-        label && <span className="absolute left-1/2 ml-2 text-[9px] uppercase tracking-[0.12em] text-ink-600">{label}</span>
+        label && <span className="absolute left-1/2 ml-2 text-micro uppercase tracking-[0.12em] text-ink-600">{label}</span>
       )}
     </div>
   );

@@ -108,7 +108,7 @@ export function AppealsPage() {
       <form onSubmit={handleSubmit} className="card-surface space-y-4 p-5 md:p-6">
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-[11px] text-ink-400">Appeal type</label>
+            <label className="mb-1 block text-micro text-ink-400">Appeal type</label>
             <select value={category} onChange={(e) => setCategory(e.target.value as AppealCategory)} className="input-field text-sm">
               <option value="appeal">General moderation appeal</option>
               <option value="appeal_account">Account ban/suspension appeal</option>
@@ -117,7 +117,7 @@ export function AppealsPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-[11px] text-ink-400">Email (required for reply)</label>
+            <label className="mb-1 block text-micro text-ink-400">Email (required for reply)</label>
             <input
               type="email"
               value={contactEmail}
@@ -132,17 +132,17 @@ export function AppealsPage() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-[11px] text-ink-400">Name (optional)</label>
+            <label className="mb-1 block text-micro text-ink-400">Name (optional)</label>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="input-field text-sm" />
           </div>
           <div>
-            <label className="mb-1 block text-[11px] text-ink-400">Subject (optional)</label>
+            <label className="mb-1 block text-micro text-ink-400">Subject (optional)</label>
             <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Appeal regarding…" className="input-field text-sm" />
           </div>
         </div>
 
         <div>
-          <label className="mb-1 block text-[11px] text-ink-400">Reference (username, title, URL, or ID)</label>
+          <label className="mb-1 block text-micro text-ink-400">Reference (username, title, URL, or ID)</label>
           <input
             value={reference}
             onChange={(e) => setReference(e.target.value)}
@@ -157,7 +157,7 @@ export function AppealsPage() {
         </div>
 
         <div>
-          <label className="mb-1 block text-[11px] text-ink-400">Appeal details (required)</label>
+          <label className="mb-1 block text-micro text-ink-400">Appeal details (required)</label>
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -167,7 +167,7 @@ export function AppealsPage() {
             className="input-field text-sm"
             required
           />
-          <div className="mt-1 text-right text-[10px] text-ink-400">{message.length}/4000</div>
+          <div className="mt-1 text-right text-micro text-ink-400">{message.length}/4000</div>
         </div>
 
         {status === 'error' && (

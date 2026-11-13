@@ -105,14 +105,14 @@ export function AvailabilityBadge({
             ) : (
               <span
                 key={provider.id}
-                className={cn('font-medium text-ink-200', compact ? 'text-[8px]' : 'text-[9px]')}
+                className={cn('font-medium text-ink-200', compact ? 'text-micro' : 'text-micro')}
               >
                 {provider.name}
               </span>
             )
           )}
           {remaining > 0 && (
-            <span className={cn('font-semibold text-ink-300', compact ? 'text-[8px]' : 'text-[9px]')}>
+            <span className={cn('font-semibold text-ink-300', compact ? 'text-micro' : 'text-micro')}>
               +{remaining}
             </span>
           )}

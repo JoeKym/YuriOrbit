@@ -171,7 +171,7 @@ export function SearchCommand({ variant = 'desktop', onNavigate }: SearchCommand
             variant === 'desktop' ? 'w-[26rem]' : 'w-full'
           )}
         >
-          <div className="flex items-center justify-between border-b border-ink-800/80 px-3 py-1.5 text-[10px] uppercase tracking-wider text-ink-400">
+          <div className="flex items-center justify-between border-b border-ink-800/80 px-3 py-1.5 text-micro uppercase tracking-wider text-ink-400">
             <span>Search</span>
             <span>Filter: {MATURITY_LABELS[level]}</span>
           </div>
@@ -185,7 +185,7 @@ export function SearchCommand({ variant = 'desktop', onNavigate }: SearchCommand
             )}
 
             {!loading && result?.direct && (
-              <p className="px-3 pb-1 pt-1.5 text-[11px] text-ink-400">
+              <p className="px-3 pb-1 pt-1.5 text-micro text-ink-400">
                 Matched an exact id — opening the title directly.
               </p>
             )}
@@ -199,7 +199,7 @@ export function SearchCommand({ variant = 'desktop', onNavigate }: SearchCommand
             {!loading &&
               groups.map((group) => (
                 <div key={group.key} className="mb-1 last:mb-0">
-                  <p className="px-3 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-400">
+                  <p className="px-3 pb-1 pt-1.5 text-micro font-semibold uppercase tracking-wider text-ink-400">
                     {group.label}
                   </p>
                   {group.hits.map((hit) => {
@@ -230,7 +230,7 @@ export function SearchCommand({ variant = 'desktop', onNavigate }: SearchCommand
                         />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-xs font-medium text-ink-50">{hit.title.title}</span>
-                          <span className="mt-0.5 flex items-center gap-1.5 text-[10px] text-ink-400">
+                          <span className="mt-0.5 flex items-center gap-1.5 text-micro text-ink-400">
                             <span>{CONTENT_TYPE_LABELS[hit.title.contentType]}</span>
                             {hit.title.releaseYear && <span>· {hit.title.releaseYear}</span>}
                             {hit.match === 'CREATOR' && (
@@ -257,7 +257,7 @@ export function SearchCommand({ variant = 'desktop', onNavigate }: SearchCommand
 
           <button
             onClick={goToSearch}
-            className="flex w-full items-center justify-between border-t border-ink-800/80 px-3 py-2 text-[11px] text-ink-300 transition-colors hover:bg-ink-850 hover:text-ink-100"
+            className="flex w-full items-center justify-between border-t border-ink-800/80 px-3 py-2 text-micro text-ink-300 transition-colors hover:bg-ink-850 hover:text-ink-100"
           >
             <span>
               See all results for “{query.trim()}”
@@ -267,7 +267,7 @@ export function SearchCommand({ variant = 'desktop', onNavigate }: SearchCommand
             </span>
           </button>
 
-          <div className="flex items-center justify-between border-t border-ink-800/80 px-3 py-1.5 text-[10px] text-ink-400">
+          <div className="flex items-center justify-between border-t border-ink-800/80 px-3 py-1.5 text-micro text-ink-400">
             <span>↑ ↓ to move · Enter to open · Esc to close</span>
             <Link to="/settings" onClick={close} className="hover:text-ink-300">
               Content filter

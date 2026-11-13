@@ -112,7 +112,7 @@ export function FeaturedTab() {
 
         <div className="flex flex-wrap items-end gap-2">
           <div className="min-w-[200px] flex-1">
-            <label className="mb-1 block text-[11px] text-ink-400">Title id</label>
+            <label className="mb-1 block text-micro text-ink-400">Title id</label>
             <input
               value={titleId}
               onChange={(e) => {
@@ -127,7 +127,7 @@ export function FeaturedTab() {
             {looking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null} Look up
           </button>
           <div className="min-w-[200px] flex-1">
-            <label className="mb-1 block text-[11px] text-ink-400">Editor&rsquo;s note (optional)</label>
+            <label className="mb-1 block text-micro text-ink-400">Editor&rsquo;s note (optional)</label>
             <input
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -153,7 +153,7 @@ export function FeaturedTab() {
             />
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-ink-100">{preview.title}</p>
-              <p className="text-[11px] text-ink-400">{preview.contentType}</p>
+              <p className="text-micro text-ink-400">{preview.contentType}</p>
             </div>
           </div>
         )}
@@ -176,7 +176,7 @@ export function FeaturedTab() {
           <ul className="divide-y divide-ink-800">
             {items.map((item) => (
               <li key={item.id} className="flex items-center gap-3 p-3">
-                <span className="w-5 text-center text-[11px] text-ink-400">{item.position}</span>
+                <span className="w-5 text-center text-micro text-ink-400">{item.position}</span>
                 <img
                   src={item.cover_image || getFallbackCover(item.title)}
                   alt=""
@@ -188,7 +188,7 @@ export function FeaturedTab() {
                 />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm text-ink-100">{item.title}</p>
-                  <p className="truncate text-[11px] text-ink-400">
+                  <p className="truncate text-micro text-ink-400">
                     {item.title_id}
                     {item.note ? ` · ${item.note}` : ''}
                   </p>

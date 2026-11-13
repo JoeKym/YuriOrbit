@@ -54,21 +54,21 @@ export function OverviewTab({ onNavigate }: OverviewTabProps) {
             <Users className="h-3.5 w-3.5" /> Accounts
           </div>
           <p className="mt-1 font-display text-3xl font-semibold text-ink-50">{stats.users.total}</p>
-          <p className="mt-0.5 text-[11px] text-ink-400">+{stats.users.last7d} in the last 7 days</p>
+          <p className="mt-0.5 text-micro text-ink-400">+{stats.users.last7d} in the last 7 days</p>
         </div>
         <div className="card-surface p-4">
           <div className="flex items-center gap-1.5 text-xs text-ink-400">
             <BookOpen className="h-3.5 w-3.5" /> Library entries
           </div>
           <p className="mt-1 font-display text-3xl font-semibold text-ink-50">{stats.library.total}</p>
-          <p className="mt-0.5 text-[11px] text-ink-400">across all accounts</p>
+          <p className="mt-0.5 text-micro text-ink-400">across all accounts</p>
         </div>
         <div className="card-surface p-4">
           <div className="flex items-center gap-1.5 text-xs text-ink-400">
             <Sparkles className="h-3.5 w-3.5" /> Editor's Picks
           </div>
           <p className="mt-1 font-display text-3xl font-semibold text-ink-50">{stats.featured.total}</p>
-          <button onClick={() => onNavigate('featured')} className="mt-1 text-[11px] text-rose-400 hover:text-rose-300">
+          <button onClick={() => onNavigate('featured')} className="mt-1 text-micro text-rose-400 hover:text-rose-300">
             Manage picks
           </button>
         </div>
@@ -77,7 +77,7 @@ export function OverviewTab({ onNavigate }: OverviewTabProps) {
           <p className="mt-1 font-display text-lg font-semibold text-ink-50">
             {stats.announcement?.active ? 'Live' : 'Off'}
           </p>
-          <button onClick={() => onNavigate('settings')} className="mt-1 text-[11px] text-rose-400 hover:text-rose-300">
+          <button onClick={() => onNavigate('settings')} className="mt-1 text-micro text-rose-400 hover:text-rose-300">
             Edit banner
           </button>
         </div>
@@ -128,14 +128,14 @@ export function OverviewTab({ onNavigate }: OverviewTabProps) {
                 <li key={row.titleId} className="flex items-center gap-2 text-xs">
                   <span className="w-4 text-ink-400">{index + 1}</span>
                   <span className="min-w-0 flex-1 truncate text-ink-200">{row.title}</span>
-                  <span className="rounded bg-ink-800 px-1.5 py-0.5 text-[10px] text-ink-300">
+                  <span className="rounded bg-ink-800 px-1.5 py-0.5 text-micro text-ink-300">
                     {row.count}
                   </span>
                 </li>
               ))}
             </ol>
           )}
-          <p className="mt-3 text-[10px] text-ink-400">
+          <p className="mt-3 text-micro text-ink-400">
             Based on the {stats.library.sampled} most recently updated entries.
           </p>
         </div>

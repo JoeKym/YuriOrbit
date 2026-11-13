@@ -155,7 +155,7 @@ export function AdminPage() {
             </Link>
           );
         })}
-        <span className="ml-auto hidden items-center gap-1.5 text-[11px] text-ink-400 sm:flex">
+        <span className="ml-auto hidden items-center gap-1.5 text-micro text-ink-400 sm:flex">
           <Star className="h-3 w-3" /> Changes are recorded in the audit log
         </span>
       </div>

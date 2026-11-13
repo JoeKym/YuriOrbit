@@ -205,7 +205,7 @@ export function FeedbackTab({ mode = 'feedback' }: FeedbackTabProps) {
                 <div className="flex flex-wrap items-center gap-2">
                   <span
                     className={cn(
-                      'inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium',
+                      'inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-micro font-medium',
                       report.kind === 'report'
                         ? 'border-rose-500/30 bg-rose-500/10 text-rose-300'
                         : 'border-lavender-500/30 bg-lavender-500/10 text-lavender-300'
@@ -215,19 +215,19 @@ export function FeedbackTab({ mode = 'feedback' }: FeedbackTabProps) {
                     {report.kind === 'report' ? 'Content report' : isContact ? 'Contact' : 'Feedback'}
                   </span>
                   {!isContact && (
-                    <span className="text-[11px] text-ink-400">
+                    <span className="text-micro text-ink-400">
                       {CATEGORY_LABELS[report.category] || report.category}
                     </span>
                   )}
                   <span
                     className={cn(
-                      'rounded-md border px-1.5 py-0.5 text-[10px] font-medium capitalize',
+                      'rounded-md border px-1.5 py-0.5 text-micro font-medium capitalize',
                       STATUS_STYLES[report.status]
                     )}
                   >
                     {report.status}
                   </span>
-                  <span className="ml-auto text-[10px] text-ink-400">
+                  <span className="ml-auto text-micro text-ink-400">
                     {new Date(report.created_at).toLocaleString()}
                   </span>
                 </div>
@@ -240,7 +240,7 @@ export function FeedbackTab({ mode = 'feedback' }: FeedbackTabProps) {
                   {report.message}
                 </p>
 
-                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-ink-400">
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-micro text-ink-400">
                   {isContact && report.contact_name && (
                     <span className="text-ink-200">{report.contact_name}</span>
                   )}
@@ -286,7 +286,7 @@ export function FeedbackTab({ mode = 'feedback' }: FeedbackTabProps) {
                       href={`mailto:${report.contact_email}?subject=${encodeURIComponent(
                         report.subject ? `Re: ${report.subject}` : 'Re: your message to YuriOrbit'
                       )}`}
-                      className="btn-secondary px-2.5 py-1 text-[11px]"
+                      className="btn-secondary px-2.5 py-1 text-micro"
                     >
                       <Reply className="h-3 w-3" /> Reply
                     </a>
@@ -297,7 +297,7 @@ export function FeedbackTab({ mode = 'feedback' }: FeedbackTabProps) {
                         type="button"
                         onClick={() => changeStatus(report, 'resolved')}
                         disabled={busy}
-                        className="btn-secondary px-2.5 py-1 text-[11px] disabled:opacity-40"
+                        className="btn-secondary px-2.5 py-1 text-micro disabled:opacity-40"
                       >
                         <Check className="h-3 w-3" /> Resolve
                       </button>
@@ -305,7 +305,7 @@ export function FeedbackTab({ mode = 'feedback' }: FeedbackTabProps) {
                         type="button"
                         onClick={() => changeStatus(report, 'dismissed')}
                         disabled={busy}
-                        className="btn-ghost px-2.5 py-1 text-[11px] disabled:opacity-40"
+                        className="btn-ghost px-2.5 py-1 text-micro disabled:opacity-40"
                       >
                         <CircleSlash className="h-3 w-3" /> Dismiss
                       </button>
@@ -315,7 +315,7 @@ export function FeedbackTab({ mode = 'feedback' }: FeedbackTabProps) {
                       type="button"
                       onClick={() => changeStatus(report, 'open')}
                       disabled={busy}
-                      className="btn-secondary px-2.5 py-1 text-[11px] disabled:opacity-40"
+                      className="btn-secondary px-2.5 py-1 text-micro disabled:opacity-40"
                     >
                       <RotateCcw className="h-3 w-3" /> Reopen
                     </button>
@@ -324,7 +324,7 @@ export function FeedbackTab({ mode = 'feedback' }: FeedbackTabProps) {
                     type="button"
                     onClick={() => handleDelete(report)}
                     disabled={busy}
-                    className="btn-ghost px-2.5 py-1 text-[11px] text-ink-400 hover:text-error-400 disabled:opacity-40"
+                    className="btn-ghost px-2.5 py-1 text-micro text-ink-400 hover:text-error-400 disabled:opacity-40"
                   >
                     <Trash2 className="h-3 w-3" /> Delete
                   </button>

@@ -83,7 +83,7 @@ function MaintenanceScreen({ config }: { config: MaintenanceConfig }) {
             </div>
           )}
 
-          <div className="mt-6 flex items-center justify-center gap-2 text-[11px] text-ink-400">
+          <div className="mt-6 flex items-center justify-center gap-2 text-micro text-ink-400">
             <Sparkles className="h-3 w-3 text-rose-400/70" />
             <span>Thank you for your patience. — YuriOrbit</span>
           </div>

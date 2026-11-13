@@ -201,7 +201,7 @@ export function ProfileEditor({ userId, profile, initialNeedsSetup, onSaved, onC
               </button>
             )}
           </div>
-          <p className="text-[11px] text-ink-400">JPG, PNG, WebP or GIF up to 5 MB. Resized automatically.</p>
+          <p className="text-micro text-ink-400">JPG, PNG, WebP or GIF up to 5 MB. Resized automatically.</p>
         </div>
       </div>
 
@@ -219,7 +219,7 @@ export function ProfileEditor({ userId, profile, initialNeedsSetup, onSaved, onC
                 className="input-field pl-8 text-sm"
               />
             </div>
-            <p className="mt-1 text-[11px] text-ink-400">Lowercase letters, numbers and underscores.</p>
+            <p className="mt-1 text-micro text-ink-400">Lowercase letters, numbers and underscores.</p>
           </div>
 
           <div>
@@ -244,7 +244,7 @@ export function ProfileEditor({ userId, profile, initialNeedsSetup, onSaved, onC
             placeholder="A few words about your taste in GL."
             className="input-field text-sm"
           />
-          <p className="mt-1 text-right text-[11px] text-ink-400">{bio.length}/280</p>
+          <p className="mt-1 text-right text-micro text-ink-400">{bio.length}/280</p>
         </div>
 
         <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-ink-800 bg-ink-900/60 p-3">
