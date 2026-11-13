@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Check, ChevronLeft, ChevronRight, Link2, Pause, Play } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils/format';
 
 /** Tuning knobs — the diagram's whole animation is controlled from here. */
@@ -12,6 +13,7 @@ const BROKEN_DASH = '7 6';
 type Scope = 'both' | 'catalogue' | 'account';
 type IconKind = 'browser' | 'react' | 'layers' | 'account' | 'cloudflare' | 'api' | 'supabase';
 type PathId = 'catalogue' | 'account';
+type NodeState = 'active' | 'visited' | 'idle';
 
 interface NodeDef {
   id: string;
@@ -31,6 +33,8 @@ interface EdgeDef {
 }
 
 interface Step {
+  /** Stable id — this is what the ?flow= deep link carries. */
+  id: string;
   title: string;
   detail: string;
   nodes: string[];
@@ -51,6 +55,8 @@ const NODES: NodeDef[] = [
   { id: 'supabase', label: 'Supabase', sub: 'accounts · personal library', icon: 'supabase', x: 674, y: 478, path: 'account' },
 ];
 
+const NODE_BY_ID = new Map(NODES.map((node) => [node.id, node]));
+
 const EDGES: EdgeDef[] = [
   { id: 'e1', d: 'M440 88 V124', path: 'catalogue' },
   { id: 'e2', d: 'M440 188 V216 H206 V228', path: 'catalogue' },
@@ -63,6 +69,7 @@ const EDGES: EdgeDef[] = [
 
 const STEPS: Step[] = [
   {
+    id: 'visitor',
     title: 'Visitor',
     detail: 'Every request starts in the browser — opening a page, searching, or signing in.',
     nodes: ['visitor'],
@@ -70,6 +77,7 @@ const STEPS: Step[] = [
     path: 'shared',
   },
   {
+    id: 'frontend',
     title: 'React frontend',
     detail: 'Static files arrive immediately; React takes over routing and renders the shell while content streams in.',
     nodes: ['visitor', 'frontend'],
@@ -77,6 +85,7 @@ const STEPS: Step[] = [
     path: 'shared',
   },
   {
+    id: 'branch',
     title: 'Two paths, one gateway',
     detail: 'Browsing the catalogue and managing an account take different branches, but both leave through the same edge layer.',
     nodes: ['frontend', 'catalogue', 'account'],
@@ -84,6 +93,7 @@ const STEPS: Step[] = [
     path: 'shared',
   },
   {
+    id: 'catalogue',
     title: 'Catalogue path',
     detail: 'Provider responses are normalised, checked for Girls’ Love, de-duplicated and ranked before any title reaches the screen.',
     nodes: ['catalogue'],
@@ -91,6 +101,7 @@ const STEPS: Step[] = [
     path: 'catalogue',
   },
   {
+    id: 'account',
     title: 'Account path',
     detail: 'A signed-in visitor carries a session so saved titles and preferences follow them between devices.',
     nodes: ['account'],
@@ -98,6 +109,7 @@ const STEPS: Step[] = [
     path: 'account',
   },
   {
+    id: 'functions',
     title: 'Cloudflare Functions',
     detail: 'One thin edge layer for both paths: it relays provider calls, keeps credentials off the client, and caches repeats.',
     nodes: ['catalogue', 'account', 'functions'],
@@ -105,6 +117,7 @@ const STEPS: Step[] = [
     path: 'shared',
   },
   {
+    id: 'upstream',
     title: 'Upstream APIs',
     detail: 'AniList, MangaDex and TMDB supply titles, covers and scores — each with its own strengths and blind spots.',
     nodes: ['functions', 'upstream'],
@@ -112,6 +125,7 @@ const STEPS: Step[] = [
     path: 'catalogue',
   },
   {
+    id: 'supabase',
     title: 'Supabase',
     detail: 'Accounts and the personal library live in Supabase, separate from the public catalogue anyone can browse.',
     nodes: ['functions', 'supabase'],
@@ -119,6 +133,11 @@ const STEPS: Step[] = [
     path: 'account',
   },
 ];
+
+const BRANCH_NODES: Record<PathId, string[]> = {
+  catalogue: ['catalogue', 'functions', 'upstream'],
+  account: ['account', 'functions', 'supabase'],
+};
 
 /** Hand-drawn stand-ins for the real brand marks, so nothing is fetched at runtime. */
 function NodeIcon({ kind }: { kind: IconKind }) {
@@ -190,12 +209,34 @@ function NodeIcon({ kind }: { kind: IconKind }) {
   }
 }
 
+function parseFlowParams(params: URLSearchParams): { scope: Scope; stepId?: string } {
+  const rawFlow = params.get('flow');
+  const step = rawFlow ? STEPS.find((candidate) => candidate.id === rawFlow) : undefined;
+  const rawPath = params.get('path');
+
+  const scope: Scope =
+    rawPath === 'catalogue' || rawPath === 'account'
+      ? rawPath
+      : step && step.path !== 'shared'
+        ? step.path
+        : 'both';
+
+  return { scope, stepId: step?.id };
+}
+
 export function HowItWorksFlow() {
-  const [step, setStep] = useState(0);
-  const [playing, setPlaying] = useState(true);
-  const [scope, setScope] = useState<Scope>('both');
+  const [searchParams, setSearchParams] = useSearchParams();
+  // The URL is read once, on mount: after that the component owns the state and
+  // writes it back, so a shared link lands on the exact step and path.
+  const initial = useMemo(() => parseFlowParams(searchParams), []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [scope, setScope] = useState<Scope>(initial.scope);
+  const [activeId, setActiveId] = useState<string>(initial.stepId ?? STEPS[0].id);
+  const [playing, setPlaying] = useState(!initial.stepId);
   const [outage, setOutage] = useState(false);
   const [motionOk, setMotionOk] = useState(true);
+  const [copied, setCopied] = useState(false);
+  const sectionRef = useRef<HTMLElement | null>(null);
 
   // Respect the OS setting: no cycling, no travelling packets.
   useEffect(() => {
@@ -210,54 +251,92 @@ export function HowItWorksFlow() {
     return () => query.removeEventListener('change', onChange);
   }, []);
 
+  // A deep link should put the diagram in view, not just load it.
+  useEffect(() => {
+    if (!initial.stepId && !searchParams.get('path')) return;
+    sectionRef.current?.scrollIntoView({ block: 'start', behavior: initial.stepId ? 'smooth' : 'auto' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const steps = useMemo(
-    () => (scope === 'both' ? STEPS : STEPS.filter((s) => s.path === 'shared' || s.path === scope)),
+    () => (scope === 'both' ? STEPS : STEPS.filter((step) => step.path === 'shared' || step.path === scope)),
     [scope]
   );
 
-  const safeIndex = Math.min(step, steps.length - 1);
-  const active = steps[safeIndex];
+  const currentIndex = Math.max(0, steps.findIndex((step) => step.id === activeId));
+  const active = steps[currentIndex];
+
+  // Filtering can hide the current step (e.g. the account step while only the
+  // catalogue path is shown), so fall back to the first visible step.
+  useEffect(() => {
+    if (active && active.id !== activeId) setActiveId(active.id);
+  }, [active, activeId]);
+
+  // Keep the address bar in sync without stacking history entries for every tick.
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    next.set('flow', activeId);
+    if (scope === 'both') next.delete('path');
+    else next.set('path', scope);
+    if (next.toString() !== searchParams.toString()) setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId, scope]);
 
   useEffect(() => {
     if (!playing || steps.length < 2) return;
-    const id = window.setInterval(() => setStep((current) => (current + 1) % steps.length), STEP_INTERVAL_MS);
+    const id = window.setInterval(() => {
+      setActiveId((current) => {
+        const index = steps.findIndex((step) => step.id === current);
+        return steps[(index + 1) % steps.length].id;
+      });
+    }, STEP_INTERVAL_MS);
     return () => window.clearInterval(id);
-  }, [playing, steps.length]);
-
-  useEffect(() => {
-    if (step > steps.length - 1) setStep(0);
-  }, [step, steps.length]);
-
-  const isVisible = (path?: PathId) => !path || scope === 'both' || path === scope;
+  }, [playing, steps]);
 
   const visited = useMemo(() => {
     const nodes = new Set<string>();
     const edges = new Set<string>();
-    steps.slice(0, safeIndex).forEach((s) => {
-      s.nodes.forEach((n) => nodes.add(n));
-      s.edges.forEach((e) => edges.add(e));
+    steps.slice(0, currentIndex).forEach((step) => {
+      step.nodes.forEach((node) => nodes.add(node));
+      step.edges.forEach((edge) => edges.add(edge));
     });
     return { nodes, edges };
-  }, [steps, safeIndex]);
+  }, [steps, currentIndex]);
 
   const activeNodes = new Set(active?.nodes ?? []);
   const activeEdges = new Set(active?.edges ?? []);
 
+  const isVisible = (path?: PathId) => !path || scope === 'both' || path === scope;
+
   const go = (delta: number) => {
-    setStep((current) => (current + delta + steps.length) % steps.length);
+    const index = steps.findIndex((step) => step.id === activeId);
+    setActiveId(steps[(index + delta + steps.length) % steps.length].id);
     setPlaying(false);
   };
 
   const jumpToNode = (id: string) => {
-    const index = steps.findIndex((s) => s.nodes.includes(id));
+    const index = steps.findIndex((step) => step.nodes.includes(id));
     if (index >= 0) {
-      setStep(index);
+      setActiveId(steps[index].id);
       setPlaying(false);
     }
   };
 
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // Clipboard access can be denied; the URL in the address bar still works.
+    }
+  };
+
+  const nodeState = (id: string): NodeState =>
+    activeNodes.has(id) ? 'active' : visited.nodes.has(id) ? 'visited' : 'idle';
+
   return (
-    <section className="mt-10">
+    <section className="mt-10 scroll-mt-24" ref={sectionRef}>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-rose-400">Under the hood</p>
@@ -279,7 +358,7 @@ export function HowItWorksFlow() {
                 type="button"
                 onClick={() => {
                   setScope(value);
-                  setStep(0);
+                  setActiveId(STEPS[0].id);
                   setPlaying(false);
                 }}
                 aria-pressed={scope === value}
@@ -306,22 +385,32 @@ export function HowItWorksFlow() {
           >
             {outage ? 'Outage shown' : 'Simulate outage'}
           </button>
+
+          <button
+            type="button"
+            onClick={copyLink}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-ink-700 bg-ink-900 px-2.5 py-2 text-xs font-medium text-ink-300 transition-colors hover:text-ink-100"
+          >
+            {copied ? <Check className="h-3.5 w-3.5 text-rose-300" /> : <Link2 className="h-3.5 w-3.5" />}
+            {copied ? 'Copied' : 'Copy link'}
+          </button>
         </div>
       </div>
 
       <div className="rounded-xl border border-ink-800 bg-ink-900/60 p-3" aria-live="polite">
-        <div key={`${scope}-${safeIndex}`} className="animate-fade-up">
+        <div key={`${scope}-${activeId}`} className="animate-fade-up">
           <p className="text-[11px] font-semibold tracking-[0.08em] text-rose-300">
-            Step {safeIndex + 1} of {steps.length} · {active?.title}
+            Step {currentIndex + 1} of {steps.length} · {active?.title}
           </p>
           <p className="mt-1 text-sm leading-relaxed text-ink-200">{active?.detail}</p>
         </div>
       </div>
 
-      <div className="mt-3 overflow-x-auto rounded-xl border border-ink-800 bg-ink-950/50 p-2 sm:p-3">
+      {/* Desktop: the branching graph. */}
+      <div className="mt-3 hidden rounded-xl border border-ink-800 bg-ink-950/50 p-3 lg:block">
         <svg
           viewBox="0 0 880 524"
-          className="h-auto w-full min-w-[560px]"
+          className="h-auto w-full"
           role="group"
           aria-label="Request flow: a visitor reaches the React frontend, which branches into a catalogue path and an account path; both pass through Cloudflare Functions to the upstream APIs and Supabase."
         >
@@ -391,7 +480,6 @@ export function HowItWorksFlow() {
             );
           })}
 
-          {/* Path labels sit beside the branch edges. */}
           {/* A failed provider call is not a dead end: the edge breaks visibly. */}
           {outage && (
             <g>
@@ -416,8 +504,7 @@ export function HowItWorksFlow() {
 
           {NODES.map((node) => {
             const visible = isVisible(node.path);
-            const isActive = activeNodes.has(node.id);
-            const isVisited = visited.nodes.has(node.id);
+            const state = nodeState(node.id);
 
             return (
               <g
@@ -443,20 +530,20 @@ export function HowItWorksFlow() {
                   rx="14"
                   className={cn(
                     'transition-all duration-500',
-                    isActive
+                    state === 'active'
                       ? 'fill-rose-500/10 stroke-rose-400/70'
-                      : isVisited
+                      : state === 'visited'
                         ? 'fill-ink-900 stroke-ink-700'
                         : 'fill-ink-950 stroke-ink-800'
                   )}
-                  strokeWidth={isActive ? 2 : 1.4}
+                  strokeWidth={state === 'active' ? 2 : 1.4}
                 />
 
                 <g
                   transform={`translate(${node.x - 82}, ${node.y - 12})`}
                   className={cn(
                     'transition-colors duration-500',
-                    isActive ? 'text-rose-200' : isVisited ? 'text-ink-200' : 'text-ink-500'
+                    state === 'active' ? 'text-rose-200' : state === 'visited' ? 'text-ink-200' : 'text-ink-500'
                   )}
                 >
                   <NodeIcon kind={node.icon} />
@@ -467,7 +554,7 @@ export function HowItWorksFlow() {
                   y={node.y - 1}
                   className={cn(
                     'text-[13px] font-semibold transition-colors duration-500',
-                    isActive ? 'fill-rose-100' : isVisited ? 'fill-ink-100' : 'fill-ink-400'
+                    state === 'active' ? 'fill-rose-100' : state === 'visited' ? 'fill-ink-100' : 'fill-ink-400'
                   )}
                 >
                   {node.label}
@@ -477,7 +564,7 @@ export function HowItWorksFlow() {
                   y={node.y + 16}
                   className={cn(
                     'text-[11px] transition-colors duration-500',
-                    isActive ? 'fill-rose-200/80' : 'fill-ink-500'
+                    state === 'active' ? 'fill-rose-200/80' : 'fill-ink-500'
                   )}
                 >
                   {node.sub}
@@ -486,6 +573,65 @@ export function HowItWorksFlow() {
             );
           })}
         </svg>
+      </div>
+
+      {/* Mobile: the same graph, stacked instead of scrolled sideways. */}
+      <div className="mt-3 rounded-xl border border-ink-800 bg-ink-950/50 p-3 lg:hidden">
+        <div className="flex flex-col items-stretch">
+          {['visitor', 'frontend'].map((id) => {
+            const node = NODE_BY_ID.get(id);
+            if (!node) return null;
+            // The visitor sits on e1; the frontend's outgoing edges are the split.
+            const outgoing = id === 'visitor' ? ['e1'] : ['e2', 'e3'];
+            const lit = outgoing.some((edge) => activeEdges.has(edge) || visited.edges.has(edge));
+            return (
+              <div key={id} className="flex flex-col">
+                <MobileNode node={node} state={nodeState(node.id)} />
+                <MobileConnector active={lit} label={id === 'visitor' ? 'request' : 'branch'} />
+              </div>
+            );
+          })}
+
+          <div className="flex flex-col gap-3">
+            {(['catalogue', 'account'] as PathId[])
+              .filter((path) => scope === 'both' || scope === path)
+              .map((path) => (
+                <div
+                  key={path}
+                  className={cn(
+                    'rounded-lg border p-2.5',
+                    scope === path ? 'border-rose-500/30 bg-rose-500/[0.04]' : 'border-ink-800 bg-ink-900/40'
+                  )}
+                >
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-500">
+                    {path === 'catalogue' ? 'Catalogue path' : 'Account path'}
+                  </p>
+
+                  {BRANCH_NODES[path].map((id, index) => {
+                    const node = NODE_BY_ID.get(id);
+                    if (!node) return null;
+                    const isLast = index === BRANCH_NODES[path].length - 1;
+                    // The same edges drive both layouts, so the stacked version
+                    // lights up in step with the graph.
+                    const edgeId = path === 'catalogue' ? (index === 0 ? 'e4' : 'e6') : index === 0 ? 'e5' : 'e7';
+                    const lit = activeEdges.has(edgeId) || visited.edges.has(edgeId);
+                    const broken = outage && path === 'catalogue' && isLast;
+
+                    return (
+                      <div key={`${path}-${id}`} className="flex flex-col">
+                        <MobileNode
+                          node={node}
+                          state={nodeState(node.id)}
+                          shared={id === 'functions'}
+                        />
+                        {!isLast && <MobileConnector active={lit} broken={broken} />}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+          </div>
+        </div>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
@@ -517,14 +663,96 @@ export function HowItWorksFlow() {
           </button>
         </div>
 
-        <p className="text-[11px] text-ink-500 sm:hidden">Scroll the diagram sideways to see the full flow.</p>
-
-        <p className="hidden text-[11px] text-ink-500 sm:block">
+        <p className="text-[11px] text-ink-500">
           {outage
             ? 'Outage view: the catalogue path shows a broken link to the upstream APIs.'
             : 'A simplified view — admin tooling, moderation and internal services are left out on purpose.'}
         </p>
       </div>
     </section>
+  );
+}
+
+function MobileNode({
+  node,
+  state,
+  shared,
+}: {
+  node: NodeDef;
+  state: NodeState;
+  shared?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-2.5 rounded-lg border px-2.5 py-2 transition-colors duration-500',
+        state === 'active'
+          ? 'border-rose-500/60 bg-rose-500/10'
+          : state === 'visited'
+            ? 'border-ink-700 bg-ink-900'
+            : 'border-ink-800 bg-ink-950'
+      )}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        className={cn(
+          'h-5 w-5 shrink-0 transition-colors duration-500',
+          state === 'active' ? 'text-rose-200' : state === 'visited' ? 'text-ink-200' : 'text-ink-500'
+        )}
+        aria-hidden="true"
+      >
+        <NodeIcon kind={node.icon} />
+      </svg>
+
+      <div className="min-w-0">
+        <p
+          className={cn(
+            'truncate text-xs font-semibold',
+            state === 'active' ? 'text-rose-100' : state === 'visited' ? 'text-ink-100' : 'text-ink-400'
+          )}
+        >
+          {node.label}
+        </p>
+        <p className={cn('truncate text-[10.5px]', state === 'active' ? 'text-rose-200/80' : 'text-ink-500')}>
+          {node.sub}
+        </p>
+      </div>
+
+      {shared && (
+        <span className="ml-auto shrink-0 rounded-full border border-ink-700 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.1em] text-ink-500">
+          shared
+        </span>
+      )}
+    </div>
+  );
+}
+
+function MobileConnector({
+  active,
+  broken,
+  label,
+}: {
+  active?: boolean;
+  broken?: boolean;
+  label?: string;
+}) {
+  return (
+    <div className="relative flex h-7 items-center justify-center" aria-hidden="true">
+      <span
+        className={cn(
+          'h-full w-px',
+          broken
+            ? 'border-l border-dashed border-rose-500/80'
+            : active
+              ? 'bg-gradient-to-b from-rose-500 to-lavender-500'
+              : 'bg-ink-800'
+        )}
+      />
+      {broken ? (
+        <span className="absolute rounded-full bg-ink-950 px-1 text-[9px] font-semibold text-rose-300">✕</span>
+      ) : (
+        label && <span className="absolute left-1/2 ml-2 text-[9px] uppercase tracking-[0.12em] text-ink-600">{label}</span>
+      )}
+    </div>
   );
 }
