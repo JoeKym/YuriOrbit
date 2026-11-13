@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, BookOpen, CheckCircle, Clock, XCircle, Pause, Trash2, Download, Star, LogIn, Cloud, HardDrive } from 'lucide-react';
+import { Heart, BookOpen, CheckCircle, Clock, XCircle, Pause, Trash2, Download, Star, LogIn, Cloud, HardDrive, BookMarked } from 'lucide-react';
 import { useLibrary } from '@/hooks/useLibrary';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { CONTENT_TYPE_LABELS, type LibraryStatus } from '@/types/content';
@@ -8,6 +8,7 @@ import { getLibraryStatusLabel, getLibraryStatusFilterLabel } from '@/lib/utils/
 import { cn, getFallbackCover } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { AvailabilityBadge } from '@/components/content/AvailabilityBadge';
+import { countNewChapters, loadChapterProgress } from '@/lib/content/chapter-updates';
 
 const STATUS_FILTERS: (LibraryStatus | 'ALL')[] = ['ALL', 'CURRENT', 'PLANNED', 'COMPLETED', 'FAVOURITE', 'ON_HOLD', 'DROPPED'];
 
@@ -27,6 +28,38 @@ export function LibraryPage() {
   const { isLoading } = useAuth();
   const [filter, setFilter] = useState<LibraryStatus | 'ALL'>('ALL');
   const [sort, setSort] = useState<'recent' | 'title' | 'rating'>('recent');
+  const [latestChapters, setLatestChapters] = useState<Record<string, number>>({});
+
+  // The entries list is only read inside the effect below; keying the effect on
+  // the tracked ids keeps a progress edit from re-asking MangaDex.
+  const libraryRef = useRef(library);
+  libraryRef.current = library;
+  const trackedIds = library
+    .filter((entry) => entry.provider === 'MANGADEX' && entry.providerId)
+    .map((entry) => entry.titleId)
+    .join('|');
+
+  useEffect(() => {
+    if (!trackedIds) return;
+    let cancelled = false;
+
+    loadChapterProgress(libraryRef.current)
+      .then((progress) => {
+        if (cancelled) return;
+        const next: Record<string, number> = {};
+        for (const [titleId, value] of Object.entries(progress)) {
+          if (value.latestChapter !== undefined) next[titleId] = value.latestChapter;
+        }
+        setLatestChapters(next);
+      })
+      .catch(() => {
+        // A missing badge is better than a broken library.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [trackedIds]);
 
   const filtered = library
     .filter((e) => filter === 'ALL' || e.status === filter)
@@ -120,6 +153,9 @@ export function LibraryPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((entry) => {
             const Icon = STATUS_ICONS[entry.status];
+            const latestChapter = latestChapters[entry.titleId];
+            const newChapters = countNewChapters(entry.progress, latestChapter);
+            const total = latestChapter ?? entry.totalProgress;
             return (
               <div key={entry.id} className="flex gap-3 rounded-xl border border-ink-800 bg-ink-900 p-3 transition-all duration-200 hover:border-ink-700">
                 <Link to={`/title/${entry.titleId}`} className="flex-shrink-0">
@@ -147,7 +183,16 @@ export function LibraryPage() {
                     <AvailabilityBadge title={entry} variant="inline" />
                   )}
                   {entry.progress > 0 && (
-                    <p className="mt-1 text-xs text-ink-400">Progress: {entry.progress}{entry.totalProgress ? `/${entry.totalProgress}` : ''}</p>
+                    <p className="mt-1 text-xs text-ink-400">
+                      Progress: {entry.progress}
+                      {total ? `/${total}` : ''}
+                    </p>
+                  )}
+                  {newChapters > 0 && (
+                    <p className="mt-1 inline-flex items-center gap-1 rounded-full border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold text-rose-300">
+                      <BookMarked className="h-3 w-3" />
+                      {newChapters} new chapter{newChapters === 1 ? '' : 's'}
+                    </p>
                   )}
                   {entry.rating && (
                     <p className="mt-0.5 flex items-center gap-1 text-xs text-amber-400">
