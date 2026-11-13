@@ -18,8 +18,7 @@ import { MATURITY_LABELS } from '@/types/content';
 import { submitFeedback } from '@/lib/feedback';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { useContentModeration } from '@/hooks/useContentModeration';
-import { countNewChapters } from '@/lib/content/chapter-updates';
-import { mangadexFindMangaId, mangadexGetChapterProgress } from '@/lib/providers/mangadex';
+import { countNewChapters, loadChapterProgress } from '@/lib/content/chapter-updates';
 import { ContentUnavailable } from '@/components/site/ContentUnavailable';
 import { RestrictedNotice } from '@/components/site/RestrictedNotice';
 import { StreamingProviders } from '@/components/site/StreamingProviders';
@@ -88,39 +87,38 @@ export function TitleDetailPage() {
   const entry = id ? getEntry(id) : undefined;
 
   // Only MangaDex tracks numbered chapter releases, and only for a title this
-  // browser has saved. Canonical catalogue ids keep the dominant upstream
-  // record (usually AniList), so a saved entry rarely carries the MangaDex uuid
-  // itself — resolve it the same way the reader does when it is missing.
+  // browser has saved. The library answers from the same cached lookup, so a
+  // title never disagrees with its own card.
+  const savedTitleId = entry?.titleId;
+  const savedTitle = entry?.title;
+  const savedContentType = entry?.contentType;
   const savedProvider = entry?.provider;
   const savedProviderId = entry?.providerId;
-  const titleName = title?.title;
-  const isReadableType = title
-    ? ['MANGA', 'MANHWA', 'MANHUA', 'WEBTOON'].includes(title.contentType)
-    : false;
   const [latestChapter, setLatestChapter] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     setLatestChapter(undefined);
-    if (!isSaved || !titleName || !isReadableType) return;
+    if (!savedTitleId || !savedTitle || !savedContentType) return;
     let cancelled = false;
-    (async () => {
-      try {
-        const mangaId =
-          savedProvider === 'MANGADEX' && savedProviderId
-            ? savedProviderId
-            : await mangadexFindMangaId(titleName, title?.altTitles);
-        if (!mangaId || cancelled) return;
-        const progress = await mangadexGetChapterProgress([mangaId]);
-        if (cancelled) return;
-        setLatestChapter(progress.get(mangaId)?.latestChapter);
-      } catch {
+    loadChapterProgress([
+      {
+        titleId: savedTitleId,
+        title: savedTitle,
+        contentType: savedContentType,
+        provider: savedProvider,
+        providerId: savedProviderId,
+      },
+    ])
+      .then((progress) => {
+        if (!cancelled) setLatestChapter(progress[savedTitleId]?.latestChapter);
+      })
+      .catch(() => {
         // A provider hiccup leaves the page without a chapter count, not broken.
-      }
-    })();
+      });
     return () => {
       cancelled = true;
     };
-  }, [isSaved, titleName, isReadableType, savedProvider, savedProviderId, title?.altTitles]);
+  }, [savedTitleId, savedTitle, savedContentType, savedProvider, savedProviderId]);
 
   const newChapters = countNewChapters(entry?.progress, latestChapter);
 
