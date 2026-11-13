@@ -119,6 +119,23 @@ const CORE_GL_KEYWORD_IDS = [
 
 const ASIAN_GL_COUNTRIES = 'TH|JP|KR|CN|TW';
 
+/**
+ * Boys' Love keyword IDs. TMDB users cross-tag freely — Khemjira carries both a
+ * Girls' Love and a Boys' Love keyword — so BL is excluded in the query itself.
+ * BL stays out of the catalogue; this is cheaper and safer than per-title rules.
+ */
+const BL_KEYWORD_IDS = [
+  '384569', // boys' love
+  '365317', // boy's love
+  '289844', // boys' love (bl)
+  '363397', // bl
+  '328692', // taiwan bl
+  '320085', // chinese bl
+  '328728', // korean bl
+  '312166', // japanese bl
+  '353318', // yaoi
+];
+
 interface TMDBKeyword {
   id: number;
   name: string;
@@ -186,6 +203,14 @@ const EXCLUDED_TITLES = new Set([
   'sex education',
   'arcane',
   'yellowjackets',
+  // Boys' Love shows that TMDB users tagged with a Girls' Love keyword
+  // ('sapphic' on Love, Victor). Keyword exclusion cannot catch these because
+  // they carry no BL keyword, so they are named here.
+  'love, victor',
+  'heartstopper',
+  'waterboyy',
+  'i feel you linger in the air',
+  'khemjira',
 ]);
 
 /** Low-budget softcore / pink-film keywords that pollute Asian film tags on TMDB. */
@@ -261,7 +286,11 @@ const MOVIE_SEARCHES = [
 
 // ─── Normalizer ───────────────────────────────────────────────────────────────
 
-function normalizeTMDB(m: TMDBMovie, isTV = false): ContentTitle {
+function normalizeTMDB(
+  m: TMDBMovie,
+  isTV = false,
+  opts: { keywordConfirmed?: boolean } = {}
+): ContentTitle {
   const title = (isTV ? (m.name || m.original_name) : (m.title || m.original_title)) || 'Unknown Title';
   const altTitles: string[] = [];
   if (isTV && m.original_name && m.original_name !== title) altTitles.push(m.original_name);
@@ -297,6 +326,15 @@ function normalizeTMDB(m: TMDBMovie, isTV = false): ContentTitle {
       glClassification = 'CONFIRMED_GL';
       if (!genres.includes("Girls' Love")) genres.unshift("Girls' Love");
     }
+  }
+
+  // Discover rows are requested with `with_keywords`, so each one already
+  // carries a Girls' Love keyword even when its synopsis never says so — which
+  // is exactly what dropped most Asian dramas (GAP, The Loyal Pin, and so on).
+  // A keyword on the record is stronger evidence than the synopsis heuristic.
+  if (opts.keywordConfirmed && glClassification === 'NEEDS_REVIEW') {
+    glClassification = 'CONFIRMED_GL';
+    if (!genres.includes("Girls' Love")) genres.unshift("Girls' Love");
   }
 
   const cover = m.poster_path
@@ -392,6 +430,7 @@ function collectGL(
 async function tmdbDiscoverAsianDramas(page = 1): Promise<ContentTitle[]> {
   const params: Record<string, string> = {
     with_keywords: CORE_GL_KEYWORD_IDS.join('|'),
+    without_keywords: BL_KEYWORD_IDS.join('|'),
     with_origin_country: ASIAN_GL_COUNTRIES,
     without_genres: '16',
     sort_by: 'popularity.desc',
@@ -401,7 +440,7 @@ async function tmdbDiscoverAsianDramas(page = 1): Promise<ContentTitle[]> {
   };
   try {
     const resp = await tmdbFetch<TMDBPageResponse>('/discover/tv', params);
-    return (resp.results || []).map((m) => normalizeTMDB(m, true));
+    return (resp.results || []).map((m) => normalizeTMDB(m, true, { keywordConfirmed: true }));
   } catch {
     return [];
   }
@@ -413,6 +452,7 @@ async function tmdbDiscoverAsianDramas(page = 1): Promise<ContentTitle[]> {
 async function tmdbDiscoverAsianMovies(page = 1): Promise<ContentTitle[]> {
   const params: Record<string, string> = {
     with_keywords: CORE_GL_KEYWORD_IDS.join('|'),
+    without_keywords: BL_KEYWORD_IDS.join('|'),
     with_origin_country: ASIAN_GL_COUNTRIES,
     sort_by: 'popularity.desc',
     page: String(page),
@@ -421,7 +461,7 @@ async function tmdbDiscoverAsianMovies(page = 1): Promise<ContentTitle[]> {
   };
   try {
     const resp = await tmdbFetch<TMDBPageResponse>('/discover/movie', params);
-    return (resp.results || []).map((m) => normalizeTMDB(m, false));
+    return (resp.results || []).map((m) => normalizeTMDB(m, false, { keywordConfirmed: true }));
   } catch {
     return [];
   }
@@ -433,6 +473,7 @@ async function tmdbDiscoverAsianMovies(page = 1): Promise<ContentTitle[]> {
 async function tmdbDiscover(mediaType: 'movie' | 'tv', page = 1): Promise<ContentTitle[]> {
   const params: Record<string, string> = {
     with_keywords: CORE_GL_KEYWORD_IDS.join('|'),
+    without_keywords: BL_KEYWORD_IDS.join('|'),
     sort_by: 'popularity.desc',
     page: String(page),
     language: 'en-US',
@@ -441,10 +482,61 @@ async function tmdbDiscover(mediaType: 'movie' | 'tv', page = 1): Promise<Conten
   };
   try {
     const resp = await tmdbFetch<TMDBPageResponse>(`/discover/${mediaType}`, params);
-    return (resp.results || []).map((m) => normalizeTMDB(m, mediaType === 'tv'));
+    return (resp.results || []).map((m) =>
+      normalizeTMDB(m, mediaType === 'tv', { keywordConfirmed: true })
+    );
   } catch {
     return [];
   }
+}
+
+/**
+ * TMDB's keyword catalogue is deep — ~17 pages of Asian GL dramas — while a rail
+ * shows 20. Reading one page per rail page hid almost everything, so each rail
+ * page reads a window of TMDB pages and keeps the first 20 after filtering.
+ */
+const DISCOVERY_PAGES_PER_RAIL_PAGE = 3;
+
+function discoveryPageWindow(page: number): number[] {
+  const start = (Math.max(1, page) - 1) * DISCOVERY_PAGES_PER_RAIL_PAGE + 1;
+  return Array.from({ length: DISCOVERY_PAGES_PER_RAIL_PAGE }, (_, i) => start + i);
+}
+
+async function collectDiscoveryPages(
+  fetchPage: (page: number) => Promise<ContentTitle[]>,
+  page: number
+): Promise<ContentTitle[]> {
+  const settled = await Promise.allSettled(discoveryPageWindow(page).map(fetchPage));
+  return settled.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
+}
+
+/**
+ * Text matches are intent, not proof. Confirm the ambiguous ones against TMDB's
+ * own keywords so a curated show is judged on the same evidence as discover.
+ */
+async function confirmAmbiguousGL(
+  items: ContentTitle[],
+  limit = MAX_KEYWORD_CHECKS
+): Promise<ContentTitle[]> {
+  const ambiguous = items.filter((item) => item.glClassification === 'NEEDS_REVIEW').slice(0, limit);
+  if (ambiguous.length === 0) return items;
+
+  const checked = await Promise.all(
+    ambiguous.map(async (item) => ({
+      id: item.id,
+      confirmed: await hasConfirmedGLKeywords(
+        item.contentType === 'MOVIE' ? 'movie' : 'tv',
+        item.providerId
+      ),
+    }))
+  );
+  const confirmed = new Set(checked.filter((c) => c.confirmed).map((c) => c.id));
+
+  return items.map((item) =>
+    confirmed.has(item.id)
+      ? { ...item, glClassification: 'CONFIRMED_GL' as const }
+      : item
+  );
 }
 
 async function tmdbTextSearch(mediaType: 'movie' | 'tv', queries: string[], page = 1): Promise<ContentTitle[]> {
@@ -512,12 +604,12 @@ export async function tmdbSearchGL(
     } else {
       const promises: Promise<ContentTitle[]>[] = [];
       if (wantsTV) {
-        promises.push(tmdbDiscoverAsianDramas(page));
-        promises.push(tmdbDiscover('tv', page));
+        promises.push(collectDiscoveryPages(tmdbDiscoverAsianDramas, page));
+        promises.push(collectDiscoveryPages((p) => tmdbDiscover('tv', p), page));
       }
       if (wantsMovie) {
-        promises.push(tmdbDiscoverAsianMovies(page));
-        promises.push(tmdbDiscover('movie', page));
+        promises.push(collectDiscoveryPages(tmdbDiscoverAsianMovies, page));
+        promises.push(collectDiscoveryPages((p) => tmdbDiscover('movie', p), page));
       }
       const settled = await Promise.allSettled(promises);
       for (const r of settled) {
@@ -528,7 +620,7 @@ export async function tmdbSearchGL(
     // A direct title search is evidence of intent, but not proof of GL status.
     // Check the keywords of the titles the heuristic was unsure about instead of
     // assuming every name match belongs in the catalogue.
-    const overriddenBatches = await withGLOverrides(batches);
+    const overriddenBatches = await confirmAmbiguousGL(await withGLOverrides(batches));
 
     const queryMatches = query
       ? overriddenBatches
@@ -582,8 +674,8 @@ export async function tmdbSearchGL(
 export async function tmdbGetGLMovies(page = 1): Promise<ContentTitle[]> {
   try {
     const [asianMovies, globalMovies, searched] = await Promise.allSettled([
-      tmdbDiscoverAsianMovies(page),
-      tmdbDiscover('movie', page),
+      collectDiscoveryPages(tmdbDiscoverAsianMovies, page),
+      collectDiscoveryPages((p) => tmdbDiscover('movie', p), page),
       tmdbTextSearch('movie', MOVIE_SEARCHES.slice(0, 5), page),
     ]);
 
@@ -592,7 +684,7 @@ export async function tmdbGetGLMovies(page = 1): Promise<ContentTitle[]> {
     if (globalMovies.status === 'fulfilled') items.push(...globalMovies.value);
     if (searched.status === 'fulfilled') items.push(...searched.value);
 
-    return collectGL(await withGLOverrides(items));
+    return collectGL(await confirmAmbiguousGL(await withGLOverrides(items)));
   } catch {
     return [];
   }
@@ -602,9 +694,9 @@ export async function tmdbGetGLMovies(page = 1): Promise<ContentTitle[]> {
 export async function tmdbGetGLDramas(page = 1): Promise<ContentTitle[]> {
   try {
     const [asianDramas, curatedHits, globalTv] = await Promise.allSettled([
-      tmdbDiscoverAsianDramas(page),
+      collectDiscoveryPages(tmdbDiscoverAsianDramas, page),
       tmdbTextSearch('tv', CURATED_ASIAN_GL_QUERIES.slice(0, 8), page),
-      tmdbDiscover('tv', page),
+      collectDiscoveryPages((p) => tmdbDiscover('tv', p), page),
     ]);
 
     const items: ContentTitle[] = [];
@@ -613,7 +705,7 @@ export async function tmdbGetGLDramas(page = 1): Promise<ContentTitle[]> {
     if (asianDramas.status === 'fulfilled') items.push(...asianDramas.value);
     if (globalTv.status === 'fulfilled') items.push(...globalTv.value);
 
-    return collectGL(await withGLOverrides(items));
+    return collectGL(await confirmAmbiguousGL(await withGLOverrides(items)));
   } catch {
     return [];
   }
