@@ -233,9 +233,17 @@ async function loadLocal(): Promise<Record<string, LibraryEntry>> {
       entries.forEach((e) => { map[e.id] = e; });
       // Every write goes to both stores, so they only diverge when IndexedDB
       // has been evicted or partly wiped. Fill in from the mirror rather than
-      // showing a library as empty while its backup still holds the titles.
+      // showing a library as empty while its backup still holds the titles,
+      // and put them back so the next read does not need the fallback.
+      const recovered: LibraryEntry[] = [];
       for (const [id, entry] of Object.entries(mirrored)) {
-        if (!map[id]) map[id] = entry;
+        if (!map[id]) {
+          map[id] = entry;
+          recovered.push(entry);
+        }
+      }
+      if (recovered.length > 0) {
+        await Promise.all(recovered.map((entry) => idbPut(entry).catch(() => {})));
       }
       return map;
     } catch {}
