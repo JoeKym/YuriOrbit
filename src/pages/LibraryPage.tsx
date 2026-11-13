@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, BookOpen, CheckCircle, Clock, XCircle, Pause, Trash2, Download, Star, LogIn, Cloud, HardDrive, BookMarked } from 'lucide-react';
+import { Heart, BookOpen, CheckCircle, Clock, XCircle, Pause, Trash2, Download, Star, LogIn, Cloud, HardDrive, BookMarked, ShieldAlert } from 'lucide-react';
 import { useLibrary } from '@/hooks/useLibrary';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { CONTENT_TYPE_LABELS, type LibraryStatus } from '@/types/content';
@@ -24,7 +24,8 @@ const STATUS_ICONS: Record<LibraryStatus, typeof Heart> = {
 export function LibraryPage() {
   usePageMeta({ title: 'My Library', description: 'Track and manage your Girls\' Love reading and watching list on YuriOrbit.', path: '/library', noIndex: true });
 
-  const { library, removeFromLibrary, clearLibrary, isAuthenticated } = useLibrary();
+  const { library, removeFromLibrary, clearLibrary, isAuthenticated, restoredCount, dismissRestoreNotice } =
+    useLibrary();
   const { isLoading } = useAuth();
   // 'UPDATES' is a view rather than a saved status, so it is not in STATUS_FILTERS.
   const [filter, setFilter] = useState<LibraryStatus | 'ALL' | 'UPDATES'>('ALL');
@@ -142,6 +143,22 @@ export function LibraryPage() {
           </button>
         </div>
       </div>
+
+      {restoredCount > 0 && (
+        <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          <p className="flex-1">
+            Restored {restoredCount} title{restoredCount === 1 ? '' : 's'} from this browser's backup:
+            the local database came back empty, so the saved copy filled it in again.
+          </p>
+          <button
+            onClick={dismissRestoreNotice}
+            className="shrink-0 text-xs font-medium text-amber-300 transition-colors hover:text-amber-100"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       <div className="mb-6 flex flex-wrap items-center gap-2">
         {STATUS_FILTERS.map((s) => (
