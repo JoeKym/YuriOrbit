@@ -50,7 +50,7 @@ export function PageHeader({
       {eyebrow && (
         <p
           className={cn(
-            'mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-300/80',
+            'mb-2 flex items-center gap-2 text-micro font-semibold uppercase tracking-[0.18em] text-rose-300/80',
             centered && 'justify-center'
           )}
         >

@@ -142,6 +142,9 @@ export function UserProfilePage() {
                 <img
                   src={profile.avatarUrl}
                   alt={displayName}
+                  width={80}
+                  height={80}
+                  decoding="async"
                   className="h-20 w-20 rounded-2xl border-4 border-ink-900 object-cover"
                 />
               ) : (
@@ -220,7 +223,10 @@ export function UserProfilePage() {
                   <img
                     src={entry.coverImage || getFallbackCover(entry.title)}
                     alt={entry.title}
+                    width={300}
+                    height={400}
                     loading="lazy"
+                    decoding="async"
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = getFallbackCover(entry.title);

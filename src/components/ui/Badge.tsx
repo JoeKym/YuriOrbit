@@ -16,8 +16,8 @@ const VARIANTS: Record<BadgeVariant, string> = {
 };
 
 const SIZES = {
-  sm: 'px-2 py-0.5 text-[10px]',
-  md: 'px-2.5 py-1 text-xs',
+  sm: 'px-2 py-0.5 text-micro',
+  md: 'px-2.5 py-1 text-caption',
 } as const;
 
 export interface BadgeProps {

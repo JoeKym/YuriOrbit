@@ -70,6 +70,28 @@ export function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Navigating (including back/forward) always leaves the menus behind. The
+  // mobile links also close themselves, but a keyboard-driven route change from
+  // the desktop dropdown would otherwise keep it open over the new page.
+  useEffect(() => {
+    setFormatsOpen(false);
+    setUserMenuOpen(false);
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  // Escape closes whichever menu is open.
+  useEffect(() => {
+    if (!formatsOpen && !userMenuOpen && !mobileOpen) return;
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setFormatsOpen(false);
+      setUserMenuOpen(false);
+      setMobileOpen(false);
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [formatsOpen, userMenuOpen, mobileOpen]);
+
   const isFormatActive = FORMAT_ITEMS.some((f) => location.pathname === f.to);
 
   return (
@@ -80,6 +102,8 @@ export function Navbar() {
           <img
             src="/apple-touch-icon.png"
             alt="YuriOrbit"
+            width={36}
+            height={36}
             className="h-9 w-9 rounded-xl shadow-md shadow-rose-500/20 transition-transform duration-200 group-hover:scale-105"
           />
           <div className="flex flex-col">
@@ -90,7 +114,7 @@ export function Navbar() {
         </Link>
 
         {/* Primary Desktop Nav Links */}
-        <nav className="hidden lg:flex items-center gap-1.5 ml-4">
+        <nav aria-label="Primary" className="hidden lg:flex items-center gap-1.5 ml-4">
           <NavLink
             to="/"
             end
@@ -119,8 +143,12 @@ export function Navbar() {
           {/* Formats Dropdown */}
           <div className="relative" ref={formatsRef}>
             <button
+              type="button"
               onClick={() => setFormatsOpen(!formatsOpen)}
               onMouseEnter={() => setFormatsOpen(true)}
+              aria-expanded={formatsOpen}
+              aria-controls="formats-menu"
+              aria-haspopup="true"
               className={cn(
                 'flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
                 isFormatActive || formatsOpen
@@ -134,6 +162,7 @@ export function Navbar() {
 
             {formatsOpen && (
               <div
+                id="formats-menu"
                 onMouseLeave={() => setFormatsOpen(false)}
                 className="absolute left-0 mt-2 w-64 rounded-xl border border-ink-800 bg-ink-900/95 p-2 shadow-2xl backdrop-blur-xl animate-fade-in-fast z-50"
               >
@@ -224,9 +253,13 @@ export function Navbar() {
                 )}
                 <div className="relative" ref={userMenuRef}>
                 <button
+                  type="button"
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center gap-2 rounded-full border border-ink-700/80 bg-ink-900/90 py-1 pl-1 pr-2.5 transition-all hover:border-ink-600 hover:bg-ink-850"
                   aria-label="User menu"
+                  aria-expanded={userMenuOpen}
+                  aria-controls="user-menu"
+                  aria-haspopup="true"
                 >
                   {user?.picture ? (
                     <img
@@ -247,7 +280,10 @@ export function Navbar() {
 
                 {/* User Dropdown Menu */}
                 {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-56 rounded-xl border border-ink-800 bg-ink-900/95 p-2 shadow-2xl backdrop-blur-xl animate-fade-in-fast z-50">
+                  <div
+                    id="user-menu"
+                    className="absolute right-0 mt-2 w-56 rounded-xl border border-ink-800 bg-ink-900/95 p-2 shadow-2xl backdrop-blur-xl animate-fade-in-fast z-50"
+                  >
                     <div className="px-3 py-2 border-b border-ink-800/80 mb-1">
                       <p className="text-xs font-semibold text-ink-100 truncate">
                         {user?.givenName ? `${user.givenName} ${user?.familyName || ''}`.trim() : user?.email}
@@ -332,9 +368,12 @@ export function Navbar() {
 
           {/* Mobile Hamburger Button */}
           <button
+            type="button"
             onClick={() => setMobileOpen(!mobileOpen)}
             className="rounded-xl p-2 text-ink-200 transition-colors hover:bg-ink-850 hover:text-ink-50 lg:hidden"
             aria-label="Menu"
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-menu"
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -343,7 +382,10 @@ export function Navbar() {
 
       {/* Mobile Drawer Menu */}
       {mobileOpen && (
-        <div className="lg:hidden border-t border-ink-800 bg-ink-950/98 px-4 py-4 backdrop-blur-xl animate-fade-in-fast">
+        <div
+          id="mobile-menu"
+          className="lg:hidden border-t border-ink-800 bg-ink-950/98 px-4 py-4 backdrop-blur-xl animate-fade-in-fast"
+        >
           {/* Mobile Search */}
           <div className="mb-4 sm:hidden">
             <SearchCommand variant="mobile" onNavigate={() => setMobileOpen(false)} />

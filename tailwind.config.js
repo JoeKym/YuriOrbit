@@ -74,6 +74,17 @@ export default {
         display: ['"Cormorant Garamond"', 'serif'],
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
+      // Named steps replace the ad-hoc `text-[11px]` / `text-[10px]` sizes.
+      // Tracking stays a separate utility so eyebrows can tune it.
+      fontSize: {
+        micro: ['0.6875rem', { lineHeight: '1rem' }], // 11px
+        caption: ['0.75rem', { lineHeight: '1.125rem' }], // 12px
+        'body-sm': ['0.875rem', { lineHeight: '1.375rem' }], // 14px
+        body: ['1rem', { lineHeight: '1.625rem' }], // 16px
+        h3: ['1.25rem', { lineHeight: '1.625rem' }],
+        h2: ['1.5rem', { lineHeight: '1.875rem' }],
+        h1: ['2rem', { lineHeight: '2.375rem' }],
+      },
       spacing: {
         '18': '4.5rem',
         '22': '5.5rem',

@@ -138,6 +138,10 @@ export function WatchPage() {
         <img
           src={title.bannerImage || getFallbackBanner(title.title)}
           alt=""
+          width={1600}
+          height={288}
+          fetchPriority="high"
+          decoding="async"
           className="h-full w-full object-cover"
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
         />
@@ -154,6 +158,10 @@ export function WatchPage() {
           <img
             src={title.coverImage || getFallbackCover(title.title)}
             alt={title.title}
+            width={176}
+            height={256}
+            fetchPriority="high"
+            decoding="async"
             className="h-48 w-32 flex-shrink-0 rounded-xl shadow-card object-cover md:h-64 md:w-44"
           />
           <div className="flex-1">

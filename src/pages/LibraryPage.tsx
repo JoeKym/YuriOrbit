@@ -220,7 +220,10 @@ export function LibraryPage() {
                   <img
                     src={entry.coverImage || getFallbackCover(entry.title)}
                     alt={entry.title}
+                    width={64}
+                    height={96}
                     loading="lazy"
+                    decoding="async"
                     className="h-24 w-16 rounded-lg bg-ink-850 object-cover"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = getFallbackCover(entry.title);

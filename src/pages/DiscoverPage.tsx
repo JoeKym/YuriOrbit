@@ -680,7 +680,10 @@ function ListView({ titles }: { titles: ContentTitle[] }) {
           <img
             src={title.coverImage || getFallbackCover(title.title)}
             alt={title.title}
+            width={64}
+            height={96}
             loading="lazy"
+            decoding="async"
             className="h-24 w-16 flex-shrink-0 rounded-lg object-cover bg-ink-800"
             onError={(e) => {
               (e.target as HTMLImageElement).src = getFallbackCover(title.title);

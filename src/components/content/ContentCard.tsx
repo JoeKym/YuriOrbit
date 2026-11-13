@@ -76,7 +76,10 @@ export function ContentCard({ title, className, showAvailability = false }: Cont
         <img
           src={title.coverImage || getFallbackCover(title.title)}
           alt={title.title}
+          width={300}
+          height={400}
           loading="lazy"
+          decoding="async"
           className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
           onError={(e) => {
             (e.target as HTMLImageElement).src = getFallbackCover(title.title);

@@ -722,6 +722,10 @@ export function ReaderPage() {
               <img
                 src={title.coverImage || getFallbackCover(title.title)}
                 alt={title.title}
+                width={224}
+                height={336}
+                loading="lazy"
+                decoding="async"
                 className="w-full rounded-lg shadow-card object-cover"
               />
             </div>
