@@ -21,6 +21,7 @@ import { getFallbackCover } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { AvailabilityBadge } from '@/components/content/AvailabilityBadge';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { Button, buttonClasses } from '@/components/ui';
 
 function ProfileSkeleton() {
   return (
@@ -93,13 +94,13 @@ export function ProfilePage() {
         <PageHeader variant="compact" title="Your profile" />
         <div className="flex items-center gap-2">
           {profile?.username && (
-            <Link to={`/user/${profile.username}`} className="btn-ghost text-xs">
+            <Link to={`/user/${profile.username}`} className={buttonClasses('ghost', 'sm')}>
               <ExternalLink className="h-3.5 w-3.5" /> View public page
             </Link>
           )}
-          <button onClick={handleSignOut} className="btn-ghost text-xs text-ink-400 hover:text-rose-300">
+          <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-ink-400 hover:text-rose-300">
             <LogOut className="h-3.5 w-3.5" /> Sign out
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -148,9 +149,9 @@ export function ProfilePage() {
                     <Calendar className="h-3 w-3" /> Joined {joinedYear}
                   </span>
                 )}
-                <button onClick={() => setEditing((prev) => !prev)} className="btn-secondary text-xs">
+                <Button variant="secondary" size="sm" onClick={() => setEditing((prev) => !prev)}>
                   <Pencil className="h-3.5 w-3.5" /> {editing ? 'Close editor' : 'Edit profile'}
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -216,7 +217,7 @@ export function ProfilePage() {
         <section className="mt-8">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="section-title">Recently updated</h2>
-            <Link to="/library" className="btn-ghost text-xs">
+            <Link to="/library" className={buttonClasses('ghost', 'sm')}>
               Open library
             </Link>
           </div>
@@ -251,7 +252,7 @@ export function ProfilePage() {
       ) : (
         <div className="mt-8 rounded-2xl border border-dashed border-ink-800 p-8 text-center">
           <p className="text-sm text-ink-300">Your library is empty.</p>
-          <Link to="/discover" className="btn-primary mt-4 text-xs">
+          <Link to="/discover" className={buttonClasses('primary', 'sm', 'mt-4')}>
             Discover titles
           </Link>
         </div>

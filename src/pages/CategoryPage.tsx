@@ -10,7 +10,7 @@ import { usePageMeta } from '@/hooks/usePageMeta';
 import { useStatusCounts } from '@/hooks/useStatusCounts';
 import { useListRestoreEffects, useRestoredPageDepth } from '@/hooks/useListRestore';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { Button } from '@/components/ui';
+import { Button, buttonClasses } from '@/components/ui';
 import {
   ActiveFilterBar,
   ActiveFilterChip,
@@ -267,11 +267,11 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
                 We encountered a network or rate limit issue fetching content.
               </p>
               <div className="mt-4 flex gap-3">
-                <button onClick={feed.reload} className="btn-primary flex items-center gap-1.5 text-xs">
+                <Button variant="primary" size="sm" onClick={feed.reload} className="flex items-center gap-1.5">
                   <RotateCcw className="h-3.5 w-3.5" />
                   Try Again
-                </button>
-                <Link to="/discover" className="btn-secondary text-xs">
+                </Button>
+                <Link to="/discover" className={buttonClasses('secondary', 'sm')}>
                   Browse Discovery
                 </Link>
               </div>
@@ -283,7 +283,7 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
               <p className="mt-1 max-w-sm text-xs text-ink-400">
                 This category does not have enough matching classified GL content yet. Try changing filters.
               </p>
-              <Link to="/discover" className="btn-secondary mt-4 text-xs">
+              <Link to="/discover" className={buttonClasses('secondary', 'sm', 'mt-4')}>
                 Browse all GL
               </Link>
             </div>

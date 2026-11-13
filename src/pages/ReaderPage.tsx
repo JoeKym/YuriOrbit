@@ -31,6 +31,7 @@ import { usePageMeta } from '@/hooks/usePageMeta';
 import { useContentModeration } from '@/hooks/useContentModeration';
 import { ContentUnavailable } from '@/components/site/ContentUnavailable';
 import { RestrictedNotice } from '@/components/site/RestrictedNotice';
+import { Button, buttonClasses } from '@/components/ui';
 
 export function ReaderPage() {
   const { id } = useParams<{ id: string }>();
@@ -342,7 +343,7 @@ export function ReaderPage() {
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <BookOpen className="mb-4 h-12 w-12 text-ink-600" />
         <p className="text-lg font-medium text-ink-200">Title not found</p>
-        <Link to="/discover" className="btn-primary mt-4">Back to Discover</Link>
+        <Link to="/discover" className={buttonClasses('primary', 'md', 'mt-4')}>Back to Discover</Link>
       </div>
     );
   }
@@ -581,18 +582,15 @@ export function ReaderPage() {
                 <h3 className="text-base font-semibold mb-2">Unable to load pages</h3>
                 <p className="text-xs opacity-80 max-w-md mx-auto mb-4">{pagesError}</p>
                 <div className="flex justify-center gap-3">
-                  <button
-                    onClick={retryChapter}
-                    className="btn-primary text-xs"
-                  >
+                  <Button variant="primary" size="sm" onClick={retryChapter}>
                     <RefreshCw className="h-3.5 w-3.5 mr-1" /> Retry Chapter
-                  </button>
+                  </Button>
                   {title.externalLinks.length > 0 && (
                     <a
                       href={title.externalLinks[0].url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="btn-secondary text-xs"
+                      className={buttonClasses('secondary', 'sm')}
                     >
                       <ExternalLink className="h-3.5 w-3.5 mr-1" /> Read on {title.externalLinks[0].site}
                     </a>
@@ -606,9 +604,9 @@ export function ReaderPage() {
                     <span>
                       {failedPages.size} page{failedPages.size === 1 ? '' : 's'} failed to load. The chapter server may be busy.
                     </span>
-                    <button onClick={retryChapter} className="btn-secondary text-xs">
+                    <Button variant="secondary" size="sm" onClick={retryChapter}>
                       <RefreshCw className="h-3.5 w-3.5 mr-1" /> Reload chapter
-                    </button>
+                    </Button>
                   </div>
                 )}
                 <div className="flex flex-col items-center gap-1 sm:gap-2">
@@ -618,9 +616,9 @@ export function ReaderPage() {
                         <div className="my-2 flex flex-col items-center justify-center gap-2 rounded-lg border border-error-500/30 bg-error-500/5 px-4 py-10 text-xs">
                           <ImageOff className="h-6 w-6 text-error-400" />
                           <p className="opacity-80">Page {idx + 1} failed to load.</p>
-                          <button onClick={() => retryPage(idx)} className="btn-secondary text-xs">
+                          <Button variant="secondary" size="sm" onClick={() => retryPage(idx)}>
                             <RefreshCw className="h-3.5 w-3.5 mr-1" /> Retry page
-                          </button>
+                          </Button>
                         </div>
                       ) : (
                         <img
@@ -685,25 +683,17 @@ export function ReaderPage() {
 
             {/* Bottom Chapter Navigation */}
             <div className="mt-8 pt-4 border-t border-ink-800 flex items-center justify-between gap-3">
-              <button
-                onClick={() => selectChapter(activeChapterIndex - 1)}
-                disabled={activeChapterIndex <= 0}
-                className="btn-secondary text-xs sm:text-sm disabled:opacity-30 disabled:pointer-events-none"
-              >
+              <Button variant="secondary" size="sm" onClick={() => selectChapter(activeChapterIndex - 1)} disabled={activeChapterIndex <= 0} className="sm:text-sm">
                 <ChevronLeft className="h-4 w-4 mr-1" /> Previous Chapter
-              </button>
+              </Button>
 
               <span className="text-xs opacity-60">
                 Chapter {activeChapterIndex + 1} of {readableChapters.length}
               </span>
 
-              <button
-                onClick={() => selectChapter(activeChapterIndex + 1)}
-                disabled={activeChapterIndex >= readableChapters.length - 1}
-                className="btn-primary text-xs sm:text-sm disabled:opacity-30 disabled:pointer-events-none"
-              >
+              <Button variant="primary" size="sm" onClick={() => selectChapter(activeChapterIndex + 1)} disabled={activeChapterIndex >= readableChapters.length - 1} className="sm:text-sm">
                 Next Chapter <ChevronRight className="h-4 w-4 ml-1" />
-              </button>
+              </Button>
             </div>
 
             {activeChapterIndex >= readableChapters.length - 1 && (
@@ -752,7 +742,7 @@ export function ReaderPage() {
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="btn-primary text-xs sm:text-sm inline-flex items-center gap-1.5"
+                    className={buttonClasses('primary', 'sm', 'sm:text-sm inline-flex items-center gap-1.5')}
                   >
                     <ExternalLink className="h-3.5 w-3.5" /> Open {link.site}
                   </a>

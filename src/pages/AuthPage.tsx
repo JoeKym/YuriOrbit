@@ -21,6 +21,7 @@ import { normalizeUsername, saveMyProfile, validateUsername } from '@/lib/profil
 import { cn } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { Button } from '@/components/ui';
 
 type Mode = 'signin' | 'signup' | 'forgot' | 'reset';
 
@@ -299,13 +300,13 @@ export function AuthPage() {
           )}
 
           <div className="flex flex-col gap-2.5">
-            <button onClick={handleMigrate} disabled={migrating} className="btn-primary flex items-center justify-center gap-2 text-sm">
+            <Button variant="primary" onClick={handleMigrate} disabled={migrating} className="flex items-center justify-center gap-2 text-sm">
               {migrating ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {migrating ? 'Importing…' : 'Import my titles'}
-            </button>
-            <button onClick={() => navigate(nextPath, { replace: true })} disabled={migrating} className="btn-ghost text-sm">
+            </Button>
+            <Button variant="ghost" onClick={() => navigate(nextPath, { replace: true })} disabled={migrating} className="text-sm">
               Start with an empty library
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -436,14 +437,10 @@ export function AuthPage() {
               </button>
             </div>
 
-            <button
-              type="submit"
-              disabled={submitting || isLoading}
-              className="btn-primary flex w-full items-center justify-center gap-2 text-sm disabled:opacity-60"
-            >
+            <Button variant="primary" type="submit" disabled={submitting || isLoading} className="flex w-full items-center justify-center gap-2 text-sm disabled:opacity-60">
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
               {submitting ? 'Signing in…' : 'Sign in'}
-            </button>
+            </Button>
           </form>
         )}
 
@@ -492,14 +489,10 @@ export function AuthPage() {
               minLength={6}
             />
 
-            <button
-              type="submit"
-              disabled={submitting || isLoading}
-              className="btn-primary flex w-full items-center justify-center gap-2 text-sm disabled:opacity-60"
-            >
+            <Button variant="primary" type="submit" disabled={submitting || isLoading} className="flex w-full items-center justify-center gap-2 text-sm disabled:opacity-60">
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
               {submitting ? 'Creating account…' : 'Create account'}
-            </button>
+            </Button>
 
             <p className="text-center text-micro text-ink-400">
               By signing up you agree to the{' '}
@@ -522,21 +515,13 @@ export function AuthPage() {
               icon={Mail}
               autoComplete="email"
             />
-            <button
-              type="submit"
-              disabled={submitting}
-              className="btn-primary flex w-full items-center justify-center gap-2 text-sm disabled:opacity-60"
-            >
+            <Button variant="primary" type="submit" disabled={submitting} className="flex w-full items-center justify-center gap-2 text-sm disabled:opacity-60">
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
               {submitting ? 'Sending link…' : 'Send reset link'}
-            </button>
-            <button
-              type="button"
-              onClick={() => switchMode('signin')}
-              className="btn-ghost w-full text-sm"
-            >
+            </Button>
+            <Button variant="ghost" type="button" onClick={() => switchMode('signin')} className="w-full text-sm">
               Back to sign in
-            </button>
+            </Button>
           </form>
         )}
 
@@ -564,17 +549,13 @@ export function AuthPage() {
               autoComplete="new-password"
               minLength={6}
             />
-            <button
-              type="submit"
-              disabled={submitting}
-              className="btn-primary flex w-full items-center justify-center gap-2 text-sm disabled:opacity-60"
-            >
+            <Button variant="primary" type="submit" disabled={submitting} className="flex w-full items-center justify-center gap-2 text-sm disabled:opacity-60">
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
               {submitting ? 'Updating…' : 'Update password'}
-            </button>
-            <button type="button" onClick={() => switchMode('signin')} className="btn-ghost w-full text-sm">
+            </Button>
+            <Button variant="ghost" type="button" onClick={() => switchMode('signin')} className="w-full text-sm">
               Back to sign in
-            </button>
+            </Button>
           </form>
         )}
 

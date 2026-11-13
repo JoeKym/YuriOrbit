@@ -9,6 +9,7 @@ import {
   type FeedbackCategory,
 } from '@/lib/feedback';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { Button, buttonClasses } from '@/components/ui';
 
 const CATEGORY_OPTIONS: { value: FeedbackCategory; label: string }[] = [
   { value: 'issue', label: 'Issue / Bug Report' },
@@ -96,20 +97,12 @@ export function FeedbackPage() {
         </div>
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link to="/discover" className="btn-primary">
+          <Link to="/discover" className={buttonClasses('primary', 'md')}>
             Back to Discover
           </Link>
-          <button
-            type="button"
-            onClick={() => {
-              setStatus('idle');
-              setMessage('');
-              setError(null);
-            }}
-            className="btn-ghost text-xs"
-          >
+          <Button variant="ghost" size="sm" type="button" onClick={() => { setStatus('idle'); setMessage(''); setError(null); }}>
             Send another
-          </button>
+          </Button>
         </div>
       </div>
     );

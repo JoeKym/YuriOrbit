@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Heart, Home, Compass, Search, Sparkles } from 'lucide-react';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { buttonClasses } from '@/components/ui';
 
 export function NotFoundPage() {
   usePageMeta({
@@ -42,13 +43,13 @@ export function NotFoundPage() {
         />
 
         <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-          <Link to="/" className="btn-secondary">
+          <Link to="/" className={buttonClasses('secondary', 'md')}>
             <Home className="h-4 w-4" /> Home
           </Link>
-          <Link to="/discover" className="btn-primary">
+          <Link to="/discover" className={buttonClasses('primary', 'md')}>
             <Compass className="h-4 w-4" /> Discover GL
           </Link>
-          <Link to="/search" className="btn-secondary">
+          <Link to="/search" className={buttonClasses('secondary', 'md')}>
             <Search className="h-4 w-4" /> Search
           </Link>
         </div>

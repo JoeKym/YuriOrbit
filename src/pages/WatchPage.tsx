@@ -12,6 +12,7 @@ import { usePageMeta } from '@/hooks/usePageMeta';
 import { useContentModeration } from '@/hooks/useContentModeration';
 import { ContentUnavailable } from '@/components/site/ContentUnavailable';
 import { RestrictedNotice } from '@/components/site/RestrictedNotice';
+import { buttonClasses } from '@/components/ui';
 
 const STREAMING_SITE_HINTS = [
   'crunchyroll', 'hidive', 'netflix', 'youtube', 'viki', 'amazon', 'prime video',
@@ -110,7 +111,7 @@ export function WatchPage() {
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <Play className="mb-4 h-12 w-12 text-ink-600" />
         <p className="text-lg font-medium text-ink-200">Title not found</p>
-        <Link to="/discover" className="btn-primary mt-4">Back to Discover</Link>
+        <Link to="/discover" className={buttonClasses('primary', 'md', 'mt-4')}>Back to Discover</Link>
       </div>
     );
   }
@@ -217,7 +218,7 @@ export function WatchPage() {
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="btn-primary"
+                    className={buttonClasses('primary', 'md')}
                   >
                     <ExternalLink className="h-4 w-4" /> Watch on {link.site}
                   </a>
@@ -247,7 +248,7 @@ export function WatchPage() {
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn-secondary text-xs"
+                  className={buttonClasses('secondary', 'sm')}
                 >
                   <ExternalLink className="h-3.5 w-3.5" /> {link.site}
                 </a>

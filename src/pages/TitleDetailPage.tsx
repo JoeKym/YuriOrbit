@@ -22,6 +22,7 @@ import { countNewChapters, loadChapterProgress } from '@/lib/content/chapter-upd
 import { ContentUnavailable } from '@/components/site/ContentUnavailable';
 import { RestrictedNotice } from '@/components/site/RestrictedNotice';
 import { StreamingProviders } from '@/components/site/StreamingProviders';
+import { Button, buttonClasses } from '@/components/ui';
 
 const STATUSES: LibraryStatus[] = ['CURRENT', 'PLANNED', 'COMPLETED', 'ON_HOLD', 'DROPPED', 'FAVOURITE'];
 
@@ -143,7 +144,7 @@ export function TitleDetailPage() {
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <p className="text-lg font-medium text-ink-200">Title not found</p>
         <p className="mt-1 text-sm text-ink-400">This title may not exist or could not be loaded.</p>
-        <Link to="/discover" className="btn-primary mt-4">Back to Discover</Link>
+        <Link to="/discover" className={buttonClasses('primary', 'md', 'mt-4')}>Back to Discover</Link>
       </div>
     );
   }
@@ -178,8 +179,8 @@ export function TitleDetailPage() {
           ({MATURITY_LABELS[level]}). Nothing about it is loaded until you change your filter.
         </p>
         <div className="mt-5 flex flex-wrap justify-center gap-2">
-          <Link to="/settings" className="btn-primary text-xs">Change content filter</Link>
-          <Link to="/discover" className="btn-secondary text-xs">Back to Discover</Link>
+          <Link to="/settings" className={buttonClasses('primary', 'sm')}>Change content filter</Link>
+          <Link to="/discover" className={buttonClasses('secondary', 'sm')}>Back to Discover</Link>
         </div>
       </div>
     );
@@ -337,25 +338,26 @@ export function TitleDetailPage() {
               {isReadable && (
                 <Link
                   to={entry?.progress ? `/read/${title.id}?ch=${encodeURIComponent(String(entry.progress))}` : `/read/${title.id}`}
-                  className="btn-primary"
+                  className={buttonClasses('primary', 'md')}
                 >
                   <BookOpen className="h-4 w-4" /> {entry?.progress ? `Continue Reading · Ch. ${entry.progress}` : 'Start Reading'}
                 </Link>
               )}
               {isWatchable && (
-                <Link to={`/watch/${title.id}`} className="btn-primary">
+                <Link to={`/watch/${title.id}`} className={buttonClasses('primary', 'md')}>
                   <Play className="h-4 w-4" /> {entry?.progress ? `Continue Watching · Ep. ${entry.progress}` : 'Watch'}
                 </Link>
               )}
 
               <div className="relative">
-                <button
+                <Button
                   onClick={() => setShowStatusMenu(!showStatusMenu)}
-                  className={cn(isSaved ? 'btn-secondary' : 'btn-secondary')}
+                  variant="secondary"
+                  aria-expanded={showStatusMenu}
                 >
                   <Heart className={cn('h-4 w-4', isSaved && 'fill-rose-500 text-rose-500')} />
                   {isSaved ? getLibraryStatusLabel(entry?.status || 'FAVOURITE', title.contentType) : 'Add to Library'}
-                </button>
+                </Button>
                 {showStatusMenu && (
                   <div className="absolute top-full mt-1 left-0 z-20 w-48 rounded-lg border border-ink-700 bg-ink-850 py-1 shadow-card-hover animate-fade-in-fast">
                     {STATUSES.map((s) => (
@@ -385,9 +387,9 @@ export function TitleDetailPage() {
                 )}
               </div>
 
-              <button onClick={handleShare} className="btn-secondary">
+              <Button variant="secondary" onClick={handleShare}>
                 <Share2 className="h-4 w-4" /> Share
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -482,7 +484,7 @@ export function TitleDetailPage() {
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn-secondary"
+                  className={buttonClasses('secondary', 'md')}
                 >
                   <ExternalLink className="h-4 w-4" /> {link.site}
                 </a>
@@ -524,17 +526,9 @@ export function TitleDetailPage() {
         )}
 
         <div className="mt-8">
-          <button
-            onClick={() => {
-              setReportOpen((open) => !open);
-              setReportStatus('idle');
-              setReportError(null);
-            }}
-            className="btn-ghost text-xs text-ink-400"
-            aria-expanded={reportOpen}
-          >
+          <Button variant="ghost" size="sm" onClick={() => { setReportOpen((open) => !open); setReportStatus('idle'); setReportError(null); }} aria-expanded={reportOpen} className="text-ink-400">
             <Flag className="h-3.5 w-3.5" /> Report incorrect information
-          </button>
+          </Button>
 
           {reportOpen && (
             <div className="card-surface mt-3 max-w-xl p-4">
@@ -575,11 +569,7 @@ export function TitleDetailPage() {
                     </p>
                   )}
                   <div className="flex items-center gap-2">
-                    <button
-                      type="submit"
-                      disabled={reportStatus === 'submitting'}
-                      className="btn-primary text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
+                    <Button variant="primary" size="sm" type="submit" disabled={reportStatus === 'submitting'} className="disabled:opacity-50 disabled:cursor-not-allowed">
                       {reportStatus === 'submitting' ? (
                         <>
                           <Loader2 className="h-3.5 w-3.5 animate-spin" /> Sending…
@@ -587,14 +577,10 @@ export function TitleDetailPage() {
                       ) : (
                         'Send report'
                       )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setReportOpen(false)}
-                      className="btn-ghost text-xs"
-                    >
+                    </Button>
+                    <Button variant="ghost" size="sm" type="button" onClick={() => setReportOpen(false)}>
                       Cancel
-                    </button>
+                    </Button>
                   </div>
                 </form>
               )}

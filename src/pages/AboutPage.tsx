@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { CatalogStats } from '@/components/site/CatalogStats';
 import { HowItWorksFlow } from '@/components/site/HowItWorksFlow';
 import { FormatDistribution } from '@/components/site/FormatDistribution';
+import { buttonClasses } from '@/components/ui';
 
 export function AboutPage() {
   usePageMeta({
@@ -134,7 +135,7 @@ export function AboutPage() {
       </div>
 
       <div className="mt-10 text-center">
-        <Link to="/discover" className="btn-primary">
+        <Link to="/discover" className={buttonClasses('primary', 'md')}>
           Start Exploring YuriOrbit
         </Link>
       </div>

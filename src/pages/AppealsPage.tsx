@@ -5,6 +5,7 @@ import { submitFeedback, FEEDBACK_FALLBACK_EMAIL } from '@/lib/feedback';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { Button, buttonClasses } from '@/components/ui';
 
 type AppealCategory = 'appeal' | 'appeal_account' | 'appeal_content' | 'takedown';
 
@@ -184,11 +185,11 @@ export function AppealsPage() {
         )}
 
         <div className="flex flex-wrap items-center gap-3">
-          <button type="submit" disabled={status === 'submitting'} className="btn-primary">
+          <Button variant="primary" type="submit" disabled={status === 'submitting'}>
             {status === 'submitting' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             Submit appeal
-          </button>
-          <Link to="/faq" className="btn-ghost text-xs">Read FAQ</Link>
+          </Button>
+          <Link to="/faq" className={buttonClasses('ghost', 'sm')}>Read FAQ</Link>
         </div>
       </form>
     </div>

@@ -40,7 +40,7 @@ import { THEMES, type ThemeId, getStoredTheme, applyTheme, THEME_STORAGE_KEY } f
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { cn } from '@/lib/utils/format';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { Tabs, tabPanelProps } from '@/components/ui';
+import { Button, Tabs, buttonClasses, tabPanelProps } from '@/components/ui';
 import { useChapterUpdatePrefs, type ChapterUpdatePrefs } from '@/lib/content/chapter-update-prefs';
 import { clearChapterProgressCache } from '@/lib/content/chapter-updates';
 
@@ -622,17 +622,11 @@ export function SettingsPage() {
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-ink-800/80 pt-4">
-              <button
-                onClick={() => {
-                  clearChapterProgressCache();
-                  showFeedback('Chapter data will be refreshed on your next library visit.');
-                }}
-                className="btn-secondary text-xs"
-              >
+              <Button variant="secondary" size="sm" onClick={() => { clearChapterProgressCache(); showFeedback('Chapter data will be refreshed on your next library visit.'); }}>
                 <RotateCcw className="h-3.5 w-3.5" /> Refresh chapter data
-              </button>
+              </Button>
               {chapterPrefs.showBadges && (
-                <Link to="/library?filter=UPDATES" className="btn-ghost text-xs">
+                <Link to="/library?filter=UPDATES" className={buttonClasses('ghost', 'sm')}>
                   <BookMarked className="h-3.5 w-3.5" /> Open new chapters
                 </Link>
               )}
@@ -655,26 +649,15 @@ export function SettingsPage() {
             />
 
             <div className="flex flex-wrap gap-2.5">
-              <button onClick={handleExport} className="btn-secondary text-xs flex items-center gap-1.5">
+              <Button variant="secondary" size="sm" onClick={handleExport} className="flex items-center gap-1.5">
                 <Download className="h-3.5 w-3.5" /> Export Data Backup
-              </button>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="btn-secondary text-xs flex items-center gap-1.5"
-              >
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5">
                 <Upload className="h-3.5 w-3.5" /> Import Data Backup
-              </button>
-              <button
-                onClick={() => {
-                  if (confirm('Clear all local library data? This will reset your saved bookmarks and reading progress.')) {
-                    clearLibrary();
-                    showFeedback('Local library data has been cleared.');
-                  }
-                }}
-                className="btn-secondary text-xs text-error-400 hover:text-error-300 flex items-center gap-1.5"
-              >
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => { if (confirm('Clear all local library data? This will reset your saved bookmarks and reading progress.')) { clearLibrary(); showFeedback('Local library data has been cleared.'); } }} className="text-error-400 hover:text-error-300 flex items-center gap-1.5">
                 <Trash2 className="h-3.5 w-3.5" /> Clear Local Library
-              </button>
+              </Button>
             </div>
 
             <div className="mt-4 flex items-center gap-4 text-xs text-ink-400">
@@ -750,19 +733,12 @@ export function SettingsPage() {
                   surface them in search and on the home page. Confirm you are 18 or older to continue.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    className="btn-primary text-xs"
-                    onClick={() => {
-                      acknowledge();
-                      setLevel(pendingLevel);
-                      setPendingLevel(null);
-                    }}
-                  >
+                  <Button variant="primary" size="sm" onClick={() => { acknowledge(); setLevel(pendingLevel); setPendingLevel(null); }}>
                     I am 18 or older
-                  </button>
-                  <button className="btn-secondary text-xs" onClick={() => setPendingLevel(null)}>
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setPendingLevel(null)}>
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -781,7 +757,7 @@ export function SettingsPage() {
             <p className="mb-4 text-xs text-ink-400">
               Username, display name, bio, avatar and visibility live on your profile page.
             </p>
-            <Link to="/profile" className="btn-secondary text-xs">
+            <Link to="/profile" className={buttonClasses('secondary', 'sm')}>
               <Pencil className="h-3.5 w-3.5" /> Go to profile
             </Link>
           </section>
@@ -808,12 +784,9 @@ export function SettingsPage() {
                     Restores appearance, theme, reader preferences, data saver, and content filter. Does not touch your library.
                   </p>
                 </div>
-                <button
-                  onClick={handleResetSettings}
-                  className="btn-secondary shrink-0 text-xs border-rose-500/30 text-rose-300 hover:border-rose-500/50 hover:text-rose-200 flex items-center gap-1.5"
-                >
+                <Button variant="secondary" size="sm" onClick={handleResetSettings} className="shrink-0 border-rose-500/30 text-rose-300 hover:border-rose-500/50 hover:text-rose-200 flex items-center gap-1.5">
                   <RotateCcw className="h-3.5 w-3.5" /> Reset settings
-                </button>
+                </Button>
               </div>
 
               <div className="flex flex-col gap-3 rounded-xl border border-ink-800/80 bg-ink-950/30 p-3.5 sm:flex-row sm:items-center sm:justify-between">
@@ -823,17 +796,9 @@ export function SettingsPage() {
                     Removes saved titles and reading progress stored in this browser. Cloud-synced data (if signed in) is not deleted.
                   </p>
                 </div>
-                <button
-                  onClick={() => {
-                    if (confirm('Clear all local library data? This will reset your saved bookmarks and reading progress.')) {
-                      clearLibrary();
-                      showFeedback('Local library data has been cleared.');
-                    }
-                  }}
-                  className="btn-secondary shrink-0 text-xs text-error-400 hover:text-error-300 border-rose-500/30 flex items-center gap-1.5"
-                >
+                <Button variant="secondary" size="sm" onClick={() => { if (confirm('Clear all local library data? This will reset your saved bookmarks and reading progress.')) { clearLibrary(); showFeedback('Local library data has been cleared.'); } }} className="shrink-0 text-error-400 hover:text-error-300 border-rose-500/30 flex items-center gap-1.5">
                   <Trash2 className="h-3.5 w-3.5" /> Clear library
-                </button>
+                </Button>
               </div>
 
               <div className="flex flex-col gap-3 rounded-xl border border-rose-500/20 bg-rose-500/[0.04] p-3.5 sm:flex-row sm:items-center sm:justify-between">
@@ -843,12 +808,9 @@ export function SettingsPage() {
                     Removes local library and resets all settings on this device. Export a backup first if needed.
                   </p>
                 </div>
-                <button
-                  onClick={handleClearAllLocalData}
-                  className="btn-secondary shrink-0 text-xs border-rose-500/40 bg-rose-500/10 text-rose-200 hover:bg-rose-500/15 flex items-center gap-1.5"
-                >
+                <Button variant="secondary" size="sm" onClick={handleClearAllLocalData} className="shrink-0 border-rose-500/40 bg-rose-500/10 text-rose-200 hover:bg-rose-500/15 flex items-center gap-1.5">
                   <Trash2 className="h-3.5 w-3.5" /> Clear all local data
-                </button>
+                </Button>
               </div>
 
               <div className="flex flex-col gap-3 rounded-xl border border-error-500/30 bg-error-500/[0.06] p-3.5 sm:flex-row sm:items-center sm:justify-between">
@@ -861,16 +823,12 @@ export function SettingsPage() {
                   </p>
                 </div>
                 {isAuthenticated ? (
-                  <button
-                    onClick={handleDeleteAccount}
-                    disabled={deletingAccount}
-                    className="btn-secondary shrink-0 text-xs border-error-500/50 bg-error-500/10 text-error-200 hover:bg-error-500/20 disabled:opacity-60 flex items-center gap-1.5"
-                  >
+                  <Button variant="secondary" size="sm" onClick={handleDeleteAccount} disabled={deletingAccount} className="shrink-0 border-error-500/50 bg-error-500/10 text-error-200 hover:bg-error-500/20 disabled:opacity-60 flex items-center gap-1.5">
                     {deletingAccount ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserX className="h-3.5 w-3.5" />}
                     {deletingAccount ? 'Deleting…' : 'Delete account'}
-                  </button>
+                  </Button>
                 ) : (
-                  <Link to="/auth?next=/settings" className="btn-secondary shrink-0 text-xs flex items-center gap-1.5">
+                  <Link to="/auth?next=/settings" className={buttonClasses('secondary', 'sm', 'shrink-0 flex items-center gap-1.5')}>
                     Sign in
                   </Link>
                 )}
