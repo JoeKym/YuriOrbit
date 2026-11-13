@@ -32,12 +32,14 @@ export function LibraryPage() {
   const [latestChapters, setLatestChapters] = useState<Record<string, number>>({});
 
   // The entries list is only read inside the effect below; keying the effect on
-  // the tracked ids keeps a progress edit from re-asking MangaDex.
+  // the tracked ids keeps a progress edit from re-asking MangaDex. Which entries
+  // are tracked is decided by content type, not provider: canonical ids usually
+  // name the dominant upstream record rather than MangaDex.
   const libraryRef = useRef(library);
   libraryRef.current = library;
   const trackedIds = library
-    .filter((entry) => entry.provider === 'MANGADEX' && entry.providerId)
-    .map((entry) => entry.titleId)
+    .filter((entry) => ['MANGA', 'MANHWA', 'MANHUA', 'WEBTOON'].includes(entry.contentType))
+    .map((entry) => `${entry.titleId}:${entry.provider ?? ''}`)
     .join('|');
 
   useEffect(() => {
