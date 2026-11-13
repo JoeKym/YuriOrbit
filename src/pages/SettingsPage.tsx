@@ -362,7 +362,7 @@ export function SettingsPage() {
               <label className="mb-2 flex items-center gap-1.5 text-xs font-medium text-ink-300">
                 <Palette className="h-3.5 w-3.5 text-rose-400" /> Theme
               </label>
-              <p className="mb-3 text-[11px] text-ink-500">GL-aligned color themes. Saved on this device.</p>
+              <p className="mb-3 text-[11px] text-ink-400">GL-aligned color themes. Saved on this device.</p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {THEMES.map((t) => {
                   const selected = t.id === theme;
@@ -450,7 +450,7 @@ export function SettingsPage() {
                   aria-pressed={selected}
                 >
                   <span className="flex items-center gap-1.5 text-sm font-medium text-ink-100">
-                    {locked && <Lock className="h-3 w-3 text-ink-500" />}
+                    {locked && <Lock className="h-3 w-3 text-ink-400" />}
                     {MATURITY_LABELS[option]}
                     {requiresAdultConfirmation(option) && (
                       <span className="rounded bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-rose-300">18+</span>
@@ -465,7 +465,7 @@ export function SettingsPage() {
             })}
           </div>
 
-          <p className="mt-3 text-[11px] text-ink-500">
+          <p className="mt-3 text-[11px] text-ink-400">
             Currently showing:{' '}
             <span className="text-ink-300">
               {MATURITY_LEVELS.slice(0, maturityRank(maturityLevel) + 1).join(', ').toLowerCase()}
@@ -497,7 +497,7 @@ export function SettingsPage() {
             </div>
           )}
 
-          <p className="mt-3 text-[11px] leading-relaxed text-ink-500">
+          <p className="mt-3 text-[11px] leading-relaxed text-ink-400">
             The filter is a browsing preference, not a verification of your age. Clear this site's storage to reset it.
           </p>
         </section>
@@ -606,7 +606,7 @@ export function SettingsPage() {
                 </option>
               ))}
             </select>
-            <p className="mt-2 text-[11px] text-ink-500">
+            <p className="mt-2 text-[11px] text-ink-400">
               Availability comes from TMDB's watch-provider data. Choosing a region turns off the
               US fallback, so an empty list means nothing is streaming there.
             </p>

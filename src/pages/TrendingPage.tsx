@@ -161,7 +161,7 @@ export function TrendingPage() {
         <aside className={cn('lg:sticky lg:top-24 lg:self-start', showFilters ? 'block' : 'hidden lg:block')}>
           <FilterPanel onReset={activeFilters.length > 0 ? clearFilters : undefined}>
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-500" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-400" />
               <input
                 value={searchInput}
                 onChange={(e) => {
@@ -232,7 +232,7 @@ export function TrendingPage() {
                 </>
               )}
             </p>
-            <p className="text-[11px] uppercase tracking-[0.14em] text-ink-500">Trending order</p>
+            <p className="text-[11px] uppercase tracking-[0.14em] text-ink-400">Trending order</p>
           </div>
 
           {feed.loading ? (

@@ -157,7 +157,7 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
         <aside className={cn('lg:sticky lg:top-24 lg:self-start', showFilters ? 'block' : 'hidden lg:block')}>
           <FilterPanel onReset={hasFilters ? resetFilters : undefined}>
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-500" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-400" />
               <input
                 value={searchInput}
                 onChange={(e) => {
@@ -241,13 +241,13 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
                 'Live catalogue'
               )}
               {query.trim() && (
-                <span className="text-ink-500">
+                <span className="text-ink-400">
                   {' '}
                   · {displayed.length} of {feed.titles.length} loaded match "{query.trim()}"
                 </span>
               )}
             </p>
-            <p className="text-[11px] uppercase tracking-[0.14em] text-ink-500">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-ink-400">
               {statusLabel} · {sortLabel}
             </p>
           </div>

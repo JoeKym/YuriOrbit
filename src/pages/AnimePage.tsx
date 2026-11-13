@@ -112,7 +112,7 @@ export function AnimePage() {
           <div className="md:col-span-2">
             <label className="mb-1 block text-[11px] text-ink-400">Refine loaded titles</label>
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-500" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-400" />
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search anime…" className="input-field pl-9 text-xs" />
             </div>
           </div>

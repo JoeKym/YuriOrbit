@@ -170,7 +170,7 @@ export function SlugRedirectsTab() {
               <X className="h-3.5 w-3.5" /> Cancel edit
             </button>
           )}
-          <span className="text-[11px] text-ink-500">Alias is the key, so rename by deleting and adding a new mapping.</span>
+          <span className="text-[11px] text-ink-400">Alias is the key, so rename by deleting and adding a new mapping.</span>
         </div>
 
         {notice && <p className="mt-3 text-xs text-success-400">{notice}</p>}
@@ -221,11 +221,11 @@ export function SlugRedirectsTab() {
                 rows.map((row) => (
                   <tr key={row.alias_slug} className="border-b border-ink-800/60 last:border-0 hover:bg-ink-850/40">
                     <td className="px-4 py-2.5">
-                      <span className="font-mono text-[11px] text-ink-500">{row.alias_slug}</span>
+                      <span className="font-mono text-[11px] text-ink-400">{row.alias_slug}</span>
                     </td>
                     <td className="px-4 py-2.5">
                       <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-ink-200">
-                        <ArrowRight className="h-3 w-3 text-ink-500" />
+                        <ArrowRight className="h-3 w-3 text-ink-400" />
                         {row.canonical_slug}
                       </span>
                     </td>
@@ -233,10 +233,10 @@ export function SlugRedirectsTab() {
                       {row.provider ? (
                         <div className="flex flex-col">
                           <span className="text-[11px] font-medium text-ink-300">{row.provider}</span>
-                          <span className="font-mono text-[10px] text-ink-500">{row.provider_id || 'no id'}</span>
+                          <span className="font-mono text-[10px] text-ink-400">{row.provider_id || 'no id'}</span>
                         </div>
                       ) : (
-                        <span className="text-[10px] text-ink-500">-</span>
+                        <span className="text-[10px] text-ink-400">-</span>
                       )}
                     </td>
                     <td className="whitespace-nowrap px-4 py-2.5 text-[11px] text-ink-400">

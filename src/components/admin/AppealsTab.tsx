@@ -86,7 +86,7 @@ export function AppealsTab() {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1 rounded-md border border-warning-500/30 bg-warning-500/10 px-1.5 py-0.5 text-[10px] font-medium text-warning-300"><Scale className="h-3 w-3" /> {CATEGORY_LABELS[r.category] || r.category}</span>
                 <span className={cn('rounded-md border px-1.5 py-0.5 text-[10px] font-medium capitalize', r.status === 'open' ? 'border-warning-500/30 bg-warning-500/10 text-warning-400' : r.status === 'resolved' ? 'border-success-500/30 bg-success-500/10 text-success-400' : 'border-ink-700 bg-ink-850 text-ink-400')}>{r.status}</span>
-                <span className="ml-auto text-[10px] text-ink-500">{new Date(r.created_at).toLocaleString()}</span>
+                <span className="ml-auto text-[10px] text-ink-400">{new Date(r.created_at).toLocaleString()}</span>
               </div>
               {r.subject && <p className="mt-2 text-sm font-medium text-ink-100">{r.subject}</p>}
               <p className="mt-1 whitespace-pre-wrap break-words text-sm text-ink-200">{r.message}</p>
@@ -94,7 +94,7 @@ export function AppealsTab() {
                 {r.contact_name && <span className="text-ink-200">{r.contact_name}</span>}
                 {r.contact_email && <a className="text-rose-300 hover:underline" href={`mailto:${r.contact_email}?subject=${encodeURIComponent(r.subject ? `Re: ${r.subject}` : 'Re: your appeal to YuriOrbit')}`}>{r.contact_email}</a>}
                 {r.user_email && r.user_email !== r.contact_email && <span>account: {r.user_email}</span>}
-                {r.resolved_by && <span className="text-ink-500">{r.status} by {r.resolved_by}</span>}
+                {r.resolved_by && <span className="text-ink-400">{r.status} by {r.resolved_by}</span>}
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-1.5">
                 {r.contact_email && <a href={`mailto:${r.contact_email}?subject=${encodeURIComponent(r.subject ? `Re: ${r.subject}` : 'Re: your appeal to YuriOrbit')}`} className="btn-secondary px-2.5 py-1 text-[11px]">Reply</a>}

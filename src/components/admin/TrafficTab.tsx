@@ -146,7 +146,7 @@ function TrafficChart({
                 strokeWidth="1"
                 strokeDasharray="2 4"
               />
-              <text x={padX - 8} y={y + 3} textAnchor="end" className="fill-ink-500" fontSize="10">
+              <text x={padX - 8} y={y + 3} textAnchor="end" className="fill-ink-400" fontSize="10">
                 {value}
               </text>
             </g>
@@ -173,7 +173,7 @@ function TrafficChart({
               x={padX + i * stepX}
               y={height - 4}
               textAnchor={i === 0 ? 'start' : i === points.length - 1 ? 'end' : 'middle'}
-              className="fill-ink-500"
+              className="fill-ink-400"
               fontSize="10"
             >
               {label}
@@ -184,7 +184,7 @@ function TrafficChart({
 
       {data.pageviews === 0 && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <p className="text-xs text-ink-500">No page views recorded in this range yet.</p>
+          <p className="text-xs text-ink-400">No page views recorded in this range yet.</p>
         </div>
       )}
     </div>
@@ -297,7 +297,7 @@ export function TrafficTab() {
       </div>
 
       <div className="flex flex-wrap gap-1.5 rounded-xl border border-ink-800 bg-ink-900/60 p-2">
-        <span className="px-2 py-1 text-[11px] text-ink-500">Time Range:</span>
+        <span className="px-2 py-1 text-[11px] text-ink-400">Time Range:</span>
         {RANGES.map((r) => (
           <button
             key={r.key}
@@ -346,7 +346,7 @@ export function TrafficTab() {
             <h3 className="text-sm font-semibold uppercase tracking-wide text-ink-100">
               Traffic overview
             </h3>
-            <p className="mb-4 text-[11px] text-ink-500">
+            <p className="mb-4 text-[11px] text-ink-400">
               {RANGES.find((r) => r.key === range)?.label}
             </p>
             <TrafficChart data={data} since={bounds.since} until={bounds.until} bucket={bounds.bucket} />
@@ -397,7 +397,7 @@ export function TrafficTab() {
                 <p className="mt-3 text-xs text-ink-400">No activity in the last 5 minutes.</p>
               ) : (
                 <table className="mt-4 w-full text-left text-xs">
-                  <thead className="text-[10px] uppercase tracking-wider text-ink-500">
+                  <thead className="text-[10px] uppercase tracking-wider text-ink-400">
                     <tr>
                       <th className="pb-2 font-medium">Session</th>
                       <th className="pb-2 font-medium">Page</th>
@@ -420,7 +420,7 @@ export function TrafficTab() {
             </div>
           </div>
 
-          <p className="text-[11px] text-ink-500">
+          <p className="text-[11px] text-ink-400">
             Time range uses this browser&rsquo;s timezone. Sessions are anonymous per-tab ids; no IP addresses or external trackers are used.
           </p>
         </>

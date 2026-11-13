@@ -137,7 +137,7 @@ export function SearchPage() {
       </div>
 
       <div className="mb-5 flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-ink-500">
+        <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-ink-400">
           <SlidersHorizontal className="h-3 w-3" /> Format
         </span>
         {FORMAT_FILTERS.map((filter) => {
@@ -150,13 +150,13 @@ export function SearchPage() {
               aria-pressed={format === filter.key}
             >
               {filter.label}
-              {query && count > 0 && <span className="text-[10px] text-ink-500">{count}</span>}
+              {query && count > 0 && <span className="text-[10px] text-ink-400">{count}</span>}
             </button>
           );
         })}
       </div>
 
-      <p className="mb-5 text-xs text-ink-500">
+      <p className="mb-5 text-xs text-ink-400">
         Showing content rated <span className="text-ink-300">{MATURITY_LABELS[level]}</span> or lower.{' '}
         <Link to="/settings" className="underline decoration-dotted hover:text-ink-300">
           Change filter

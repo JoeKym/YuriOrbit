@@ -159,7 +159,7 @@ export function ContentModerationTab() {
             <div>
               <label className="mb-1 block text-[11px] text-ink-400">Suspension duration (hours)</label>
               <input type="number" min={1} value={durationHours} onChange={(e) => setDurationHours(Number(e.target.value || 1))} className="input-field text-xs" />
-              <div className="mt-1 text-[10px] text-ink-500">Common: 24 (1 day), 72 (3 days), 168 (7 days). Auto-restores on expiry.</div>
+              <div className="mt-1 text-[10px] text-ink-400">Common: 24 (1 day), 72 (3 days), 168 (7 days). Auto-restores on expiry.</div>
             </div>
           )}
           <div>
@@ -225,12 +225,12 @@ export function ContentModerationTab() {
                   <tr key={item.titleId} className="border-b border-ink-800/60 last:border-0">
                     <td className="px-4 py-2.5">
                       <p className="font-medium text-ink-100">{item.title || item.titleId}</p>
-                      <p className="text-[10px] text-ink-500">{item.titleId}</p>
+                      <p className="text-[10px] text-ink-400">{item.titleId}</p>
                     </td>
                     <td className="px-4 py-2.5">
                       <span className={cn('rounded-md border px-1.5 py-0.5 text-[10px] font-medium uppercase', item.action === 'takedown' ? 'border-error-500/30 bg-error-500/10 text-error-400' : item.action === 'suspended' ? 'border-warning-500/30 bg-warning-500/10 text-warning-400' : 'border-ink-700 bg-ink-850 text-ink-300')}>{item.action}</span>
                       {item.action === 'suspended' && item.expiresAt && (
-                        <div className="mt-1 text-[10px] text-ink-500">
+                        <div className="mt-1 text-[10px] text-ink-400">
                           {Date.parse(item.expiresAt) > Date.now()
                             ? `Until ${new Date(item.expiresAt).toLocaleString()}`
                             : 'Expired'}
@@ -238,7 +238,7 @@ export function ContentModerationTab() {
                       )}
                     </td>
                     <td className="max-w-[260px] truncate px-4 py-2.5 text-ink-400" title={item.reason}>{item.reason || '—'}</td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-ink-500">{item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '—'}</td>
+                    <td className="whitespace-nowrap px-4 py-2.5 text-ink-400">{item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '—'}</td>
                     <td className="px-4 py-2.5 text-right">
                       {item.action === 'restricted' && (
                         <button

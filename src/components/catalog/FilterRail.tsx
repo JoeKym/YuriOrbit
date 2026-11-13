@@ -27,7 +27,7 @@ export function FilterRow({
     >
       <span className="truncate">{label}</span>
       {typeof count === 'number' && (
-        <span className={cn('shrink-0 text-[11px] tabular-nums', active ? 'text-rose-200/80' : 'text-ink-500')}>
+        <span className={cn('shrink-0 text-[11px] tabular-nums', active ? 'text-rose-200/80' : 'text-ink-400')}>
           {count.toLocaleString()}
         </span>
       )}
@@ -67,7 +67,7 @@ export function ActiveFilterBar({
 
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-ink-800 bg-ink-900/40 px-3 py-2">
-      <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-500">
+      <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-400">
         Active filters
         {typeof count === 'number' && count > 0 && (
           <span className="rounded-full bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-rose-200">
@@ -78,7 +78,7 @@ export function ActiveFilterBar({
       {hasChips ? (
         children
       ) : (
-        <span className="text-[11px] text-ink-500">{emptyLabel ?? 'None applied'}</span>
+        <span className="text-[11px] text-ink-400">{emptyLabel ?? 'None applied'}</span>
       )}
       {hasChips && onClearAll && (
         <button
@@ -96,7 +96,7 @@ export function ActiveFilterBar({
 export function FilterGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="border-t border-ink-800/70 pt-3">
-      <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-500">{title}</p>
+      <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-400">{title}</p>
       <div className="space-y-0.5">{children}</div>
     </div>
   );
@@ -131,7 +131,7 @@ export function FilterPanel({
 
       {children}
 
-      <p className="mt-3 border-t border-ink-800/70 pt-3 text-[10px] leading-relaxed text-ink-500">
+      <p className="mt-3 border-t border-ink-800/70 pt-3 text-[10px] leading-relaxed text-ink-400">
         {note ?? 'Counts come from the live catalogue query and update as providers respond.'}
       </p>
     </div>

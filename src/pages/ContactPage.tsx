@@ -265,7 +265,7 @@ function ContactForm() {
             className="input-field min-h-[120px] resize-y text-sm"
             placeholder="How can we help?"
           />
-          <p className="mt-1 text-right text-[11px] text-ink-500">
+          <p className="mt-1 text-right text-[11px] text-ink-400">
             {message.length}/{MESSAGE_MAX}
           </p>
         </div>

@@ -199,7 +199,7 @@ export function SearchCommand({ variant = 'desktop', onNavigate }: SearchCommand
             {!loading &&
               groups.map((group) => (
                 <div key={group.key} className="mb-1 last:mb-0">
-                  <p className="px-3 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-500">
+                  <p className="px-3 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-400">
                     {group.label}
                   </p>
                   {group.hits.map((hit) => {
@@ -241,7 +241,7 @@ export function SearchCommand({ variant = 'desktop', onNavigate }: SearchCommand
                               </span>
                             )}
                             {hit.match === 'ALT_TITLE' && (
-                              <span className="truncate text-ink-500">aka {hit.detail}</span>
+                              <span className="truncate text-ink-400">aka {hit.detail}</span>
                             )}
                           </span>
                         </span>
@@ -259,12 +259,12 @@ export function SearchCommand({ variant = 'desktop', onNavigate }: SearchCommand
             <span>
               See all results for “{query.trim()}”
             </span>
-            <span className="inline-flex items-center gap-1 text-ink-500">
+            <span className="inline-flex items-center gap-1 text-ink-400">
               <CornerDownLeft className="h-3 w-3" /> Enter
             </span>
           </button>
 
-          <div className="flex items-center justify-between border-t border-ink-800/80 px-3 py-1.5 text-[10px] text-ink-500">
+          <div className="flex items-center justify-between border-t border-ink-800/80 px-3 py-1.5 text-[10px] text-ink-400">
             <span>↑ ↓ to move · Enter to open · Esc to close</span>
             <Link to="/settings" onClick={close} className="hover:text-ink-300">
               Content filter

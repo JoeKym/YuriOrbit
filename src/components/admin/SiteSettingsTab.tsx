@@ -182,7 +182,7 @@ export function SiteSettingsTab() {
               ETA (optional) — shown as &quot;Estimated return&quot;
             </label>
             <div className="relative">
-              <Clock className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-500" />
+              <Clock className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-400" />
               <input
                 value={maintenance.eta}
                 onChange={(e) => setMaintenance({ ...maintenance, eta: e.target.value })}
@@ -220,7 +220,7 @@ export function SiteSettingsTab() {
               </p>
             )}
           </div>
-          <p className="mt-2 text-[11px] text-ink-500">
+          <p className="mt-2 text-[11px] text-ink-400">
             The live maintenance page also sets its own metadata (title/description/noindex) while active.
           </p>
         </div>
@@ -316,10 +316,10 @@ export function SiteSettingsTab() {
             )}
           </div>
         ) : (
-          <p className="text-xs text-ink-500">Enter a message to preview it.</p>
+          <p className="text-xs text-ink-400">Enter a message to preview it.</p>
         )}
         {!announcement.active && (
-          <p className="mt-2 text-[11px] text-ink-500">Currently disabled — visitors will not see this.</p>
+          <p className="mt-2 text-[11px] text-ink-400">Currently disabled — visitors will not see this.</p>
         )}
       </div>
     </div>

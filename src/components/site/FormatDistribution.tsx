@@ -111,7 +111,7 @@ export function FormatDistribution({ className }: { className?: string }) {
                 {exact !== null ? (
                   <>
                     <span className="font-semibold text-ink-200">{exact.toLocaleString()}</span>
-                    {share !== null && <span className="ml-1 text-ink-500">{share}%</span>}
+                    {share !== null && <span className="ml-1 text-ink-400">{share}%</span>}
                   </>
                 ) : floor !== null ? (
                   <>
@@ -129,7 +129,7 @@ export function FormatDistribution({ className }: { className?: string }) {
         })}
       </ul>
 
-      <p className="mt-3 text-[11px] leading-relaxed text-ink-500">
+      <p className="mt-3 text-[11px] leading-relaxed text-ink-400">
         {view.loading
           ? 'Counts load one format at a time so the providers are not hammered.'
           : view.floorFormats > 0
