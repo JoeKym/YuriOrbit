@@ -167,7 +167,7 @@ export function SiteSettingsTab() {
 
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-[11px] text-ink-400">Maintenance message (shown to visitors)</label>
+            <label className="mb-1 block text-micro text-ink-400">Maintenance message (shown to visitors)</label>
             <textarea
               value={maintenance.message}
               onChange={(e) => setMaintenance({ ...maintenance, message: e.target.value })}
@@ -178,7 +178,7 @@ export function SiteSettingsTab() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-[11px] text-ink-400">
+            <label className="mb-1 block text-micro text-ink-400">
               ETA (optional) — shown as &quot;Estimated return&quot;
             </label>
             <div className="relative">
@@ -205,9 +205,9 @@ export function SiteSettingsTab() {
         </div>
 
         <div className="mt-4 rounded-xl border border-ink-800 bg-ink-950/40 p-4">
-          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-400">Visitor preview</h3>
+          <h3 className="mb-2 text-micro font-semibold uppercase tracking-wider text-ink-400">Visitor preview</h3>
           <div className="rounded-lg border border-ink-800 bg-ink-900 p-4 text-center">
-            <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-warning-500/30 bg-warning-500/10 px-2.5 py-0.5 text-[10px] font-medium text-warning-400">
+            <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-warning-500/30 bg-warning-500/10 px-2.5 py-0.5 text-micro font-medium text-warning-400">
               <Construction className="h-3 w-3" /> Maintenance in progress
             </div>
             <p className="font-display text-lg font-semibold text-ink-50">We'll be right back</p>
@@ -215,12 +215,12 @@ export function SiteSettingsTab() {
               {maintenance.message.trim() || 'YuriOrbit is temporarily down for maintenance.'}
             </p>
             {maintenance.eta.trim() && (
-              <p className="mt-2 text-[11px] text-ink-400">
+              <p className="mt-2 text-micro text-ink-400">
                 Estimated return: <span className="text-ink-200">{maintenance.eta.trim()}</span>
               </p>
             )}
           </div>
-          <p className="mt-2 text-[11px] text-ink-400">
+          <p className="mt-2 text-micro text-ink-400">
             The live maintenance page also sets its own metadata (title/description/noindex) while active.
           </p>
         </div>
@@ -247,7 +247,7 @@ export function SiteSettingsTab() {
           </label>
 
           <div>
-            <label className="mb-1 block text-[11px] text-ink-400">Message</label>
+            <label className="mb-1 block text-micro text-ink-400">Message</label>
             <textarea
               value={announcement.text}
               onChange={(e) => setAnnouncement({ ...announcement, text: e.target.value })}
@@ -260,7 +260,7 @@ export function SiteSettingsTab() {
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-[11px] text-ink-400">Tone</label>
+              <label className="mb-1 block text-micro text-ink-400">Tone</label>
               <select
                 value={announcement.tone}
                 onChange={(e) =>
@@ -274,7 +274,7 @@ export function SiteSettingsTab() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-[11px] text-ink-400">Link label (optional)</label>
+              <label className="mb-1 block text-micro text-ink-400">Link label (optional)</label>
               <input
                 value={announcement.linkLabel ?? ''}
                 onChange={(e) => setAnnouncement({ ...announcement, linkLabel: e.target.value })}
@@ -285,7 +285,7 @@ export function SiteSettingsTab() {
           </div>
 
           <div>
-            <label className="mb-1 block text-[11px] text-ink-400">Link URL (optional)</label>
+            <label className="mb-1 block text-micro text-ink-400">Link URL (optional)</label>
             <input
               value={announcement.linkHref ?? ''}
               onChange={(e) => setAnnouncement({ ...announcement, linkHref: e.target.value })}
@@ -319,7 +319,7 @@ export function SiteSettingsTab() {
           <p className="text-xs text-ink-400">Enter a message to preview it.</p>
         )}
         {!announcement.active && (
-          <p className="mt-2 text-[11px] text-ink-400">Currently disabled — visitors will not see this.</p>
+          <p className="mt-2 text-micro text-ink-400">Currently disabled — visitors will not see this.</p>
         )}
       </div>
     </div>

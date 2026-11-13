@@ -27,7 +27,7 @@ export function FilterRow({
     >
       <span className="truncate">{label}</span>
       {typeof count === 'number' && (
-        <span className={cn('shrink-0 text-[11px] tabular-nums', active ? 'text-rose-200/80' : 'text-ink-400')}>
+        <span className={cn('shrink-0 text-micro tabular-nums', active ? 'text-rose-200/80' : 'text-ink-400')}>
           {count.toLocaleString()}
         </span>
       )}
@@ -40,7 +40,7 @@ export function ActiveFilterChip({ label, onRemove }: { label: string; onRemove:
     <button
       type="button"
       onClick={onRemove}
-      className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-[11px] text-rose-200 transition-colors hover:border-rose-400/50 hover:bg-rose-500/15"
+      className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-micro text-rose-200 transition-colors hover:border-rose-400/50 hover:bg-rose-500/15"
     >
       {label}
       <X className="h-3 w-3 opacity-70" />
@@ -67,10 +67,10 @@ export function ActiveFilterBar({
 
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-ink-800 bg-ink-900/40 px-3 py-2">
-      <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-400">
+      <span className="flex items-center gap-1.5 text-micro font-semibold uppercase tracking-[0.16em] text-ink-400">
         Active filters
         {typeof count === 'number' && count > 0 && (
-          <span className="rounded-full bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-rose-200">
+          <span className="rounded-full bg-rose-500/15 px-1.5 py-0.5 text-micro font-bold tabular-nums text-rose-200">
             {count}
           </span>
         )}
@@ -78,13 +78,13 @@ export function ActiveFilterBar({
       {hasChips ? (
         children
       ) : (
-        <span className="text-[11px] text-ink-400">{emptyLabel ?? 'None applied'}</span>
+        <span className="text-micro text-ink-400">{emptyLabel ?? 'None applied'}</span>
       )}
       {hasChips && onClearAll && (
         <button
           type="button"
           onClick={onClearAll}
-          className="ml-auto text-[11px] font-medium text-ink-400 transition-colors hover:text-rose-300"
+          className="ml-auto text-micro font-medium text-ink-400 transition-colors hover:text-rose-300"
         >
           Clear all
         </button>
@@ -96,7 +96,7 @@ export function ActiveFilterBar({
 export function FilterGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="border-t border-ink-800/70 pt-3">
-      <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-400">{title}</p>
+      <p className="mb-1.5 px-1 text-micro font-semibold uppercase tracking-[0.16em] text-ink-400">{title}</p>
       <div className="space-y-0.5">{children}</div>
     </div>
   );
@@ -115,14 +115,14 @@ export function FilterPanel({
   return (
     <div className="overscroll-contain rounded-2xl border border-ink-800 bg-ink-900/60 p-4 backdrop-blur-sm lg:max-h-[calc(100vh-11rem)] lg:overflow-y-auto">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-400">
+        <h2 className="flex items-center gap-1.5 text-micro font-semibold uppercase tracking-[0.16em] text-ink-400">
           <SlidersHorizontal className="h-3 w-3" /> Filter works
         </h2>
         {onReset && (
           <button
             type="button"
             onClick={onReset}
-            className="inline-flex items-center gap-1 text-[11px] text-rose-300 transition-colors hover:text-rose-200"
+            className="inline-flex items-center gap-1 text-micro text-rose-300 transition-colors hover:text-rose-200"
           >
             <X className="h-3 w-3" /> Reset
           </button>
@@ -131,7 +131,7 @@ export function FilterPanel({
 
       {children}
 
-      <p className="mt-3 border-t border-ink-800/70 pt-3 text-[10px] leading-relaxed text-ink-400">
+      <p className="mt-3 border-t border-ink-800/70 pt-3 text-micro leading-relaxed text-ink-400">
         {note ?? 'Counts come from the live catalogue query and update as providers respond.'}
       </p>
     </div>

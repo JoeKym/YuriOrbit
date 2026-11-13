@@ -98,18 +98,18 @@ export function ContentCard({ title, className, showAvailability = false }: Cont
         <div className="absolute top-2 left-2 right-2 flex items-center justify-between gap-1 pointer-events-none">
           {/* Format & Maturity Tag Group */}
           <div className="flex items-center gap-1 flex-wrap">
-            <span className="rounded-md border border-white/10 bg-ink-950/80 px-2 py-0.5 text-[10px] font-semibold text-ink-100 backdrop-blur-md shadow-sm">
+            <span className="rounded-md border border-white/10 bg-ink-950/80 px-2 py-0.5 text-micro font-semibold text-ink-100 backdrop-blur-md shadow-sm">
               {contentFormatLabel}
             </span>
 
             {title.country && title.country.length <= 3 && (
-              <span className="rounded-md border border-white/10 bg-ink-950/80 px-1.5 py-0.5 text-[10px] font-bold text-rose-300 backdrop-blur-md">
+              <span className="rounded-md border border-white/10 bg-ink-950/80 px-1.5 py-0.5 text-micro font-bold text-rose-300 backdrop-blur-md">
                 {title.country}
               </span>
             )}
 
             {maturityBadge && (
-              <span className={cn('rounded-md border px-1.5 py-0.5 text-[10px] font-bold backdrop-blur-md', maturityBadge.className)}>
+              <span className={cn('rounded-md border px-1.5 py-0.5 text-micro font-bold backdrop-blur-md', maturityBadge.className)}>
                 {maturityBadge.label}
               </span>
             )}
@@ -117,7 +117,7 @@ export function ContentCard({ title, className, showAvailability = false }: Cont
 
           {/* Score Badge */}
           {title.averageScore ? (
-            <div className="flex items-center gap-1 rounded-md border border-amber-500/30 bg-ink-950/85 px-1.5 py-0.5 text-[10px] font-bold text-amber-400 backdrop-blur-md shadow-sm">
+            <div className="flex items-center gap-1 rounded-md border border-amber-500/30 bg-ink-950/85 px-1.5 py-0.5 text-micro font-bold text-amber-400 backdrop-blur-md shadow-sm">
               <Star className="h-3 w-3 fill-amber-400" />
               {formatScore(title.averageScore)}
             </div>
@@ -152,7 +152,7 @@ export function ContentCard({ title, className, showAvailability = false }: Cont
         <div className="absolute bottom-0 left-0 right-0 p-3 flex flex-col justify-end transition-transform duration-300 group-hover:-translate-y-1">
           {/* Status indicator, then the chapter/episode and genre group, which
               truncates as a unit so a word is never sliced by the card edge. */}
-          <div className="mb-1 flex min-w-0 items-center gap-1.5 text-[10px] font-medium text-ink-300">
+          <div className="mb-1 flex min-w-0 items-center gap-1.5 text-micro font-medium text-ink-300">
             {statusLabel && (
               <span className="flex shrink-0 items-center gap-1">
                 <span className={cn('h-1.5 w-1.5 rounded-full', statusInfo.dotClass)} />
@@ -185,10 +185,10 @@ export function ContentCard({ title, className, showAvailability = false }: Cont
           </h3>
 
           {/* Year & Metric line */}
-          <div className="mt-1 flex min-w-0 items-center justify-between gap-2 text-[11px] text-ink-400">
+          <div className="mt-1 flex min-w-0 items-center justify-between gap-2 text-micro text-ink-400">
             {title.releaseYear ? <span className="shrink-0">{title.releaseYear}</span> : <span />}
             {popularFormatted && (
-              <span className="truncate text-[10px] font-mono text-ink-400">
+              <span className="truncate text-micro font-mono text-ink-400">
                 {popularFormatted} readers
               </span>
             )}
@@ -203,13 +203,13 @@ export function ContentCard({ title, className, showAvailability = false }: Cont
               {title.genres?.slice(0, 2).map((g) => (
                 <span
                   key={g}
-                  className="rounded-full bg-rose-500/20 border border-rose-500/30 px-2 py-0.5 text-[9px] font-semibold text-rose-300"
+                  className="rounded-full bg-rose-500/20 border border-rose-500/30 px-2 py-0.5 text-micro font-semibold text-rose-300"
                 >
                   {g}
                 </span>
               ))}
               {statusLabel && (
-                <span className={cn('rounded-full border px-2 py-0.5 text-[9px] font-semibold flex items-center gap-1', statusInfo.bgClass)}>
+                <span className={cn('rounded-full border px-2 py-0.5 text-micro font-semibold flex items-center gap-1', statusInfo.bgClass)}>
                   <span className={cn('h-1 w-1 rounded-full', statusInfo.dotClass)} />
                   {statusLabel}
                 </span>
@@ -223,7 +223,7 @@ export function ContentCard({ title, className, showAvailability = false }: Cont
 
             {/* Synopsis Teaser snippet */}
             {title.description ? (
-              <p className="line-clamp-3 text-[11px] text-ink-200/90 leading-relaxed font-sans">
+              <p className="line-clamp-3 text-micro text-ink-200/90 leading-relaxed font-sans">
                 {title.description.replace(/<[^>]*>/g, '')}
               </p>
             ) : null}

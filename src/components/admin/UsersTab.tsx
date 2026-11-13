@@ -202,7 +202,7 @@ export function UsersTab() {
           </div>
           <div className="mt-3 grid gap-3 md:grid-cols-3">
             <div>
-              <label className="mb-1 block text-[11px] text-ink-400">Action</label>
+              <label className="mb-1 block text-micro text-ink-400">Action</label>
               <select value={action} onChange={(e) => setAction(e.target.value as typeof action)} className="input-field text-xs">
                 <option value="suspend">Suspend (temporary)</option>
                 <option value="ban">Ban (long duration)</option>
@@ -211,13 +211,13 @@ export function UsersTab() {
             </div>
             {action !== 'unban' && (
               <div>
-                <label className="mb-1 block text-[11px] text-ink-400">Duration (hours)</label>
+                <label className="mb-1 block text-micro text-ink-400">Duration (hours)</label>
                 <input type="number" min={1} value={durationHours} onChange={(e) => setDurationHours(Number(e.target.value || 1))} className="input-field text-xs" />
-                <div className="mt-1 text-[10px] text-ink-400">{action === 'ban' ? 'Use a long duration for bans (e.g. 87600 = 10 years).' : 'Common: 24 (1 day), 168 (7 days), 720 (30 days).'}</div>
+                <div className="mt-1 text-micro text-ink-400">{action === 'ban' ? 'Use a long duration for bans (e.g. 87600 = 10 years).' : 'Common: 24 (1 day), 168 (7 days), 720 (30 days).'}</div>
               </div>
             )}
             <div className={action === 'unban' ? 'md:col-span-2' : ''}>
-              <label className="mb-1 block text-[11px] text-ink-400">
+              <label className="mb-1 block text-micro text-ink-400">
                 Reason {action !== 'unban' && <span className="text-rose-300">(required — shown to the user)</span>}
               </label>
               <input
@@ -236,14 +236,14 @@ export function UsersTab() {
                       key={preset}
                       type="button"
                       onClick={() => { setReason(preset); setReasonError(null); }}
-                      className="rounded border border-ink-700 px-1.5 py-0.5 text-[10px] text-ink-400 transition-colors hover:border-ink-600 hover:text-ink-200"
+                      className="rounded border border-ink-700 px-1.5 py-0.5 text-micro text-ink-400 transition-colors hover:border-ink-600 hover:text-ink-200"
                     >
                       {preset}
                     </button>
                   ))}
                 </div>
               )}
-              {reasonError && <div className="mt-1 text-[10px] text-error-300">{reasonError}</div>}
+              {reasonError && <div className="mt-1 text-micro text-error-300">{reasonError}</div>}
             </div>
           </div>
           <div className="mt-3 flex items-center gap-2">
@@ -251,7 +251,7 @@ export function UsersTab() {
               {busyId === moderateFor.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : action === 'unban' ? <ShieldCheck className="h-3.5 w-3.5" /> : <Ban className="h-3.5 w-3.5" />}
               Apply {action}
             </button>
-            <span className="text-[11px] text-ink-400">Enforcement uses Supabase Auth ban duration (best-effort for this app).</span>
+            <span className="text-micro text-ink-400">Enforcement uses Supabase Auth ban duration (best-effort for this app).</span>
           </div>
         </div>
       )}
@@ -280,23 +280,23 @@ export function UsersTab() {
                     <tr key={user.id} className="border-b border-ink-800/60 last:border-0 hover:bg-ink-850/40">
                       <td className="px-4 py-2.5">
                         <p className="font-medium text-ink-100">{user.email ?? '(no email)'}</p>
-                        <p className="text-[10px] text-ink-400">
+                        <p className="text-micro text-ink-400">
                           {user.id}
                           {!user.confirmed && <span className="ml-1.5 text-warning-400">unconfirmed</span>}
                         </p>
-                        {(() => { const n = user.moderationNote; const reason = typeof n === 'string' ? n : n?.reason; return reason ? <p className="mt-0.5 max-w-[260px] truncate text-[10px] text-ink-400" title={reason}>Note: {reason}</p> : null; })()}
+                        {(() => { const n = user.moderationNote; const reason = typeof n === 'string' ? n : n?.reason; return reason ? <p className="mt-0.5 max-w-[260px] truncate text-micro text-ink-400" title={reason}>Note: {reason}</p> : null; })()}
                       </td>
                       <td className="px-4 py-2.5">
                         {banned ? (
-                          <span className="inline-flex items-center gap-1 rounded-md border border-error-500/30 bg-error-500/10 px-1.5 py-0.5 text-[10px] font-medium text-error-400"><Ban className="h-3 w-3" /> Restricted</span>
+                          <span className="inline-flex items-center gap-1 rounded-md border border-error-500/30 bg-error-500/10 px-1.5 py-0.5 text-micro font-medium text-error-400"><Ban className="h-3 w-3" /> Restricted</span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 rounded-md border border-success-500/30 bg-success-500/10 px-1.5 py-0.5 text-[10px] font-medium text-success-400"><ShieldCheck className="h-3 w-3" /> Active</span>
+                          <span className="inline-flex items-center gap-1 rounded-md border border-success-500/30 bg-success-500/10 px-1.5 py-0.5 text-micro font-medium text-success-400"><ShieldCheck className="h-3 w-3" /> Active</span>
                         )}
-                        {user.bannedUntil && banned && <div className="mt-1 flex items-center gap-1 text-[10px] text-ink-400"><Clock3 className="h-3 w-3" /> until {new Date(user.bannedUntil).toLocaleString()}</div>}
+                        {user.bannedUntil && banned && <div className="mt-1 flex items-center gap-1 text-micro text-ink-400"><Clock3 className="h-3 w-3" /> until {new Date(user.bannedUntil).toLocaleString()}</div>}
                       </td>
                       <td className="whitespace-nowrap px-4 py-2.5 text-ink-400">
                         <div>{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '—'}</div>
-                        <div className="text-[10px] text-ink-400">{user.lastSignInAt ? `Last: ${new Date(user.lastSignInAt).toLocaleDateString()}` : 'never signed in'}</div>
+                        <div className="text-micro text-ink-400">{user.lastSignInAt ? `Last: ${new Date(user.lastSignInAt).toLocaleDateString()}` : 'never signed in'}</div>
                       </td>
                       <td className="px-4 py-2.5 text-ink-300">{user.libraryCount}</td>
                       <td className="px-4 py-2.5">

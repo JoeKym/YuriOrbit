@@ -402,7 +402,7 @@ export function ReaderPage() {
             <div className="min-w-0">
               <h1 className="truncate text-xs md:text-sm font-semibold">{title.title}</h1>
               {activeChapter && (
-                <p className="text-[11px] opacity-70 truncate">
+                <p className="text-micro opacity-70 truncate">
                   {activeChapter.title || `Chapter ${activeChapter.number}`}
                 </p>
               )}
@@ -533,7 +533,7 @@ export function ReaderPage() {
                       {ch.title && <span className="opacity-70 font-normal">· {ch.title}</span>}
                     </span>
                     {ch.pageCount && (
-                      <span className="text-[10px] opacity-50 shrink-0 ml-2">
+                      <span className="text-micro opacity-50 shrink-0 ml-2">
                         {ch.pageCount}p
                       </span>
                     )}
@@ -641,7 +641,7 @@ export function ReaderPage() {
                           }
                         />
                       )}
-                      <div className="py-1 text-[11px] opacity-40 select-none">
+                      <div className="py-1 text-micro opacity-40 select-none">
                         {idx + 1} / {pageUrls.length}
                       </div>
                     </div>
@@ -655,7 +655,7 @@ export function ReaderPage() {
               prefetchProgress.total > 0 &&
               prefetchProgress.warmed < prefetchProgress.total && (
                 <div className="mx-auto mt-6 max-w-xs" aria-live="polite">
-                  <div className="mb-1 flex items-center justify-between text-[11px] opacity-70">
+                  <div className="mb-1 flex items-center justify-between text-micro opacity-70">
                     <span className="flex items-center gap-1.5">
                       <RefreshCw className="h-3 w-3 animate-spin text-rose-400" />
                       Preparing next chapter
@@ -764,7 +764,7 @@ export function ReaderPage() {
               </p>
             )}
 
-            <div className="mt-8 pt-4 border-t border-ink-800/50 text-[11px] opacity-50">
+            <div className="mt-8 pt-4 border-t border-ink-800/50 text-micro opacity-50">
               Catalog source: {title.provider} · YuriOrbit does not host or redistribute copyrighted pages.
             </div>
           </div>

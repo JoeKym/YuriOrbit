@@ -61,7 +61,7 @@ export function AnnouncementBanner() {
 
   return (
     <div className={cn('border-b px-4 py-2 text-xs', tone)}>
-      <div className="mx-auto flex max-w-[1500px] items-center gap-2.5">
+      <div className="mx-auto flex max-w-page items-center gap-2.5">
         <Megaphone className="h-3.5 w-3.5 flex-shrink-0" />
         <p className="flex-1">{announcement.text}</p>
         {announcement.linkLabel && announcement.linkHref && (

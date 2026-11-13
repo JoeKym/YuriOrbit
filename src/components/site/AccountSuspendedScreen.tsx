@@ -77,7 +77,7 @@ function InlineAppeal({ isBan }: { isBan: boolean }) {
             className="absolute left-[-9999px] h-0 w-0 opacity-0"
           />
           <div>
-            <label htmlFor="appeal-email" className="mb-1 block text-[11px] uppercase tracking-wider text-ink-400">
+            <label htmlFor="appeal-email" className="mb-1 block text-micro uppercase tracking-wider text-ink-400">
               Your email (for reply)
             </label>
             <input
@@ -92,7 +92,7 @@ function InlineAppeal({ isBan }: { isBan: boolean }) {
             />
           </div>
           <div>
-            <label htmlFor="appeal-message" className="mb-1 block text-[11px] uppercase tracking-wider text-ink-400">
+            <label htmlFor="appeal-message" className="mb-1 block text-micro uppercase tracking-wider text-ink-400">
               Explain why this should be lifted
             </label>
             <textarea
@@ -105,7 +105,7 @@ function InlineAppeal({ isBan }: { isBan: boolean }) {
               placeholder={`Explain why your ${isBan ? 'ban' : 'suspension'} should be lifted…`}
               className="input-field min-h-[110px] resize-y text-sm"
             />
-            <div className="mt-1 text-right text-[10px] text-ink-400">
+            <div className="mt-1 text-right text-micro text-ink-400">
               {message.length}/{MESSAGE_MAX}
             </div>
           </div>
@@ -124,7 +124,7 @@ function InlineAppeal({ isBan }: { isBan: boolean }) {
         </form>
       )}
 
-      <p className="mt-3 text-center text-[11px] text-ink-400">
+      <p className="mt-3 text-center text-micro text-ink-400">
         Need more detail? Use the{' '}
         <Link to="/appeals" className="text-rose-300 hover:underline">full appeals form</Link>{' '}
         or <Link to="/contact" className="text-rose-300 hover:underline">contact us</Link>.
@@ -176,7 +176,7 @@ export function AccountSuspendedScreen({
         )}
 
         <div className="mt-7 w-full rounded-xl border border-ink-800 bg-ink-900/60 p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ink-400">Reason</p>
+          <p className="text-micro font-semibold uppercase tracking-[0.2em] text-ink-400">Reason</p>
           <p className="mt-2 text-sm text-ink-200">
             {block.reason?.trim() || (isBan ? 'Violation of community guidelines.' : 'Policy violation.')}
           </p>
@@ -198,7 +198,7 @@ export function AccountSuspendedScreen({
           <Link to="/privacy" className="btn-ghost text-xs">Privacy</Link>
         </div>
 
-        <p className="mt-2 flex items-center gap-1.5 text-[11px] text-ink-400">
+        <p className="mt-2 flex items-center gap-1.5 text-micro text-ink-400">
           <Scale className="h-3 w-3" />
           Submitting an appeal does not guarantee the decision will be reversed.
         </p>

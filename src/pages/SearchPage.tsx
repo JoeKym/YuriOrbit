@@ -117,7 +117,7 @@ export function SearchPage() {
   };
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
+    <div className="mx-auto max-w-page px-4 py-8 md:px-6">
       <PageHeader
         eyebrow="Search the catalogue"
         title={query ? 'Results for' : 'Search'}
@@ -145,7 +145,7 @@ export function SearchPage() {
       </div>
 
       <div className="mb-5 flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-ink-400">
+        <span className="inline-flex items-center gap-1.5 text-micro uppercase tracking-wider text-ink-400">
           <SlidersHorizontal className="h-3 w-3" /> Format
         </span>
         {FORMAT_FILTERS.map((filter) => {

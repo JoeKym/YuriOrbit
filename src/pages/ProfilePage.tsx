@@ -20,6 +20,7 @@ import { getLibraryStatusLabel } from '@/lib/utils/status';
 import { getFallbackCover } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { AvailabilityBadge } from '@/components/content/AvailabilityBadge';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 function ProfileSkeleton() {
   return (
@@ -89,7 +90,7 @@ export function ProfilePage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 md:px-6 md:py-10">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-2xl font-semibold text-ink-50">Your profile</h1>
+        <PageHeader variant="compact" title="Your profile" />
         <div className="flex items-center gap-2">
           {profile?.username && (
             <Link to={`/user/${profile.username}`} className="btn-ghost text-xs">
@@ -238,7 +239,7 @@ export function ProfilePage() {
                   {['MOVIE', 'TV', 'DRAMA'].includes(entry.contentType) && (
                     <AvailabilityBadge title={entry} variant="compact" />
                   )}
-                  <span className="absolute bottom-1.5 left-1.5 rounded-md bg-ink-950/85 px-1.5 py-0.5 text-[10px] font-medium text-ink-200 backdrop-blur-sm">
+                  <span className="absolute bottom-1.5 left-1.5 rounded-md bg-ink-950/85 px-1.5 py-0.5 text-micro font-medium text-ink-200 backdrop-blur-sm">
                     {getLibraryStatusLabel(entry.status, entry.contentType)}
                   </span>
                 </div>

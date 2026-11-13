@@ -96,20 +96,23 @@ export function AvailabilityBadge({
                 key={provider.id}
                 src={provider.logoUrl}
                 alt={provider.name}
+                width={16}
+                height={16}
                 loading="lazy"
+                decoding="async"
                 className={cn('rounded-sm object-cover', compact ? 'h-3 w-3' : 'h-4 w-4')}
               />
             ) : (
               <span
                 key={provider.id}
-                className={cn('font-medium text-ink-200', compact ? 'text-[8px]' : 'text-[9px]')}
+                className={cn('font-medium text-ink-200', compact ? 'text-micro' : 'text-micro')}
               >
                 {provider.name}
               </span>
             )
           )}
           {remaining > 0 && (
-            <span className={cn('font-semibold text-ink-300', compact ? 'text-[8px]' : 'text-[9px]')}>
+            <span className={cn('font-semibold text-ink-300', compact ? 'text-micro' : 'text-micro')}>
               +{remaining}
             </span>
           )}

@@ -180,7 +180,7 @@ export function StreamingProviders({
               </a>
             ))}
           </div>
-          <p className="mt-2 text-[11px] text-ink-400">
+          <p className="mt-2 text-micro text-ink-400">
             Availability in {data.region}. Streaming data provided by{' '}
             {data.link ? (
               <a

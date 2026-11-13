@@ -43,7 +43,7 @@ export function TestimonialsSection({
   const items = compact ? reviews.slice(0, 3) : reviews;
 
   return (
-    <section className={cn('mx-auto max-w-[1600px] px-4 md:px-6', compact ? 'py-8' : 'py-12')}>
+    <section className={cn('mx-auto max-w-page px-4 md:px-6', compact ? 'py-8' : 'py-12')}>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-display text-2xl font-semibold text-ink-50 md:text-3xl">{title}</h2>
@@ -61,7 +61,7 @@ export function TestimonialsSection({
             <blockquote className="mt-3 text-sm leading-relaxed text-ink-200">“{review.quote.trim()}”</blockquote>
             <figcaption className="mt-4 border-t border-ink-800 pt-3">
               <div className="text-sm font-medium text-ink-100">{review.name || 'YuriOrbit user'}</div>
-              {review.role && <div className="text-[11px] text-ink-400">{review.role}</div>}
+              {review.role && <div className="text-micro text-ink-400">{review.role}</div>}
             </figcaption>
           </figure>
         ))}

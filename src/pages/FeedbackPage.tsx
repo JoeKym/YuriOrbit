@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertCircle, CheckCircle, Loader2, Send } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import {
@@ -8,6 +8,7 @@ import {
   submitFeedback,
   type FeedbackCategory,
 } from '@/lib/feedback';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 const CATEGORY_OPTIONS: { value: FeedbackCategory; label: string }[] = [
   { value: 'issue', label: 'Issue / Bug Report' },
@@ -71,14 +72,14 @@ export function FeedbackPage() {
 
   if (status === 'success') {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
-        <div className="text-center mb-10">
-          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 to-lavender-600 mb-4 mx-auto">
-            <CheckCircle className="h-7 w-7 text-white" fill="white" />
-          </div>
-          <h1 className="font-display text-4xl font-semibold text-ink-50">Thank You</h1>
-          <p className="mt-2 text-lg text-ink-300">{category === 'review' || category === 'testimonial' ? 'Your review/testimonial was submitted' : 'Your feedback has been submitted'}</p>
-        </div>
+      <div className="mx-auto max-w-prose px-4 py-12 md:px-6">
+        <PageHeader
+          eyebrow="Feedback"
+          title="Thank you"
+          description={category === 'review' || category === 'testimonial' ? 'Your review/testimonial was submitted.' : 'Your feedback has been submitted.'}
+          align="center"
+          className="mb-10"
+        />
 
         <div className="prose prose-invert max-w-none">
           <p className="text-ink-300 leading-relaxed">
@@ -115,14 +116,15 @@ export function FeedbackPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
-      <div className="text-center mb-10">
-        <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 to-lavender-600 mb-4 mx-auto">
-          <Send className="h-7 w-7 text-white" fill="white" />
-        </div>
-        <h1 className="font-display text-4xl font-semibold text-ink-50">Feedback &amp; Reports</h1>
-        <p className="mt-2 text-lg text-ink-300">Help us improve YuriOrbit</p>
-      </div>
+    <div className="mx-auto max-w-prose px-4 py-12 md:px-6">
+      <PageHeader
+        eyebrow="Support"
+        title="Feedback &"
+        accent="Reports"
+        description="Help us improve YuriOrbit."
+        align="center"
+        className="mb-10"
+      />
 
       <div className="prose prose-invert max-w-none">
         <p className="text-ink-300 leading-relaxed mb-2">
@@ -184,7 +186,7 @@ export function FeedbackPage() {
             className="mt-1 block w-full rounded-md border border-ink-700 bg-ink-950 px-3 py-3 text-sm text-ink-300 resize-y min-h-[100px] focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent"
             placeholder="Describe the issue, request, feedback, or your review/testimonial..."
           />
-          <p className="mt-1 text-right text-[11px] text-ink-400">
+          <p className="mt-1 text-right text-micro text-ink-400">
             {message.length}/{MESSAGE_MAX}
           </p>
         </div>

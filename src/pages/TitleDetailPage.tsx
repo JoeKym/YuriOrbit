@@ -124,7 +124,7 @@ export function TitleDetailPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
+      <div className="mx-auto max-w-page px-4 py-8 md:px-6">
         <div className="skeleton mb-6 h-6 w-24 rounded" />
         <div className="flex flex-col gap-6 md:flex-row">
           <div className="skeleton h-80 w-56 rounded-xl" />
@@ -169,7 +169,7 @@ export function TitleDetailPage() {
           decoding="async"
           className="mb-5 h-40 w-28 rounded-xl object-cover opacity-40 blur-sm"
         />
-        <p className="mb-1 text-[11px] uppercase tracking-wider text-rose-300">
+        <p className="mb-1 text-micro uppercase tracking-wider text-rose-300">
           {MATURITY_LABELS[maturity]} · hidden by your content filter
         </p>
         <h1 className="font-display text-2xl font-semibold text-ink-50">{title.title}</h1>
@@ -235,7 +235,7 @@ export function TitleDetailPage() {
         </div>
       )}
 
-      <div className="mx-auto max-w-[1400px] px-4 py-6 md:px-6">
+      <div className="mx-auto max-w-content px-4 py-6 md:px-6">
         <RestrictedNotice moderation={moderation} />
         <Link to="/discover" className="mb-4 inline-flex items-center gap-1 text-sm text-ink-400 transition-colors hover:text-rose-400">
           <ChevronLeft className="h-4 w-4" /> Back
@@ -516,7 +516,7 @@ export function TitleDetailPage() {
                     />
                   </div>
                   <p className="mt-1.5 line-clamp-2 text-xs text-ink-200">{rel.title}</p>
-                  <p className="text-[10px] text-ink-400">{rel.relationType.replace(/_/g, ' ').toLowerCase()}</p>
+                  <p className="text-micro text-ink-400">{rel.relationType.replace(/_/g, ' ').toLowerCase()}</p>
                 </Link>
               ))}
             </div>

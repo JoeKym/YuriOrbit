@@ -114,7 +114,7 @@ export function GLOverridesTab() {
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <label className="mb-1 block text-[11px] text-ink-400">Media type</label>
+            <label className="mb-1 block text-micro text-ink-400">Media type</label>
             <select
               value={mediaType}
               onChange={(event) => setMediaType(event.target.value as MediaType)}
@@ -125,7 +125,7 @@ export function GLOverridesTab() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-[11px] text-ink-400">TMDB id</label>
+            <label className="mb-1 block text-micro text-ink-400">TMDB id</label>
             <input
               value={tmdbId}
               onChange={(event) => setTmdbId(event.target.value)}
@@ -134,7 +134,7 @@ export function GLOverridesTab() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-[11px] text-ink-400">Title (optional)</label>
+            <label className="mb-1 block text-micro text-ink-400">Title (optional)</label>
             <input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
@@ -143,7 +143,7 @@ export function GLOverridesTab() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-[11px] text-ink-400">Note (optional)</label>
+            <label className="mb-1 block text-micro text-ink-400">Note (optional)</label>
             <input
               value={note}
               onChange={(event) => setNote(event.target.value)}
@@ -196,12 +196,12 @@ export function GLOverridesTab() {
               <tbody>
                 {list.map(([key, item]) => (
                   <tr key={key} className="border-b border-ink-800/60 last:border-0">
-                    <td className="px-4 py-2.5 font-mono text-[11px] text-ink-300">{key}</td>
+                    <td className="px-4 py-2.5 font-mono text-micro text-ink-300">{key}</td>
                     <td className="px-4 py-2.5 text-ink-200">{item.title || '—'}</td>
                     <td className="max-w-[260px] truncate px-4 py-2.5 text-ink-400" title={item.note}>
                       {item.note || '—'}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-[11px] text-ink-400">
+                    <td className="whitespace-nowrap px-4 py-2.5 text-micro text-ink-400">
                       {item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '—'}
                     </td>
                     <td className="px-4 py-2.5 text-right">
@@ -222,7 +222,7 @@ export function GLOverridesTab() {
         )}
       </div>
 
-      <div className="rounded-xl border border-ink-800 bg-ink-900/50 p-4 text-[11px] text-ink-400">
+      <div className="rounded-xl border border-ink-800 bg-ink-900/50 p-4 text-micro text-ink-400">
         Overrides only apply to TMDB records and are checked before keyword confirmation. Use this for genuine GL
         titles with missing keywords, not to admit unrelated titles; content moderation remains the tool for hiding
         unwanted entries.

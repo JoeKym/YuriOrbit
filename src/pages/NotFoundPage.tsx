@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Heart, Home, Compass, Search, Sparkles } from 'lucide-react';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 export function NotFoundPage() {
   usePageMeta({
@@ -32,11 +33,13 @@ export function NotFoundPage() {
           </div>
         </div>
 
-        <h1 className="font-display text-3xl font-semibold text-ink-50 md:text-4xl">Lost in orbit</h1>
-        <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-ink-400">
-          The page you're looking for doesn't exist, moved, or isn't available right now. Let's get you back to
-          discovering Girls' Love stories.
-        </p>
+        <PageHeader
+          eyebrow="404"
+          title="Lost in"
+          accent="orbit"
+          description="The page you're looking for doesn't exist, moved, or isn't available right now. Let's get you back to discovering Girls' Love stories."
+          align="center"
+        />
 
         <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
           <Link to="/" className="btn-secondary">
@@ -51,7 +54,7 @@ export function NotFoundPage() {
         </div>
 
         <div className="mx-auto mt-8 max-w-md rounded-xl border border-ink-800 bg-ink-900/50 p-4 text-left">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Try these</p>
+          <p className="text-micro font-semibold uppercase tracking-wider text-ink-400">Try these</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {[
               ['/trending', 'Trending'],

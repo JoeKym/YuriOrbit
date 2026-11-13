@@ -20,6 +20,7 @@ import { migrateLocalToCloud, hasLocalLibraryData, hasMigratedLocal } from '@/ho
 import { normalizeUsername, saveMyProfile, validateUsername } from '@/lib/profiles';
 import { cn } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 type Mode = 'signin' | 'signup' | 'forgot' | 'reset';
 
@@ -87,7 +88,7 @@ function Field({
           </button>
         )}
       </div>
-      {hint && <p className="mt-1 text-[11px] text-ink-400">{hint}</p>}
+      {hint && <p className="mt-1 text-micro text-ink-400">{hint}</p>}
     </div>
   );
 }
@@ -320,9 +321,13 @@ export function AuthPage() {
         <div className="inline-flex items-center gap-2 rounded-full border border-rose-500/20 bg-rose-500/5 px-3 py-1 text-xs font-medium text-rose-300 w-fit">
           <Heart className="h-3.5 w-3.5" /> Girls&rsquo; Love, organised
         </div>
-        <h1 className="mt-5 font-display text-4xl font-semibold leading-tight text-ink-50">
-          Your whole GL world,<br />in one orbit.
-        </h1>
+        <PageHeader
+          as="h2"
+          variant="display"
+          title="Your whole GL world,"
+          accent="in one orbit."
+          className="mt-5"
+        />
         <p className="mt-4 max-w-md text-sm leading-relaxed text-ink-300">
           Track what you read and watch, rate your favourites, and share a public profile that
           updates everywhere you sign in.
@@ -425,7 +430,7 @@ export function AuthPage() {
               <button
                 type="button"
                 onClick={() => switchMode('forgot')}
-                className="text-[11px] font-medium text-rose-400 transition-colors hover:text-rose-300"
+                className="text-micro font-medium text-rose-400 transition-colors hover:text-rose-300"
               >
                 Forgot password?
               </button>
@@ -496,7 +501,7 @@ export function AuthPage() {
               {submitting ? 'Creating account…' : 'Create account'}
             </button>
 
-            <p className="text-center text-[11px] text-ink-400">
+            <p className="text-center text-micro text-ink-400">
               By signing up you agree to the{' '}
               <Link to="/terms" className="text-ink-300 underline-offset-2 hover:underline">terms</Link>{' '}
               and{' '}

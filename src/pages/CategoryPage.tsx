@@ -133,7 +133,7 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
   const sortLabel = SORT_OPTIONS.find((option) => option.value === sort)?.label ?? 'Popularity';
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
+    <div className="mx-auto max-w-page px-4 py-8 md:px-6">
       <PageHeader
         eyebrow="Curated GL catalogue"
         title="GL"
@@ -248,7 +248,7 @@ export function CategoryPage({ contentType, title }: CategoryPageProps) {
                 </span>
               )}
             </p>
-            <p className="text-[11px] uppercase tracking-[0.14em] text-ink-400">
+            <p className="text-micro uppercase tracking-[0.14em] text-ink-400">
               {statusLabel} · {sortLabel}
             </p>
           </div>

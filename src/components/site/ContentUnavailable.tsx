@@ -32,8 +32,8 @@ export function ContentUnavailable({
       <p
         className={
           isTakedown
-            ? 'mb-1 text-[11px] uppercase tracking-wider text-error-300/90'
-            : 'mb-1 text-[11px] uppercase tracking-wider text-warning-300/90'
+            ? 'mb-1 text-micro uppercase tracking-wider text-error-300/90'
+            : 'mb-1 text-micro uppercase tracking-wider text-warning-300/90'
         }
       >
         Content {isTakedown ? 'takedown' : 'temporarily suspended'}
@@ -52,7 +52,7 @@ export function ContentUnavailable({
       </p>
 
       <div className="mt-6 w-full rounded-xl border border-ink-800 bg-ink-900/60 p-4 text-left">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ink-400">Reason</p>
+        <p className="text-micro font-semibold uppercase tracking-[0.2em] text-ink-400">Reason</p>
         <p className="mt-1.5 text-sm text-ink-200">
           {moderation.reason?.trim() || 'No reason was provided.'}
         </p>

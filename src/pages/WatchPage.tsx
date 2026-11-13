@@ -148,7 +148,7 @@ export function WatchPage() {
         <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/60 to-transparent" />
       </div>
 
-      <div className="mx-auto max-w-[1200px] px-4 py-6 md:px-6">
+      <div className="mx-auto max-w-reading px-4 py-6 md:px-6">
         <RestrictedNotice moderation={moderation} />
         <Link to={`/title/${title.id}`} className="mb-4 inline-flex items-center gap-1 text-sm text-ink-400 hover:text-rose-400 transition-colors">
           <ChevronLeft className="h-4 w-4" /> Back to title

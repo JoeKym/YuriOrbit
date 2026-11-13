@@ -129,9 +129,9 @@ export function ReviewsTab() {
             {submissions.map((r) => (
               <li key={r.id} className="rounded-lg border border-ink-800 bg-ink-900/40 p-3">
                 <p className="text-sm text-ink-200">“{r.message}”</p>
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-ink-400">
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-micro text-ink-400">
                   <span>{r.contact_name || r.user_email || r.contact_email || 'Anonymous'} • {new Date(r.created_at).toLocaleDateString()}</span>
-                  <button onClick={() => approveFromSubmission(r)} disabled={saving} className="btn-secondary px-2.5 py-1 text-[11px] disabled:opacity-40"><Check className="h-3 w-3" /> Approve & publish</button>
+                  <button onClick={() => approveFromSubmission(r)} disabled={saving} className="btn-secondary px-2.5 py-1 text-micro disabled:opacity-40"><Check className="h-3 w-3" /> Approve & publish</button>
                 </div>
               </li>
             ))}
@@ -151,14 +151,14 @@ export function ReviewsTab() {
               <li key={r.id} className="rounded-lg border border-ink-800 bg-ink-900/40 p-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm font-medium text-ink-100">{r.name}</span>
-                  {r.role && <span className="text-[11px] text-ink-400">• {r.role}</span>}
+                  {r.role && <span className="text-micro text-ink-400">• {r.role}</span>}
                   <span className="ml-auto flex items-center gap-0.5 text-amber-400">{Array.from({length: Math.max(1, Math.min(5, r.rating || 5))}).map((_,i)=><Star key={i} className="h-3 w-3 fill-amber-400" />)}</span>
                 </div>
                 <p className="mt-1 text-sm text-ink-300">“{r.quote}”</p>
                 <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  <button onClick={() => toggle(r.id, 'approved')} className={cn('rounded-md border px-2 py-0.5 text-[10px]', r.approved ? 'border-success-500/30 bg-success-500/10 text-success-400' : 'border-ink-700 bg-ink-850 text-ink-400')}>{r.approved ? 'Approved' : 'Hidden'}</button>
-                  <button onClick={() => toggle(r.id, 'featured')} className={cn('rounded-md border px-2 py-0.5 text-[10px]', r.featured ? 'border-rose-500/30 bg-rose-500/10 text-rose-300' : 'border-ink-700 bg-ink-850 text-ink-400')}>{r.featured ? 'Featured' : 'Not featured'}</button>
-                  <button onClick={() => remove(r.id)} className="ml-auto btn-ghost px-2 py-0.5 text-[10px] text-ink-400 hover:text-error-400"><Trash2 className="h-3 w-3" /> Remove</button>
+                  <button onClick={() => toggle(r.id, 'approved')} className={cn('rounded-md border px-2 py-0.5 text-micro', r.approved ? 'border-success-500/30 bg-success-500/10 text-success-400' : 'border-ink-700 bg-ink-850 text-ink-400')}>{r.approved ? 'Approved' : 'Hidden'}</button>
+                  <button onClick={() => toggle(r.id, 'featured')} className={cn('rounded-md border px-2 py-0.5 text-micro', r.featured ? 'border-rose-500/30 bg-rose-500/10 text-rose-300' : 'border-ink-700 bg-ink-850 text-ink-400')}>{r.featured ? 'Featured' : 'Not featured'}</button>
+                  <button onClick={() => remove(r.id)} className="ml-auto btn-ghost px-2 py-0.5 text-micro text-ink-400 hover:text-error-400"><Trash2 className="h-3 w-3" /> Remove</button>
                 </div>
               </li>
             ))}

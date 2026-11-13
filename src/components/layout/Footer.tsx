@@ -56,7 +56,7 @@ const FOOTER_SECTIONS = [
 export function Footer() {
   return (
     <footer className="mt-16 border-t border-ink-800 bg-ink-950">
-      <div className="mx-auto max-w-[1600px] px-4 py-12 md:px-6">
+      <div className="mx-auto max-w-page px-4 py-12 md:px-6">
         <div className="grid grid-cols-2 gap-8 md:grid-cols-3 lg:grid-cols-7">
           <div className="col-span-2">
             <Link to="/" className="flex items-center gap-2 mb-3">

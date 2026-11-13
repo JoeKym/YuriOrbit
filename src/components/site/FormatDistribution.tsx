@@ -107,7 +107,7 @@ export function FormatDistribution({ className }: { className?: string }) {
                 />
               </span>
 
-              <span className="w-24 text-right text-[11px] tabular-nums text-ink-400">
+              <span className="w-24 text-right text-micro tabular-nums text-ink-400">
                 {exact !== null ? (
                   <>
                     <span className="font-semibold text-ink-200">{exact.toLocaleString()}</span>
@@ -129,7 +129,7 @@ export function FormatDistribution({ className }: { className?: string }) {
         })}
       </ul>
 
-      <p className="mt-3 text-[11px] leading-relaxed text-ink-400">
+      <p className="mt-3 text-micro leading-relaxed text-ink-400">
         {view.loading
           ? 'Counts load one format at a time so the providers are not hammered.'
           : view.floorFormats > 0

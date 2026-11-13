@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Settings as SettingsIcon,
   Trash2,
   Download,
   Upload,
@@ -39,6 +38,7 @@ import { resetMaturityPreference } from '@/lib/content/maturity-preference';
 import { THEMES, type ThemeId, getStoredTheme, applyTheme, THEME_STORAGE_KEY } from '@/lib/theme/themes';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { cn } from '@/lib/utils/format';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 export function SettingsPage() {
   usePageMeta({
@@ -325,10 +325,12 @@ export function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 md:px-6">
-      <div className="mb-6 flex items-center gap-3">
-        <SettingsIcon className="h-6 w-6 text-rose-400" />
-        <h1 className="font-display text-3xl font-semibold text-ink-50">Settings</h1>
-      </div>
+      <PageHeader
+        eyebrow="Account"
+        title="Settings"
+        description="Appearance, reader, data and content filters — saved on this device."
+        className="mb-6"
+      />
 
       {feedback && (
         <div
@@ -362,7 +364,7 @@ export function SettingsPage() {
               <label className="mb-2 flex items-center gap-1.5 text-xs font-medium text-ink-300">
                 <Palette className="h-3.5 w-3.5 text-rose-400" /> Theme
               </label>
-              <p className="mb-3 text-[11px] text-ink-400">GL-aligned color themes. Saved on this device.</p>
+              <p className="mb-3 text-micro text-ink-400">GL-aligned color themes. Saved on this device.</p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {THEMES.map((t) => {
                   const selected = t.id === theme;
@@ -393,7 +395,7 @@ export function SettingsPage() {
                           {t.name}
                           {selected && <CheckCircle2 className="h-3.5 w-3.5 text-rose-400" />}
                         </span>
-                        <span className="mt-0.5 block text-[11px] leading-relaxed text-ink-400">{t.description}</span>
+                        <span className="mt-0.5 block text-micro leading-relaxed text-ink-400">{t.description}</span>
                       </span>
                     </button>
                   );
@@ -453,11 +455,11 @@ export function SettingsPage() {
                     {locked && <Lock className="h-3 w-3 text-ink-400" />}
                     {MATURITY_LABELS[option]}
                     {requiresAdultConfirmation(option) && (
-                      <span className="rounded bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-rose-300">18+</span>
+                      <span className="rounded bg-rose-500/15 px-1.5 py-0.5 text-micro font-semibold text-rose-300">18+</span>
                     )}
                     {selected && <CheckCircle2 className="ml-auto h-3.5 w-3.5 text-rose-400" />}
                   </span>
-                  <span className="mt-0.5 block text-[11px] leading-relaxed text-ink-400">
+                  <span className="mt-0.5 block text-micro leading-relaxed text-ink-400">
                     {MATURITY_DESCRIPTIONS[option]}
                   </span>
                 </button>
@@ -465,7 +467,7 @@ export function SettingsPage() {
             })}
           </div>
 
-          <p className="mt-3 text-[11px] text-ink-400">
+          <p className="mt-3 text-micro text-ink-400">
             Currently showing:{' '}
             <span className="text-ink-300">
               {MATURITY_LEVELS.slice(0, maturityRank(maturityLevel) + 1).join(', ').toLowerCase()}
@@ -497,7 +499,7 @@ export function SettingsPage() {
             </div>
           )}
 
-          <p className="mt-3 text-[11px] leading-relaxed text-ink-400">
+          <p className="mt-3 text-micro leading-relaxed text-ink-400">
             The filter is a browsing preference, not a verification of your age. Clear this site's storage to reset it.
           </p>
         </section>
@@ -606,7 +608,7 @@ export function SettingsPage() {
                 </option>
               ))}
             </select>
-            <p className="mt-2 text-[11px] text-ink-400">
+            <p className="mt-2 text-micro text-ink-400">
               Availability comes from TMDB's watch-provider data. Choosing a region turns off the
               US fallback, so an empty list means nothing is streaming there.
             </p>

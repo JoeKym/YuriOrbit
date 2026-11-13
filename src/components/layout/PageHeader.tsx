@@ -18,6 +18,11 @@ export interface PageHeaderProps {
   variant?: PageHeaderVariant;
   /** Render-level actions (filters toggle, sort, export) aligned with the title. */
   actions?: ReactNode;
+  /**
+   * Heading level. Pages use `h1`; a marketing panel that sits beside the real
+   * page heading uses `h2` so the document keeps a single h1.
+   */
+  as?: 'h1' | 'h2';
   className?: string;
 }
 
@@ -41,9 +46,11 @@ export function PageHeader({
   align = 'left',
   variant = 'page',
   actions,
+  as = 'h1',
   className,
 }: PageHeaderProps) {
   const centered = align === 'center';
+  const Heading = as;
 
   const heading = (
     <div className={cn(centered ? 'text-center' : '', 'min-w-0')}>
@@ -59,7 +66,7 @@ export function PageHeader({
         </p>
       )}
 
-      <h1
+      <Heading
         className={cn(
           'font-display font-semibold leading-tight tracking-tight text-ink-50 text-balance',
           TITLE_SIZES[variant],
@@ -73,7 +80,7 @@ export function PageHeader({
             <span className="text-gradient">{accent}</span>
           </>
         )}
-      </h1>
+      </Heading>
 
       {description && (
         <p
