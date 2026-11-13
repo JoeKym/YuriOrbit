@@ -35,6 +35,7 @@ import { ReviewsTab } from '@/components/admin/ReviewsTab';
 import { BarChart3, Scale, ShieldAlert, Quote } from 'lucide-react';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { buttonClasses } from '@/components/ui';
 
 type TabKey = 'overview' | 'traffic' | 'users' | 'appeals' | 'moderation' | 'reviews' | 'library' | 'redirects' | 'gl-overrides' | 'feedback' | 'contact' | 'featured' | 'settings' | 'audit';
 
@@ -131,7 +132,7 @@ export function AdminPage() {
             }
           />
         </div>
-        <Link to="/" className="btn-ghost text-xs">
+        <Link to="/" className={buttonClasses('ghost', 'sm')}>
           <Compass className="h-3.5 w-3.5" /> View site
         </Link>
       </div>

@@ -40,7 +40,7 @@ import { useWatchRegion } from '@/hooks/useWatchRegion';
 import { useStatusCounts } from '@/hooks/useStatusCounts';
 import { useListRestoreEffects, useRestoredPageDepth } from '@/hooks/useListRestore';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { Chip } from '@/components/ui';
+import { Button, Chip } from '@/components/ui';
 import {
   ActiveFilterBar,
   ActiveFilterChip,
@@ -580,15 +580,9 @@ export function DiscoverPage() {
                 <p className="mt-1 text-xs text-ink-400 max-w-sm">
                   We encountered an issue fetching metadata from the providers.
                 </p>
-                <button
-                  onClick={() => {
-                    setError(false);
-                    setReloadKey((k) => k + 1);
-                  }}
-                  className="btn-primary mt-4 text-xs"
-                >
+                <Button variant="primary" size="sm" onClick={() => { setError(false); setReloadKey((k) => k + 1); }} className="mt-4">
                   Try Again
-                </button>
+                </Button>
               </div>
             ) : titles.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl border border-dashed border-ink-800 p-8">
@@ -597,9 +591,9 @@ export function DiscoverPage() {
                 <p className="mt-1 text-xs text-ink-400 max-w-sm">
                   No matching titles found for your current filter and search combination.
                 </p>
-                <button onClick={clearAllFilters} className="btn-secondary mt-4 text-xs">
+                <Button variant="secondary" size="sm" onClick={clearAllFilters} className="mt-4">
                   Reset Filters
-                </button>
+                </Button>
               </div>
             ) : streamingOnly && visibleTitles.length === 0 ? (
               checkingAvailability ? (
@@ -618,12 +612,9 @@ export function DiscoverPage() {
                     No titles in this batch have a streaming provider listed there. Change the region
                     in settings, or show all titles.
                   </p>
-                  <button
-                    onClick={() => updateFilter('streaming', undefined)}
-                    className="btn-secondary mt-4 text-xs"
-                  >
+                  <Button variant="secondary" size="sm" onClick={() => updateFilter('streaming', undefined)} className="mt-4">
                     Show all titles
-                  </button>
+                  </Button>
                 </div>
               )
             ) : viewMode === 'grid' ? (
@@ -635,13 +626,9 @@ export function DiscoverPage() {
                 </div>
                 {hasNextPage && (
                   <div className="mt-12 flex justify-center">
-                    <button
-                      onClick={loadMore}
-                      disabled={loadingMore}
-                      className="btn-secondary px-8 py-2.5 text-xs font-medium disabled:opacity-50"
-                    >
+                    <Button variant="secondary" size="sm" onClick={loadMore} disabled={loadingMore} className="px-8 py-2.5 font-medium disabled:opacity-50">
                       {loadingMore ? 'Loading titles...' : 'Load More Titles'}
-                    </button>
+                    </Button>
                   </div>
                 )}
               </>
@@ -650,13 +637,9 @@ export function DiscoverPage() {
                 <ListView titles={visibleTitles} />
                 {hasNextPage && (
                   <div className="mt-12 flex justify-center">
-                    <button
-                      onClick={loadMore}
-                      disabled={loadingMore}
-                      className="btn-secondary px-8 py-2.5 text-xs font-medium disabled:opacity-50"
-                    >
+                    <Button variant="secondary" size="sm" onClick={loadMore} disabled={loadingMore} className="px-8 py-2.5 font-medium disabled:opacity-50">
                       {loadingMore ? 'Loading titles...' : 'Load More Titles'}
-                    </button>
+                    </Button>
                   </div>
                 )}
               </>

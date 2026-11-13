@@ -1,4 +1,5 @@
 import { PageHeader } from '@/components/layout/PageHeader';
+import { buttonClasses } from '@/components/ui';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { BookOpen, Calendar, Heart, Lock, Star, UserX } from 'lucide-react';
@@ -92,7 +93,7 @@ export function UserProfilePage() {
           title="Profiles aren't enabled yet"
           description="This deployment does not have the profile tables yet. Apply the Supabase migration to switch public profiles on."
         />
-        <Link to="/discover" className="btn-primary mt-6">
+        <Link to="/discover" className={buttonClasses('primary', 'md', 'mt-6')}>
           Back to Discover
         </Link>
       </div>
@@ -103,7 +104,7 @@ export function UserProfilePage() {
     return (
       <div className="mx-auto max-w-xl px-4 py-20 text-center">
         <PageHeader variant="compact" align="center" title="Could not load profile" description={error} />
-        <Link to="/discover" className="btn-secondary mt-6">
+        <Link to="/discover" className={buttonClasses('secondary', 'md', 'mt-6')}>
           Back to Discover
         </Link>
       </div>
@@ -119,7 +120,7 @@ export function UserProfilePage() {
           title={`@${username} not found`}
           description="No YuriOrbit member has claimed that username, or their profile is private."
         />
-        <Link to="/discover" className="btn-primary mt-6">
+        <Link to="/discover" className={buttonClasses('primary', 'md', 'mt-6')}>
           Back to Discover
         </Link>
       </div>
@@ -173,7 +174,7 @@ export function UserProfilePage() {
                 </span>
               )}
               {isOwner && (
-                <Link to="/profile" className="btn-secondary text-xs">
+                <Link to="/profile" className={buttonClasses('secondary', 'sm')}>
                   Edit profile
                 </Link>
               )}

@@ -10,7 +10,7 @@ import { MATURITY_LABELS } from '@/types/content';
 import { cn } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { Chip, EmptyState } from '@/components/ui';
+import { Button, Chip, EmptyState } from '@/components/ui';
 
 const FORMAT_KEYS = FORMAT_FILTERS.map((filter) => filter.key);
 
@@ -183,7 +183,7 @@ export function SearchPage() {
       ) : result?.error ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <p className="mb-4 text-ink-400">Search failed — the providers did not answer. Please try again.</p>
-          <button onClick={() => window.location.reload()} className="btn-primary">Retry</button>
+          <Button variant="primary" onClick={() => window.location.reload()}>Retry</Button>
         </div>
       ) : (
         <>

@@ -7,7 +7,7 @@ import { searchGLTitles } from '@/lib/providers';
 import { usePaginatedTitles } from '@/hooks/usePaginatedTitles';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { Button } from '@/components/ui';
+import { Button, buttonClasses } from '@/components/ui';
 import { useListRestoreEffects, useRestoredPageDepth } from '@/hooks/useListRestore';
 import { useStatusCounts } from '@/hooks/useStatusCounts';
 import {
@@ -248,10 +248,10 @@ export function TrendingPage() {
               <h3 className="text-base font-semibold text-ink-100">Unable to load trending titles</h3>
               <p className="mt-1 max-w-sm text-xs text-ink-400">We encountered an issue fetching trending content.</p>
               <div className="mt-4 flex gap-3">
-                <button onClick={feed.reload} className="btn-primary flex items-center gap-1.5 text-xs">
+                <Button variant="primary" size="sm" onClick={feed.reload} className="flex items-center gap-1.5">
                   <RotateCcw className="h-3.5 w-3.5" /> Try Again
-                </button>
-                <Link to="/discover" className="btn-secondary text-xs">
+                </Button>
+                <Link to="/discover" className={buttonClasses('secondary', 'sm')}>
                   Browse Discovery
                 </Link>
               </div>
@@ -261,7 +261,7 @@ export function TrendingPage() {
               <Search className="mb-3 h-10 w-10 text-ink-600" />
               <h3 className="text-base font-medium text-ink-200">No trending titles available</h3>
               <p className="mt-1 max-w-sm text-xs text-ink-400">Try changing filters or explore the discovery page.</p>
-              <Link to="/discover" className="btn-secondary mt-4 text-xs">
+              <Link to="/discover" className={buttonClasses('secondary', 'sm', 'mt-4')}>
                 Browse all GL
               </Link>
             </div>

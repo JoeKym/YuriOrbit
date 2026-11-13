@@ -15,6 +15,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { FEEDBACK_FALLBACK_EMAIL, submitFeedback } from '@/lib/feedback';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { Button } from '@/components/ui';
 
 export function ContactPage() {
   usePageMeta({ title: 'Contact', description: 'Contact YuriOrbit for questions, corrections, partnerships, or support. Use Appeals for moderation actions.', path: '/contact' });
@@ -176,9 +177,9 @@ function ContactForm() {
           Thanks{name.trim() ? `, ${name.trim()}` : ''} — your message is in the inbox and we'll
           reply to <span className="text-ink-100">{email.trim()}</span>.
         </p>
-        <button type="button" onClick={() => setStatus('idle')} className="btn-secondary mt-5 text-xs">
+        <Button variant="secondary" size="sm" type="button" onClick={() => setStatus('idle')} className="mt-5">
           Send another message
-        </button>
+        </Button>
       </section>
     );
   }

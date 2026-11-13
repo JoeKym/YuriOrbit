@@ -9,7 +9,7 @@ import { ContentCard, ContentCardSkeleton } from '@/components/content/ContentCa
 import { cn } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { Button, EmptyState } from '@/components/ui';
+import { Button, EmptyState, buttonClasses } from '@/components/ui';
 import { useListRestoreEffects } from '@/hooks/useListRestore';
 import {
   ActiveFilterBar,
@@ -365,10 +365,10 @@ export function GenresPage() {
                 We encountered an issue fetching popular titles. You can try again or explore titles directly.
               </p>
               <div className="mt-4 flex gap-3">
-                <button onClick={() => setReloadKey((k) => k + 1)} className="btn-primary flex items-center gap-1.5 text-xs">
+                <Button variant="primary" size="sm" onClick={() => setReloadKey((k) => k + 1)} className="flex items-center gap-1.5">
                   <RotateCcw className="h-3.5 w-3.5" /> Try Again
-                </button>
-                <Link to="/discover" className="btn-secondary text-xs">
+                </Button>
+                <Link to="/discover" className={buttonClasses('secondary', 'sm')}>
                   Browse Discovery
                 </Link>
               </div>
@@ -398,7 +398,7 @@ export function GenresPage() {
                   <section key={g}>
                     <div className="mb-3 flex items-center justify-between">
                       <h2 className="section-title">{g}</h2>
-                      <Link to={`/discover?genre=${encodeURIComponent(g)}`} className="btn-ghost text-xs">
+                      <Link to={`/discover?genre=${encodeURIComponent(g)}`} className={buttonClasses('ghost', 'sm')}>
                         View all <ChevronRight className="h-3 w-3" />
                       </Link>
                     </div>

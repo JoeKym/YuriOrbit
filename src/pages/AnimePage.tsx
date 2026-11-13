@@ -9,6 +9,7 @@ import { usePaginatedTitles } from '@/hooks/usePaginatedTitles';
 import { cn } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { Button, buttonClasses } from '@/components/ui';
 
 type AnimeTab = 'ALL' | 'SERIES' | 'FILM';
 
@@ -154,8 +155,8 @@ export function AnimePage() {
           <h3 className="text-base font-semibold text-ink-100">Unable to load anime</h3>
           <p className="mt-1 max-w-sm text-xs text-ink-400">We encountered an issue fetching anime metadata.</p>
           <div className="mt-4 flex gap-3">
-            <button onClick={feed.reload} className="btn-primary flex items-center gap-1.5 text-xs"><RotateCcw className="h-3.5 w-3.5" /> Try Again</button>
-            <Link to="/discover" className="btn-secondary text-xs">Browse Discovery</Link>
+            <Button variant="primary" size="sm" onClick={feed.reload} className="flex items-center gap-1.5"><RotateCcw className="h-3.5 w-3.5" /> Try Again</Button>
+            <Link to="/discover" className={buttonClasses('secondary', 'sm')}>Browse Discovery</Link>
           </div>
         </div>
       ) : feed.titles.length === 0 ? (
@@ -163,7 +164,7 @@ export function AnimePage() {
           <Search className="mb-3 h-10 w-10 text-ink-600" />
           <h3 className="text-base font-medium text-ink-200">No anime in this view</h3>
           <p className="mt-1 max-w-sm text-xs text-ink-400">Try changing filters or browse all GL titles.</p>
-          <Link to="/discover" className="btn-secondary mt-4 text-xs">Browse all GL</Link>
+          <Link to="/discover" className={buttonClasses('secondary', 'sm', 'mt-4')}>Browse all GL</Link>
         </div>
       ) : (
         <>
