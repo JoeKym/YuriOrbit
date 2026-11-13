@@ -19,6 +19,7 @@ const STORE_NAME = 'library';
 const LS_KEY = 'yuriorbit:library';
 const MIGRATION_FLAG_KEY = 'yuriorbit:library_migrated';
 const REF_BACKFILL_SESSION_PREFIX = 'yuriorbit:ref-backfill:';
+const RESTORE_NOTICE_KEY = 'yuriorbit:library-restore-noticed';
 
 // sessionStorage normally carries the once-per-session claim; the in-memory
 // set keeps private browsing/storage-disabled sessions from repeating it.
@@ -224,7 +225,13 @@ async function persistBackfilledRef(
 
 // ─── Local load (IDB first, LS fallback) ──────────────────────────────────────
 
-async function loadLocal(): Promise<Record<string, LibraryEntry>> {
+interface LocalLoad {
+  library: Record<string, LibraryEntry>;
+  /** Titles that only the localStorage mirror still had. */
+  restored: number;
+}
+
+async function loadLocal(): Promise<LocalLoad> {
   const mirrored = lsLoad();
   if (isIDBAvailable()) {
     try {
@@ -245,10 +252,10 @@ async function loadLocal(): Promise<Record<string, LibraryEntry>> {
       if (recovered.length > 0) {
         await Promise.all(recovered.map((entry) => idbPut(entry).catch(() => {})));
       }
-      return map;
+      return { library: map, restored: recovered.length };
     } catch {}
   }
-  return mirrored;
+  return { library: mirrored, restored: 0 };
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -260,6 +267,14 @@ export function useLibrary(options: { backfillProviderRefs?: boolean } = {}) {
   const [library, setLibrary] = useState<Record<string, LibraryEntry>>({});
   const [loaded, setLoaded] = useState(false);
   const [cloudError, setCloudError] = useState<string | null>(null);
+  const [restoredCount, setRestoredCount] = useState(0);
+  const [restoreNoticeSeen, setRestoreNoticeSeen] = useState(() => {
+    try {
+      return localStorage.getItem(RESTORE_NOTICE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
   const useIDB = useRef(isIDBAvailable());
 
   // Snapshot for the one-shot backfill below; a library update must not cancel
@@ -310,8 +325,9 @@ export function useLibrary(options: { backfillProviderRefs?: boolean } = {}) {
           // Fall back to local data on error
           const local = await loadLocal();
           if (cancelled) return;
-          rememberSavedRefs(Object.values(local));
-          setLibrary(local);
+          rememberSavedRefs(Object.values(local.library));
+          setLibrary(local.library);
+          setRestoredCount(local.restored);
           setLoaded(true);
           return;
         }
@@ -320,8 +336,9 @@ export function useLibrary(options: { backfillProviderRefs?: boolean } = {}) {
       // Not authenticated — local only
       const local = await loadLocal();
       if (cancelled) return;
-      rememberSavedRefs(Object.values(local));
-      setLibrary(local);
+      rememberSavedRefs(Object.values(local.library));
+      setLibrary(local.library);
+      setRestoredCount(local.restored);
       setLoaded(true);
     }
 
@@ -545,6 +562,15 @@ export function useLibrary(options: { backfillProviderRefs?: boolean } = {}) {
     });
   }, [isAuthenticated, upsertCloud, persistLocal]);
 
+  const dismissRestoreNotice = useCallback(() => {
+    setRestoreNoticeSeen(true);
+    try {
+      localStorage.setItem(RESTORE_NOTICE_KEY, '1');
+    } catch {
+      // Storage blocked: the notice stays dismissed for this visit.
+    }
+  }, []);
+
   const clearLibrary = useCallback(async () => {
     setLibrary({});
     if (isAuthenticated && userId && supabase) {
@@ -578,6 +604,8 @@ export function useLibrary(options: { backfillProviderRefs?: boolean } = {}) {
     isInLibrary,
     getEntry,
     clearLibrary,
+    restoredCount: restoreNoticeSeen ? 0 : restoredCount,
+    dismissRestoreNotice,
   };
 }
 
@@ -586,7 +614,7 @@ export function useLibrary(options: { backfillProviderRefs?: boolean } = {}) {
 export async function migrateLocalToCloud(): Promise<{ imported: number; error: string | null }> {
   if (!supabase) return { imported: 0, error: 'Cloud sync is not configured.' };
   const local = await loadLocal();
-  const localEntries = Object.values(local);
+  const localEntries = Object.values(local.library);
   if (localEntries.length === 0) return { imported: 0, error: null };
 
   const rows = localEntries.map((entry) => entryToRow(entry));
