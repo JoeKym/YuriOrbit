@@ -1,4 +1,5 @@
 import { searchGLTitles } from '@/lib/providers';
+import { getMaturityLevel } from '@/lib/content/maturity-preference';
 import type { ContentType } from '@/types/content';
 
 export interface FormatCount {
@@ -16,10 +17,14 @@ export interface FormatCount {
  * passed off as exact, and a format with no trustworthy figure at all returns
  * an empty object.
  */
-const CACHE = new Map<ContentType, FormatCount>();
+const CACHE = new Map<string, FormatCount>();
+
+/** Counts move with the content filter, so the cache key includes it. */
+const cacheKey = (contentType: ContentType) => `${getMaturityLevel()}:${contentType}`;
 
 export async function loadFormatCount(contentType: ContentType): Promise<FormatCount> {
-  const cached = CACHE.get(contentType);
+  const key = cacheKey(contentType);
+  const cached = CACHE.get(key);
   if (cached) return cached;
 
   try {
@@ -31,7 +36,7 @@ export async function loadFormatCount(contentType: ContentType): Promise<FormatC
         ? { floor: result.totalFloor }
         : {};
 
-    if (count.exact || count.floor) CACHE.set(contentType, count);
+    if (count.exact || count.floor) CACHE.set(key, count);
     return count;
   } catch {
     return {};

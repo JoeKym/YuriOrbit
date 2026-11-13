@@ -3,8 +3,8 @@
  *
  * Every provider exposes maturity differently — MangaDex has an explicit
  * content rating, AniList has `isAdult` plus user-voted tags, TMDB has an
- * `adult` flag, Jikan has explicit genres — so everything is folded into one
- * four-step scale that matches MangaDex's own wording.
+ * `adult` flag — so everything is folded into one four-step scale that matches
+ * MangaDex's own wording.
  *
  * Titles are only *labelled* here. What a visitor is allowed to see is decided
  * by their preference (see `maturity-preference.ts`).
