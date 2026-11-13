@@ -117,6 +117,12 @@ export interface ContentTitle {
   popularity?: number;
   favourites?: number;
   chapters?: number;
+  /**
+   * Newest chapter the provider currently knows about. For MangaDex this is the
+   * latest upload rather than a finished total, which is what a reader's saved
+   * progress needs to be compared against.
+   */
+  latestChapter?: number;
   volumes?: number;
   episodes?: number;
   seasons?: SeasonInfo[];

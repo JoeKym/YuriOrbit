@@ -118,6 +118,9 @@ interface MDMangaAttributes {
   lastVolume?: string;
   lastChapter?: string;
   latestUploadedChapter?: string;
+  /** Provider-side record timestamps, not the time of our request. */
+  createdAt?: string;
+  updatedAt?: string;
   /** Cross-catalogue URLs MangaDex knows for this work (MAL, AniList, official). */
   links?: Record<string, string>;
 }
@@ -227,6 +230,13 @@ function getCoverUrl(relationships: MDRelationship[], mangaId: string): string |
   return `${MANGADEX_COVERS_BASE}/${mangaId}/${fileName}.512.jpg`;
 }
 
+/** "41.5" → 41.5; blank, "none" or unparseable → undefined. */
+function parseChapterNumber(value?: string | null): number | undefined {
+  if (!value) return undefined;
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+}
+
 function normalizeMangaDex(m: MDManga): ContentTitle {
   const attrs = m.attributes;
   const title = getBestText(attrs.title);
@@ -248,6 +258,15 @@ function normalizeMangaDex(m: MDManga): ContentTitle {
   }));
 
   const glClassification = classifyGL({ genres, tags, description, title, altTitles });
+
+  // `lastChapter` is the furthest chapter MangaDex hosts, `latestUploadedChapter`
+  // the newest upload — either way it is the number a reader's saved progress has
+  // to be compared against, and until now it was discarded.
+  // `latestUploadedChapter` is a chapter id, not a number; only finished works
+  // carry a usable `lastChapter`, so ongoing titles resolve it on demand in
+  // `mangadexGetChapterProgress`.
+  const lastChapter = parseChapterNumber(attrs.lastChapter);
+  const latestChapter = lastChapter;
 
   // Author/artist names are only present when the request asked for them.
   const creators = m.relationships
@@ -278,6 +297,8 @@ function normalizeMangaDex(m: MDManga): ContentTitle {
     maturityRating: mapMDMaturity(attrs.contentRating),
     status: mapMDStatusInternal(attrs.status),
     releaseYear: attrs.year,
+    chapters: lastChapter,
+    latestChapter,
     externalLinks: [
       { url: `https://mangadex.org/title/${m.id}`, site: 'MangaDex', type: 'METADATA' },
       ...providerLinks,
@@ -285,7 +306,7 @@ function normalizeMangaDex(m: MDManga): ContentTitle {
     relations: [],
     glClassification,
     sourceUrl: `https://mangadex.org/title/${m.id}`,
-    updatedAt: new Date().toISOString(),
+    updatedAt: attrs.updatedAt,
   };
 }
 
@@ -399,8 +420,7 @@ export async function mangadexGetPopular(perPage = 24): Promise<ContentTitle[]> 
   }
 }
 
-/** Get a MangaDex title by its UUID. */
-export async function mangadexGetById(id: string): Promise<ContentTitle | null> {
+/** Get a MangaDex title by its UUID. */export async function mangadexGetById(id: string): Promise<ContentTitle | null> {
   const mdId = id.replace('MANGADEX-', '');
   try {
     const resp = await mdFetch<{ result: string; data: MDManga }>(`/manga/${mdId}`, {
@@ -410,6 +430,83 @@ export async function mangadexGetById(id: string): Promise<ContentTitle | null> 
   } catch {
     return null;
   }
+}
+
+/** How far a saved title has got upstream. */
+export interface MangaDexChapterProgress {
+  /** Newest chapter MangaDex currently hosts. */
+  latestChapter?: number;
+  /** Publication date of that chapter, else when MangaDex last touched the record. */
+  updatedAt?: string;
+}
+
+/** Chapter lookups are one request each, so a visit only refreshes this many. */
+const CHAPTER_PROGRESS_LOOKUPS = 40;
+
+/**
+ * Latest chapter numbers for saved titles.
+ *
+ * `lastChapter` on the manga record is only filled in for finished works —
+ * ongoing titles leave it blank and expose nothing but a chapter id — so the
+ * second phase asks `/chapter` for the newest chapter of each title that still
+ * needs a number. Those lookups are one request each and rate limited upstream,
+ * so they are capped per visit and cached by the caller.
+ */
+export async function mangadexGetChapterProgress(
+  ids: string[]
+): Promise<Map<string, MangaDexChapterProgress>> {
+  const progress = new Map<string, MangaDexChapterProgress>();
+  const unique = Array.from(
+    new Set(ids.map((id) => id.replace('MANGADEX-', '').trim()).filter(Boolean))
+  );
+  if (unique.length === 0) return progress;
+
+  for (let offset = 0; offset < unique.length; offset += 100) {
+    const batch = unique.slice(offset, offset + 100);
+    try {
+      const resp = await mdFetch<MDListResponse<MDManga>>('/manga', {
+        'ids[]': batch,
+        limit: '100',
+        // Saved titles keep their ratings; omitting one here would silently drop
+        // the entry from the response and hide its update.
+        'contentRating[]': ['safe', 'suggestive', 'erotica', 'pornographic'],
+      });
+
+      for (const manga of resp.data) {
+        progress.set(manga.id, {
+          latestChapter: parseChapterNumber(manga.attributes.lastChapter),
+          updatedAt: manga.attributes.updatedAt,
+        });
+      }
+    } catch {
+      // Leave this batch out of the result so the next visit retries it.
+    }
+  }
+
+  const unknown = unique
+    .filter((id) => progress.get(id)?.latestChapter === undefined)
+    .slice(0, CHAPTER_PROGRESS_LOOKUPS);
+
+  for (const mangaId of unknown) {
+    try {
+      const resp = await mdFetch<MDListResponse<MDChapter>>('/chapter', {
+        manga: mangaId,
+        'order[chapter]': 'desc',
+        limit: '1',
+        'contentRating[]': ['safe', 'suggestive', 'erotica', 'pornographic'],
+      });
+      const newest = resp.data[0];
+      if (!newest) continue;
+      progress.set(mangaId, {
+        latestChapter: parseChapterNumber(newest.attributes.chapter),
+        updatedAt: newest.attributes.publishAt ?? progress.get(mangaId)?.updatedAt,
+      });
+    } catch {
+      // Keep whatever phase one found.
+    }
+  }
+
+  return progress;
 }
 
 /** Fetch the chapter list for a MangaDex manga ID. */
