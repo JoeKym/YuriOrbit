@@ -9,6 +9,7 @@
 import { useEffect, useState } from 'react';
 
 const STORAGE_KEY = 'yuriorbit:chapter-update-prefs';
+const SYNCED_KEY = 'yuriorbit:chapter-update-prefs:synced';
 const CHANGE_EVENT = 'yuriorbit:chapter-update-prefs-changed';
 
 export interface ChapterUpdatePrefs {
@@ -49,6 +50,42 @@ export function writeChapterUpdatePrefs(next: ChapterUpdatePrefs): void {
     window.dispatchEvent(new Event(CHANGE_EVENT));
   } catch {
     // Storage blocked: the setting simply does not stick.
+  }
+}
+
+/**
+ * Whether this browser has preferences of its own, i.e. someone moved a switch
+ * here. A guest who configured the library should not have those choices wiped by
+ * the account defaults the first time they sign in.
+ */
+export function hasLocalChapterUpdatePrefs(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Whether this browser has already reconciled its preferences with the account.
+ * Until it has, the first sign-in pushes local values up rather than pulling the
+ * account's down.
+ */
+export function wasChapterUpdatePrefsSynced(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(SYNCED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function markChapterUpdatePrefsSynced(): void {
+  try {
+    window.localStorage.setItem(SYNCED_KEY, '1');
+  } catch {
+    // Storage blocked: the sync simply runs again on the next visit.
   }
 }
 

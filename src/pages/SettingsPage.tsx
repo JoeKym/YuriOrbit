@@ -23,7 +23,7 @@ import {
 import { useLibrary } from '@/hooks/useLibrary';
 import { useMaturity } from '@/hooks/useMaturity';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { fetchMyProfile, saveWatchRegion } from '@/lib/profiles';
+import { fetchMyProfile, saveChapterUpdatePrefs, saveWatchRegion } from '@/lib/profiles';
 import {
   REGION_OPTIONS,
   readStoredWatchRegion,
@@ -41,7 +41,7 @@ import { usePageMeta } from '@/hooks/usePageMeta';
 import { cn } from '@/lib/utils/format';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Tabs, tabPanelProps } from '@/components/ui';
-import { useChapterUpdatePrefs } from '@/lib/content/chapter-update-prefs';
+import { useChapterUpdatePrefs, type ChapterUpdatePrefs } from '@/lib/content/chapter-update-prefs';
 import { clearChapterProgressCache } from '@/lib/content/chapter-updates';
 
 const SETTINGS_TABS = [
@@ -170,6 +170,15 @@ export function SettingsPage() {
       cancelled = true;
     };
   }, [isAuthenticated, user?.id]);
+
+  const handleChapterPrefsChange = (patch: Partial<ChapterUpdatePrefs>) => {
+    updateChapterPrefs(patch);
+
+    if (!isAuthenticated || !user?.id) return;
+    saveChapterUpdatePrefs(user.id, { ...chapterPrefs, ...patch }).then((result) => {
+      if (result.error) showFeedback(result.error, 'error');
+    });
+  };
 
   const handleThemeChange = (id: ThemeId) => {
     setTheme(id);
@@ -575,6 +584,9 @@ export function SettingsPage() {
             <p className="mb-4 text-xs text-ink-400">
               What the library&rsquo;s &ldquo;New chapters&rdquo; badge tracks. Only manga, manhwa, manhua and
               webtoons have numbered releases to compare against.
+              {isAuthenticated
+                ? ' Synced to your profile.'
+                : ' Saved in this browser until you sign in.'}
             </p>
 
             <div className="space-y-3">
@@ -582,7 +594,7 @@ export function SettingsPage() {
                 <input
                   type="checkbox"
                   checked={chapterPrefs.showBadges}
-                  onChange={(e) => updateChapterPrefs({ showBadges: e.target.checked })}
+                  onChange={(e) => handleChapterPrefsChange({ showBadges: e.target.checked })}
                   className="mt-0.5 h-4 w-4 rounded border-ink-600 bg-ink-800 text-rose-500 focus:ring-rose-500"
                 />
                 <span>
@@ -597,7 +609,7 @@ export function SettingsPage() {
                 <input
                   type="checkbox"
                   checked={chapterPrefs.onlyReading}
-                  onChange={(e) => updateChapterPrefs({ onlyReading: e.target.checked })}
+                  onChange={(e) => handleChapterPrefsChange({ onlyReading: e.target.checked })}
                   className="mt-0.5 h-4 w-4 rounded border-ink-600 bg-ink-800 text-rose-500 focus:ring-rose-500"
                 />
                 <span>

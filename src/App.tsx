@@ -30,8 +30,17 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 import { AdminPage } from '@/pages/AdminPage';
 import { AuthPage } from '@/pages/AuthPage';
 import { ProfilePage } from '@/pages/ProfilePage';
-import { AuthProvider } from '@/lib/auth/AuthContext';
+import { AuthProvider, useAuth } from '@/lib/auth/AuthContext';
 import { useLibrary } from '@/hooks/useLibrary';
+import { fetchChapterUpdatePrefs, saveChapterUpdatePrefs } from '@/lib/profiles';
+import {
+  hasLocalChapterUpdatePrefs,
+  markChapterUpdatePrefsSynced,
+  readChapterUpdatePrefs,
+  wasChapterUpdatePrefsSynced,
+  writeChapterUpdatePrefs,
+} from '@/lib/content/chapter-update-prefs';
+import { useEffect } from 'react';
 
 /**
  * Runs the provider-reference upgrade once per signed-in browser session,
@@ -42,10 +51,53 @@ function LibraryReferenceBackfill() {
   return null;
 }
 
+/**
+ * Reconciles the library's chapter-update switches with the account once per
+ * sign-in. The first sync on a browser pushes the choices already made here; later
+ * sign-ins take the account's copy, which is why the switches follow a reader
+ * across devices.
+ */
+function ChapterPrefsSync() {
+  const { user } = useAuth();
+  const userId = user?.id;
+
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+
+    if (!wasChapterUpdatePrefsSynced() && hasLocalChapterUpdatePrefs()) {
+      saveChapterUpdatePrefs(userId, readChapterUpdatePrefs())
+        .then((result) => {
+          if (cancelled || result.error || result.needsSetup) return;
+          markChapterUpdatePrefsSynced();
+        })
+        .catch(() => undefined);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    fetchChapterUpdatePrefs(userId)
+      .then((remote) => {
+        if (cancelled || !remote) return;
+        writeChapterUpdatePrefs(remote);
+        markChapterUpdatePrefsSynced();
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  return null;
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <LibraryReferenceBackfill />
+      <ChapterPrefsSync />
       <BrowserRouter>
         <ScrollToTop />
         <TrafficTracker />
