@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Heart, BookOpen, Play, Share2, Flag, ExternalLink, Star,
   ChevronLeft, Calendar, Globe, Layers, Hash, TrendingUp, Users,
-  CheckCircle, Loader2
+  CheckCircle, Loader2, BookMarked
 } from 'lucide-react';
 import type { ContentTitle, LibraryStatus } from '@/types/content';
 import { CONTENT_TYPE_LABELS, LIBRARY_STATUS_LABELS } from '@/types/content';
@@ -18,6 +18,8 @@ import { MATURITY_LABELS } from '@/types/content';
 import { submitFeedback } from '@/lib/feedback';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { useContentModeration } from '@/hooks/useContentModeration';
+import { countNewChapters } from '@/lib/content/chapter-updates';
+import { mangadexFindMangaId, mangadexGetChapterProgress } from '@/lib/providers/mangadex';
 import { ContentUnavailable } from '@/components/site/ContentUnavailable';
 import { RestrictedNotice } from '@/components/site/RestrictedNotice';
 import { StreamingProviders } from '@/components/site/StreamingProviders';
@@ -84,6 +86,43 @@ export function TitleDetailPage() {
 
   const isSaved = id ? isInLibrary(id) : false;
   const entry = id ? getEntry(id) : undefined;
+
+  // Only MangaDex tracks numbered chapter releases, and only for a title this
+  // browser has saved. Canonical catalogue ids keep the dominant upstream
+  // record (usually AniList), so a saved entry rarely carries the MangaDex uuid
+  // itself — resolve it the same way the reader does when it is missing.
+  const savedProvider = entry?.provider;
+  const savedProviderId = entry?.providerId;
+  const titleName = title?.title;
+  const isReadableType = title
+    ? ['MANGA', 'MANHWA', 'MANHUA', 'WEBTOON'].includes(title.contentType)
+    : false;
+  const [latestChapter, setLatestChapter] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    setLatestChapter(undefined);
+    if (!isSaved || !titleName || !isReadableType) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const mangaId =
+          savedProvider === 'MANGADEX' && savedProviderId
+            ? savedProviderId
+            : await mangadexFindMangaId(titleName, title?.altTitles);
+        if (!mangaId || cancelled) return;
+        const progress = await mangadexGetChapterProgress([mangaId]);
+        if (cancelled) return;
+        setLatestChapter(progress.get(mangaId)?.latestChapter);
+      } catch {
+        // A provider hiccup leaves the page without a chapter count, not broken.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSaved, titleName, isReadableType, savedProvider, savedProviderId, title?.altTitles]);
+
+  const newChapters = countNewChapters(entry?.progress, latestChapter);
 
   if (loading) {
     return (
@@ -271,7 +310,20 @@ export function TitleDetailPage() {
               </div>
             )}
 
-            <div className="mt-6 flex flex-wrap gap-2">
+            {newChapters > 0 && (
+              <div className="mt-6 flex items-start gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+                <BookMarked className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  {newChapters} new chapter{newChapters === 1 ? '' : 's'} since you stopped at Ch.{' '}
+                  {entry?.progress}
+                  {latestChapter !== undefined && (
+                    <span className="text-rose-300/70"> · latest is Ch. {latestChapter}</span>
+                  )}
+                </span>
+              </div>
+            )}
+
+            <div className={cn('flex flex-wrap gap-2', newChapters > 0 ? 'mt-3' : 'mt-6')}>
               {isReadable && (
                 <Link
                   to={entry?.progress ? `/read/${title.id}?ch=${encodeURIComponent(String(entry.progress))}` : `/read/${title.id}`}
@@ -364,7 +416,15 @@ export function TitleDetailPage() {
                   onChange={(e) => updateProgress(title.id, parseInt(e.target.value) || 0)}
                   className="w-20 rounded-lg border border-ink-700 bg-ink-850 px-2 py-1 text-sm text-ink-50 focus:border-rose-500/50 focus:outline-none"
                 />
-                <span className="text-xs text-ink-400">/ {title.chapters || title.episodes || '—'}</span>
+                <span className="text-xs text-ink-400">
+                  / {latestChapter ?? title.chapters ?? title.episodes ?? '—'}
+                  {latestChapter !== undefined && (
+                    <span className="ml-2 text-rose-300">
+                      latest Ch. {latestChapter}
+                      {newChapters > 0 ? ` · ${newChapters} new` : ''}
+                    </span>
+                  )}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <label className="text-xs text-ink-400">Rating:</label>
