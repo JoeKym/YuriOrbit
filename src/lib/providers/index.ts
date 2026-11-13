@@ -36,6 +36,7 @@ import { canonicalizeTitle, canonicalizeTitles } from '@/lib/catalog/canonical';
 import { findRegisteredBySlug, getRegisteredTitle, registerTitles } from '@/lib/catalog/registry';
 import { fetchContentModeration, filterModeratedTitles } from '@/lib/moderation/contentModeration';
 import { isLegacyProviderId, slugToQuery, slugifyTitle, titleKey } from '@/lib/catalog/identity';
+import { isAnimatedTitle } from '@/lib/catalog/animated';
 import { getSavedRef, rememberSavedRef } from '@/lib/content/saved-refs';
 import { canonicalSlugFor, rememberSlugAlias } from '@/lib/catalog/slug-redirects';
 
@@ -195,7 +196,11 @@ export async function getGLByContentType(
     results = await anilistByType(contentType, fetchSize);
   }
 
-  const final = await withoutBlocked(visible(canonicalizeTitles(results.filter(isGL))));
+  const screened =
+    contentType === 'TV' || contentType === 'DRAMA'
+      ? results.filter((title) => !isAnimatedTitle(title))
+      : results;
+  const final = await withoutBlocked(visible(canonicalizeTitles(screened.filter(isGL))));
   if (final.length > 0) setCached(cacheKey, final);
   return final.slice(0, perPage);
 }
@@ -229,6 +234,10 @@ function matchesContentType(
   title: ContentTitle,
   wanted: ContentTitle['contentType']
 ): boolean {
+  // The dramas catalogue is live action. Anime has its own catalogue, and
+  // AniList TV rows were filling the drama page with series nobody meant to see
+  // there.
+  if ((wanted === 'TV' || wanted === 'DRAMA') && isAnimatedTitle(title)) return false;
   if (title.contentType === wanted) return true;
   // TMDB does not separate live-action drama from TV series, so the two labels
   // are interchangeable for screen formats.

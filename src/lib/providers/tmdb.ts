@@ -254,7 +254,6 @@ const CURATED_ASIAN_GL_QUERIES = [
   'Blank',
   '23.5',
   'Chaser Game W',
-  'AYAKA is in LOVE with HIROKO',
   'Couple of Mirrors',
   'She Makes My Heart Flutter',
   'Fragrance of the First Flower',
@@ -297,6 +296,12 @@ function normalizeTMDB(
   if (!isTV && m.original_title && m.original_title !== title) altTitles.push(m.original_title);
 
   const genres = (m.genres || []).map((g) => g.name);
+  // List endpoints return numeric genre ids rather than named genres, so anime
+  // arrived looking like plain live-action drama. TMDB uses 16 for Animation.
+  const ANIMATION_GENRE_ID = 16;
+  if (m.genre_ids?.includes(ANIMATION_GENRE_ID) && !genres.some((g) => /^animation$/i.test(g))) {
+    genres.push('Animation');
+  }
   const description = m.overview;
   const contentType = isTV ? 'TV' : 'MOVIE';
   const country = (m.origin_country?.[0] || m.original_language || '').toUpperCase();
