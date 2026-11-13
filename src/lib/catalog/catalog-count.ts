@@ -1,15 +1,27 @@
 /**
- * The headline "titles catalogued" number, cached for a day per browser.
+ * The headline "titles catalogued" figure, cached for a day per browser.
+ *
+ * It is the sum of each format's *exact* provider count, so `count` is only
+ * meaningful together with `exactFormats` / `flooredFormats`: a format whose
+ * provider stops at its own ceiling contributes nothing rather than an estimate.
  *
  * Provider queries are built from the visitor's maturity preference, so the
  * number is only valid for the level it was measured at — callers that change
  * that preference must call `clearCatalogCount()`.
  */
-const STORAGE_KEY = 'yuriorbit:catalog-title-count:v1';
+const STORAGE_KEY = 'yuriorbit:catalog-title-count:v2';
 const TTL_MS = 24 * 60 * 60 * 1000;
 
-interface StoredCount {
+export interface CatalogCount {
+  /** Sum of exact per-format counts. */
   count: number;
+  /** How many formats contributed an exact figure. */
+  exactFormats: number;
+  /** How many formats were skipped because the source caps its total. */
+  flooredFormats: number;
+}
+
+interface StoredCount extends CatalogCount {
   savedAt: number;
 }
 
@@ -26,13 +38,20 @@ function readStore(): StoredCount | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<StoredCount>;
     const count = Number(parsed?.count);
+    const exactFormats = Number(parsed?.exactFormats);
+    const flooredFormats = Number(parsed?.flooredFormats);
     const savedAt = Number(parsed?.savedAt);
     if (!Number.isFinite(count) || count <= 0 || !Number.isFinite(savedAt)) return null;
     if (!isFresh(savedAt)) {
       window.localStorage.removeItem(STORAGE_KEY);
       return null;
     }
-    return { count, savedAt };
+    return {
+      count,
+      exactFormats: Number.isFinite(exactFormats) ? exactFormats : 0,
+      flooredFormats: Number.isFinite(flooredFormats) ? flooredFormats : 0,
+      savedAt,
+    };
   } catch {
     // Private mode, blocked storage or a legacy plain-number value: re-query.
     return null;
@@ -40,7 +59,7 @@ function readStore(): StoredCount | null {
 }
 
 /** Cached count if one exists and is still within the daily window. */
-export function readCachedCatalogCount(): number | null {
+export function readCachedCatalogCount(): CatalogCount | null {
   if (!restored) {
     cached = readStore();
     restored = true;
@@ -50,11 +69,11 @@ export function readCachedCatalogCount(): number | null {
     clearCatalogCount();
     return null;
   }
-  return cached.count;
+  return { count: cached.count, exactFormats: cached.exactFormats, flooredFormats: cached.flooredFormats };
 }
 
-export function storeCatalogCount(count: number): void {
-  cached = { count, savedAt: Date.now() };
+export function storeCatalogCount(value: CatalogCount): void {
+  cached = { ...value, savedAt: Date.now() };
   restored = true;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cached));

@@ -103,7 +103,7 @@ export function Footer() {
 
         <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-ink-800 pt-6 sm:flex-row">
           <p className="text-xs text-ink-400">
-            Powered by AniList, Jikan, MangaDex & TMDB. YuriOrbit is a discovery platform and does not host copyrighted media.
+            Powered by AniList, MangaDex & TMDB. YuriOrbit is a discovery platform and does not host copyrighted media.
           </p>
           <p className="text-xs text-ink-400">
             © {new Date().getFullYear()} YuriOrbit. Built with care by{' '}

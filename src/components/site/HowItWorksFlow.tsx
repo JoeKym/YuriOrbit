@@ -29,7 +29,10 @@ interface NodeDef {
 interface EdgeDef {
   id: string;
   d: string;
-  path: PathId;
+  /** Omitted for edges that belong to both branches. */
+  path?: PathId;
+  /** Answers travel back along the return lane rather than the request lines. */
+  direction?: 'response';
 }
 
 interface Step {
@@ -65,6 +68,12 @@ const EDGES: EdgeDef[] = [
   { id: 'e5', d: 'M674 294 V330 H460 V338', path: 'account' },
   { id: 'e6', d: 'M440 404 V430 H206 V444', path: 'catalogue' },
   { id: 'e7', d: 'M440 404 V430 H674 V444', path: 'account' },
+  // The return lane: every request is answered, and the answer travels back up
+  // the right-hand side to the browser that asked for it.
+  { id: 'r1', d: 'M206 510 V520 H838', path: 'catalogue', direction: 'response' },
+  { id: 'r2', d: 'M674 510 V520 H838', path: 'account', direction: 'response' },
+  { id: 'r3', d: 'M838 520 V156 H540', direction: 'response' },
+  { id: 'r4', d: 'M452 158 V88', direction: 'response' },
 ];
 
 const STEPS: Step[] = [
@@ -131,6 +140,22 @@ const STEPS: Step[] = [
     nodes: ['functions', 'supabase'],
     edges: ['e7'],
     path: 'account',
+  },
+  {
+    id: 'response',
+    title: 'The answer comes back',
+    detail: 'Every request is answered. The providers reply to the edge layer, which normalises, filters and caches the payload before it travels any further.',
+    nodes: ['upstream', 'supabase', 'functions'],
+    edges: ['e6', 'e7', 'r1', 'r2'],
+    path: 'shared',
+  },
+  {
+    id: 'render',
+    title: 'Back on screen — the loop closes',
+    detail: 'React renders what came back and the visitor sees it. The next scroll, search or sign-in starts the same round trip again.',
+    nodes: ['functions', 'frontend', 'visitor'],
+    edges: ['r3', 'r4'],
+    path: 'shared',
   },
 ];
 
@@ -409,7 +434,7 @@ export function HowItWorksFlow() {
       {/* Desktop: the branching graph. */}
       <div className="mt-3 hidden rounded-xl border border-ink-800 bg-ink-950/50 p-3 lg:block">
         <svg
-          viewBox="0 0 880 524"
+          viewBox="0 0 880 556"
           className="h-auto w-full"
           role="group"
           aria-label="Request flow: a visitor reaches the React frontend, which branches into a catalogue path and an account path; both pass through Cloudflare Functions to the upstream APIs and Supabase."
@@ -425,6 +450,10 @@ export function HowItWorksFlow() {
             <marker id="arrowActive" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
               <path d="M0 0 10 5 0 10z" fill="rgb(251 113 133)" />
             </marker>
+            <linearGradient id="returnGrad" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0%" stopColor="rgb(167 139 250)" />
+              <stop offset="100%" stopColor="rgb(244 63 94)" />
+            </linearGradient>
           </defs>
 
           {EDGES.map((edge) => {
@@ -440,7 +469,19 @@ export function HowItWorksFlow() {
                   id={`edge-${edge.id}`}
                   d={edge.d}
                   fill="none"
-                  stroke={broken ? 'rgb(244 63 94)' : isActive ? 'url(#flowGrad)' : isVisited ? 'rgb(82 82 91)' : 'rgb(39 39 42)'}
+                  stroke={
+                    broken
+                      ? 'rgb(244 63 94)'
+                      : edge.direction === 'response'
+                        ? isActive || isVisited
+                          ? 'url(#returnGrad)'
+                          : 'rgb(63 63 70)'
+                        : isActive
+                          ? 'url(#flowGrad)'
+                          : isVisited
+                            ? 'rgb(82 82 91)'
+                            : 'rgb(39 39 42)'
+                  }
                   strokeWidth={isActive ? 2.4 : 1.8}
                   strokeDasharray={broken ? BROKEN_DASH : undefined}
                   strokeLinecap="round"
@@ -453,7 +494,7 @@ export function HowItWorksFlow() {
                   <path
                     d={edge.d}
                     fill="none"
-                    stroke="url(#flowGrad)"
+                    stroke={edge.direction === 'response' ? 'url(#returnGrad)' : 'url(#flowGrad)'}
                     strokeWidth="2"
                     strokeDasharray={EDGE_DASH}
                     strokeLinecap="round"
@@ -501,6 +542,16 @@ export function HowItWorksFlow() {
               </text>
             </>
           )}
+
+          <text
+            x="828"
+            y="330"
+            transform="rotate(-90 828 330)"
+            textAnchor="middle"
+            className="fill-ink-600 text-[10px] uppercase tracking-[0.18em]"
+          >
+            response
+          </text>
 
           {NODES.map((node) => {
             const visible = isVisible(node.path);
@@ -631,6 +682,26 @@ export function HowItWorksFlow() {
                 </div>
               ))}
           </div>
+
+          {/* The answer comes back to the browser — the loop closes. */}
+          <div className="mt-3 rounded-lg border border-ink-800 bg-ink-900/40 p-2.5">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-500">
+              Response
+            </p>
+
+            {['frontend', 'visitor'].map((id, index) => {
+              const node = NODE_BY_ID.get(id);
+              if (!node) return null;
+              const edgeId = index === 0 ? 'r3' : 'r4';
+              const lit = activeEdges.has(edgeId) || visited.edges.has(edgeId);
+              return (
+                <div key={`response-${id}`} className="flex flex-col">
+                  <MobileNode node={node} state={nodeState(node.id)} />
+                  <MobileConnector active={lit} label={index === 0 ? 'answer' : undefined} />
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -666,7 +737,7 @@ export function HowItWorksFlow() {
         <p className="text-[11px] text-ink-500">
           {outage
             ? 'Outage view: the catalogue path shows a broken link to the upstream APIs.'
-            : 'A simplified view — admin tooling, moderation and internal services are left out on purpose.'}
+            : 'Requests travel the middle of the graph; answers come back along the return lane.'}
         </p>
       </div>
     </section>

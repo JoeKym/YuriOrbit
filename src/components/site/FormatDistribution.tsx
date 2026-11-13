@@ -114,7 +114,10 @@ export function FormatDistribution({ className }: { className?: string }) {
                     {share !== null && <span className="ml-1 text-ink-500">{share}%</span>}
                   </>
                 ) : floor !== null ? (
-                  <span className="font-semibold text-ink-300">{floor.toLocaleString()}+</span>
+                  <>
+                    <span className="font-semibold text-ink-300">{floor.toLocaleString()}+</span>
+                    <span className="ml-1 text-ink-600">cap</span>
+                  </>
                 ) : loading ? (
                   <span className="text-ink-600">counting…</span>
                 ) : (
@@ -130,7 +133,7 @@ export function FormatDistribution({ className }: { className?: string }) {
         {view.loading
           ? 'Counts load one format at a time so the providers are not hammered.'
           : view.floorFormats > 0
-            ? `A "+" bar is a floor, not a total: that upstream source stops counting at its ceiling, so the real figure is at least that. Percentages use exact counts only${view.unavailable > 0 ? `, and ${view.unavailable} format${view.unavailable === 1 ? '' : 's'} have no usable count` : ''}.`
+            ? `AniList stops counting at 5,000, so a "+" bar is a floor rather than a total — the real figure is at least that, and there is no way to get the exact one from the source. Percentages use exact counts only${view.unavailable > 0 ? `, and ${view.unavailable} format${view.unavailable === 1 ? '' : 's'} have no usable count` : ''}.`
             : 'Every bar is a live provider total, not a hard-coded figure.'}
       </p>
     </section>
