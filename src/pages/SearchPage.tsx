@@ -9,6 +9,8 @@ import { FORMAT_FILTERS, liveSearch, matchesFormat, type FormatFilter, type Live
 import { MATURITY_LABELS } from '@/types/content';
 import { cn } from '@/lib/utils/format';
 import { usePageMeta } from '@/hooks/usePageMeta';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Chip, EmptyState } from '@/components/ui';
 
 const FORMAT_KEYS = FORMAT_FILTERS.map((filter) => filter.key);
 
@@ -116,13 +118,19 @@ export function SearchPage() {
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-8 md:px-6">
-      <h1 className="mb-1 font-display text-3xl font-semibold text-ink-50">
-        {query ? `Results for “${query}”` : 'Search'}
-      </h1>
-      <p className="mb-4 text-sm text-ink-400">
-        Search by title, alternate title, creator, or an exact id —{' '}
-        <span className="text-ink-300">ANILIST-30013</span>, <span className="text-ink-300">TMDB-movie-12345</span>, or a YuriOrbit slug.
-      </p>
+      <PageHeader
+        eyebrow="Search the catalogue"
+        title={query ? 'Results for' : 'Search'}
+        accent={query ? `“${query}”` : undefined}
+        className="mb-4"
+        description={
+          <>
+            Search by title, alternate title, creator, or an exact id —{' '}
+            <span className="text-ink-300">ANILIST-30013</span>,{' '}
+            <span className="text-ink-300">TMDB-movie-12345</span>, or a YuriOrbit slug.
+          </>
+        }
+      />
 
       <div className="relative mb-4">
         <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
@@ -143,15 +151,14 @@ export function SearchPage() {
         {FORMAT_FILTERS.map((filter) => {
           const count = formatCounts.get(filter.key) ?? 0;
           return (
-            <button
+            <Chip
               key={filter.key}
+              selected={format === filter.key}
               onClick={() => updateFormat(filter.key)}
-              className={cn('chip', format === filter.key && 'chip-active')}
-              aria-pressed={format === filter.key}
+              count={query && count > 0 ? count : undefined}
             >
               {filter.label}
-              {query && count > 0 && <span className="text-[10px] text-ink-400">{count}</span>}
-            </button>
+            </Chip>
           );
         })}
       </div>
@@ -168,13 +175,11 @@ export function SearchPage() {
           {Array.from({ length: 14 }).map((_, i) => <ContentCardSkeleton key={i} />)}
         </div>
       ) : !query || query.trim().length < 2 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Search className="mb-4 h-12 w-12 text-ink-600" />
-          <p className="text-lg font-medium text-ink-200">Start searching</p>
-          <p className="mt-1 max-w-md text-sm text-ink-400">
-            Titles and aliases, creator names, and exact ids all work. Two characters is enough.
-          </p>
-        </div>
+        <EmptyState
+          icon={Search}
+          title="Start searching"
+          description="Titles and aliases, creator names, and exact ids all work. Two characters is enough."
+        />
       ) : result?.error ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <p className="mb-4 text-ink-400">Search failed — the providers did not answer. Please try again.</p>
@@ -190,15 +195,15 @@ export function SearchPage() {
           )}
 
           {hits.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <Search className="mb-4 h-12 w-12 text-ink-600" />
-              <p className="text-lg font-medium text-ink-200">No titles found</p>
-              <p className="mt-1 max-w-md text-sm text-ink-400">
-                {format === 'all'
+            <EmptyState
+              icon={Search}
+              title="No titles found"
+              description={
+                format === 'all'
                   ? 'Try a shorter query, an alternate title, or a creator name.'
-                  : 'Nothing in this format for that query — try “All formats”.'}
-              </p>
-            </div>
+                  : 'Nothing in this format for that query — try “All formats”.'
+              }
+            />
           ) : (
             <>
               <p className="mb-3 text-xs text-ink-400">
