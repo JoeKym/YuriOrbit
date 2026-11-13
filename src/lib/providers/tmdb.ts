@@ -120,6 +120,12 @@ const CORE_GL_KEYWORD_IDS = [
 const ASIAN_GL_COUNTRIES = 'TH|JP|KR|CN|TW';
 
 /**
+ * TMDB occasionally files an anime under Comedy/Drama with no Animation genre
+ * and no "anime" keyword, so the genre check cannot see it.
+ */
+const ANIMATED_TMDB_IDS = new Set(['256384']); // AYAKA is in LOVE with HIROKO
+
+/**
  * Boys' Love keyword IDs. TMDB users cross-tag freely — Khemjira carries both a
  * Girls' Love and a Boys' Love keyword — so BL is excluded in the query itself.
  * BL stays out of the catalogue; this is cheaper and safer than per-title rules.
@@ -303,7 +309,10 @@ function normalizeTMDB(
     genres.push('Animation');
   }
   const description = m.overview;
-  const contentType = isTV ? 'TV' : 'MOVIE';
+  // Animated screen works are their own content type, so live-action pages never
+  // have to reason about which provider a title came from.
+  const isAnimated = genres.some((genre) => /^(animation|anime)$/i.test(genre));
+  const contentType = isAnimated || ANIMATED_TMDB_IDS.has(String(m.id)) ? 'ANIME' : isTV ? 'TV' : 'MOVIE';
   const country = (m.origin_country?.[0] || m.original_language || '').toUpperCase();
 
   const releaseDate = m.release_date || m.first_air_date;

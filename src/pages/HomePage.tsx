@@ -142,7 +142,13 @@ export function HomePage() {
 
         data['popularManga'] = pool.filter((t) => t.contentType === 'MANGA').slice(0, 20);
         data['screen'] = dedupe([
-          ...pool.filter((t) => t.contentType === 'TV' || t.contentType === 'MOVIE' || t.contentType === 'DRAMA'),
+          ...pool.filter(
+            (t) =>
+              t.contentType === 'TV' ||
+              t.contentType === 'MOVIE' ||
+              t.contentType === 'DRAMA' ||
+              t.contentType === 'ANIME'
+          ),
           ...movies,
           ...tv,
         ]).slice(0, 20);

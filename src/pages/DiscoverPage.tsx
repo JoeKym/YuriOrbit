@@ -60,7 +60,8 @@ const MEDIA_CATEGORIES: MediaTypeTab[] = [
   { value: 'MANHUA', label: 'Manhua', icon: BookOpen },
   { value: 'WEBTOON', label: 'Webtoons', icon: BookOpen },
   { value: 'LIGHT_NOVEL', label: 'Light Novels', icon: BookOpen },
-  { value: 'TV', label: 'Anime & TV', icon: Tv },
+  { value: 'ANIME', label: 'Anime', icon: Tv },
+  { value: 'TV', label: 'TV Series', icon: Tv },
   { value: 'MOVIE', label: 'Movies', icon: Film },
   { value: 'DRAMA', label: 'Live-Action', icon: Film },
 ];

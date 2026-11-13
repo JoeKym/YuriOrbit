@@ -8,7 +8,10 @@ export type ContentType =
   | 'BOOK'
   | 'MOVIE'
   | 'DRAMA'
-  | 'TV';
+  | 'TV'
+  /** Animated screen works. Kept separate from MOVIE/TV/DRAMA so live-action
+   *  catalogues never have to guess from the provider. */
+  | 'ANIME';
 
 export type ContentFormat = ContentType;
 
@@ -143,6 +146,8 @@ export interface ContentFilter {
   source?: SourceProvider | 'ALL';
   sort?: 'TITLE' | 'YEAR' | 'SCORE' | 'POPULARITY' | 'NEWEST' | 'TRENDING' | 'UPDATED_AT';
   classification?: GLClassification | 'ALL';
+  /** Narrow the anime catalogue to series/OVA or films. */
+  animeFormat?: 'SERIES' | 'FILM';
 }
 
 export interface PaginatedResult {
@@ -209,6 +214,7 @@ export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
   MOVIE: 'Movie',
   DRAMA: 'Drama',
   TV: 'TV Series',
+  ANIME: 'Anime',
 };
 
 export const CONTENT_TYPE_ROUTES: Record<ContentType, string> = {
@@ -222,6 +228,7 @@ export const CONTENT_TYPE_ROUTES: Record<ContentType, string> = {
   MOVIE: '/movies',
   DRAMA: '/dramas',
   TV: '/dramas',
+  ANIME: '/anime',
 };
 
 export const GENRE_LIST = [

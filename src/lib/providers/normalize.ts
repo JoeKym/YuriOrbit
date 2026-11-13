@@ -68,13 +68,14 @@ function mapContentType(format?: string, country?: string): ContentType {
     case 'MANHUA': return 'MANHUA';
     case 'NOVEL': return 'LIGHT_NOVEL';
     case 'ONE_SHOT': return 'MANGA';
-    case 'MOVIE': return 'MOVIE';
-    case 'TV': return 'TV';
-    case 'TV_SHORT': return 'TV';
-    case 'OVA': return 'TV';
-    case 'ONA': return 'TV';
-    case 'SPECIAL': return 'TV';
-    case 'MUSIC': return 'TV';
+    // Everything AniList screens is animation, whatever its runtime.
+    case 'MOVIE': return 'ANIME';
+    case 'TV': return 'ANIME';
+    case 'TV_SHORT': return 'ANIME';
+    case 'OVA': return 'ANIME';
+    case 'ONA': return 'ANIME';
+    case 'SPECIAL': return 'ANIME';
+    case 'MUSIC': return 'ANIME';
     default:
       if (isKorean) return 'MANHWA';
       if (isChinese) return 'MANHUA';

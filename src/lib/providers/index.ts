@@ -36,7 +36,6 @@ import { canonicalizeTitle, canonicalizeTitles } from '@/lib/catalog/canonical';
 import { findRegisteredBySlug, getRegisteredTitle, registerTitles } from '@/lib/catalog/registry';
 import { fetchContentModeration, filterModeratedTitles } from '@/lib/moderation/contentModeration';
 import { isLegacyProviderId, slugToQuery, slugifyTitle, titleKey } from '@/lib/catalog/identity';
-import { isAnimatedTitle } from '@/lib/catalog/animated';
 import { getSavedRef, rememberSavedRef } from '@/lib/content/saved-refs';
 import { canonicalSlugFor, rememberSlugAlias } from '@/lib/catalog/slug-redirects';
 
@@ -187,20 +186,15 @@ export async function getGLByContentType(
 
   let results: ContentTitle[];
   if (contentType === 'MOVIE') {
-    const tmdbResults = await tmdbGetGLMovies().catch(() => []);
-    results = tmdbResults.length > 0 ? tmdbResults : await anilistByType('MOVIE', fetchSize);
+    results = await tmdbGetGLMovies().catch(() => []);
   } else if (contentType === 'TV' || contentType === 'DRAMA') {
-    const tmdbResults = await tmdbGetGLDramas().catch(() => []);
-    results = tmdbResults.length > 0 ? tmdbResults : await anilistByType('TV', fetchSize);
+    results = await tmdbGetGLDramas().catch(() => []);
   } else {
+    // Anime, comics and novels all come from AniList.
     results = await anilistByType(contentType, fetchSize);
   }
 
-  const screened =
-    contentType === 'TV' || contentType === 'DRAMA'
-      ? results.filter((title) => !isAnimatedTitle(title))
-      : results;
-  const final = await withoutBlocked(visible(canonicalizeTitles(screened.filter(isGL))));
+  const final = await withoutBlocked(visible(canonicalizeTitles(results.filter(isGL))));
   if (final.length > 0) setCached(cacheKey, final);
   return final.slice(0, perPage);
 }
@@ -228,16 +222,13 @@ const ENFORCED_CONTENT_TYPES = new Set<ContentTitle['contentType']>([
   'MOVIE',
   'TV',
   'DRAMA',
+  'ANIME',
 ]);
 
 function matchesContentType(
   title: ContentTitle,
   wanted: ContentTitle['contentType']
 ): boolean {
-  // The dramas catalogue is live action. Anime has its own catalogue, and
-  // AniList TV rows were filling the drama page with series nobody meant to see
-  // there.
-  if ((wanted === 'TV' || wanted === 'DRAMA') && isAnimatedTitle(title)) return false;
   if (title.contentType === wanted) return true;
   // TMDB does not separate live-action drama from TV series, so the two labels
   // are interchangeable for screen formats.
@@ -260,9 +251,11 @@ export async function searchGLTitles(
   const contentType = filter.contentType;
   const isScreen = contentType === 'MOVIE' || contentType === 'TV' || contentType === 'DRAMA';
 
-  // MangaDex only indexes comics, so it stays out of film/series and novel queries.
-  const useMangaDex = !isScreen && contentType !== 'LIGHT_NOVEL';
-  const promises: Promise<PaginatedResult>[] = [anilistSearch(filter, page, perPage)];
+  // AniList serves anime, comics and novels; TMDB serves live-action screens.
+  // Asking the wrong provider for a format is how anime used to reach /dramas.
+  const useAniList = !isScreen;
+  const useMangaDex = useAniList && contentType !== 'LIGHT_NOVEL';
+  const promises: Promise<PaginatedResult>[] = useAniList ? [anilistSearch(filter, page, perPage)] : [];
   if (useMangaDex) {
     promises.push(mangadexSearchGL(filter, page, perPage, onGlDropped));
   }

@@ -270,6 +270,11 @@ async function fetchGLBase(extra: Partial<MediaFilterVars> = {}, sortEnum: strin
 }
 
 export async function searchGLTitles(filter: ContentFilter, page = 1, perPage = 20): Promise<PaginatedResult> {
+  // AniList is an anime and comics database; live-action never comes from here.
+  if (filter.contentType === 'MOVIE' || filter.contentType === 'TV' || filter.contentType === 'DRAMA') {
+    return { items: [], page, perPage, total: 0, hasNextPage: false };
+  }
+
   const sortEnum = SORT_MAP[filter.sort || 'POPULARITY'] || 'POPULARITY_DESC';
   const extra: Partial<MediaFilterVars> = {};
 
@@ -285,12 +290,14 @@ export async function searchGLTitles(filter: ContentFilter, page = 1, perPage = 
       extra.type = 'MANGA';
       extra.countryOfOrigin = 'CN';
       extra.format_in = ['MANGA', 'ONE_SHOT'];
-    } else if (filter.contentType === 'MOVIE') {
+    } else if (filter.contentType === 'ANIME') {
       extra.type = 'ANIME';
-      extra.format_in = ['MOVIE'];
-    } else if (filter.contentType === 'TV' || filter.contentType === 'DRAMA') {
-      extra.type = 'ANIME';
-      extra.format_in = ['TV', 'TV_SHORT', 'OVA', 'ONA'];
+      extra.format_in =
+        filter.animeFormat === 'FILM'
+          ? ['MOVIE']
+          : filter.animeFormat === 'SERIES'
+            ? ['TV', 'TV_SHORT', 'OVA', 'ONA', 'SPECIAL']
+            : undefined;
     } else if (filter.contentType === 'WEBTOON') {
       // AniList has no webtoon format: it indexes them as digital manga.
       extra.type = 'MANGA';
@@ -345,12 +352,12 @@ export async function getGLByContentType(contentType: ContentType, perPage = 30)
     extra.type = 'MANGA';
     extra.countryOfOrigin = 'CN';
     extra.format_in = ['MANGA', 'ONE_SHOT'];
-  } else if (contentType === 'MOVIE') {
+  } else if (contentType === 'ANIME') {
     extra.type = 'ANIME';
-    extra.format_in = ['MOVIE'];
-  } else if (contentType === 'TV') {
-    extra.type = 'ANIME';
-    extra.format_in = ['TV', 'TV_SHORT', 'OVA', 'ONA'];
+    extra.format_in = ['TV', 'TV_SHORT', 'OVA', 'ONA', 'SPECIAL', 'MOVIE'];
+  } else if (contentType === 'MOVIE' || contentType === 'TV' || contentType === 'DRAMA') {
+    // Live-action screens are TMDB's job.
+    return [];
   } else if (contentType === 'LIGHT_NOVEL') {
     extra.type = 'MANGA';
     extra.format_in = ['NOVEL'];

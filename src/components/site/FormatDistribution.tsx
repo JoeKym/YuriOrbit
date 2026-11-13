@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils/format';
  * separates them from manga, so a Webtoon bar would double-count the manga one.
  */
 const CHARTED_FORMATS: ContentType[] = [
+  'ANIME',
   'MANGA',
   'MANHWA',
   'MANHUA',
