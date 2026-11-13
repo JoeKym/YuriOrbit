@@ -72,7 +72,9 @@ function buildHeroDeck(pinned: ContentTitle[], pool: ContentTitle[]): ContentTit
 
 export function HomePage() {
   usePageMeta({
-    title: 'Your World of Girls\' Love',
+    // Brand first, and identical to the static shell's <title>. Google uses the
+    // homepage title to decide the site name; a tagline-only title loses it.
+    title: "YuriOrbit — Your World of Girls' Love",
     description:
       "Discover, track, and enjoy curated Yuri and Girls' Love anime, manga, manhwa, webtoons, light novels, and live-action dramas from around the globe.",
     path: '/',
