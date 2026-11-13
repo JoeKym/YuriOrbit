@@ -71,7 +71,14 @@ export function usePageMeta(meta: PageMeta) {
           : title;
 
     const origin = siteOrigin();
-    const url = toAbsoluteUrl(path, origin);
+    // Self-referencing: the URL the reader is actually on wins, so a shell served
+    // at `/discover/` and the hydrated page agree on one canonical. `path` is the
+    // fallback for the rare render without a location.
+    const currentPath =
+      typeof window !== 'undefined' && window.location?.pathname
+        ? window.location.pathname
+        : path;
+    const url = toAbsoluteUrl(currentPath, origin);
     const imageUrl = toAbsoluteUrl(image, origin) || toAbsoluteUrl(DEFAULT_IMAGE, origin)!;
 
     document.title = fullTitle;
