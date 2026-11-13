@@ -51,7 +51,7 @@ export function NotFoundPage() {
         </div>
 
         <div className="mx-auto mt-8 max-w-md rounded-xl border border-ink-800 bg-ink-900/50 p-4 text-left">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">Try these</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Try these</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {[
               ['/trending', 'Trending'],

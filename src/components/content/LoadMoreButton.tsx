@@ -24,7 +24,7 @@ export function LoadMoreButton({ onClick, loading, hasMore, count, label = 'titl
           {loading ? 'Loading…' : 'Load more'}
         </button>
       ) : (
-        <p className="text-xs text-ink-500">
+        <p className="text-xs text-ink-400">
           You've reached the end — {count} {label}
           {count === 1 ? '' : 's'} shown.
         </p>

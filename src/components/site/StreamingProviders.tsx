@@ -145,7 +145,7 @@ export function StreamingProviders({
       </div>
 
       {loading && (
-        <p className="text-xs text-ink-500">Checking availability in {regionName(region)}…</p>
+        <p className="text-xs text-ink-400">Checking availability in {regionName(region)}…</p>
       )}
 
       {!loading && data && (
@@ -177,7 +177,7 @@ export function StreamingProviders({
               </a>
             ))}
           </div>
-          <p className="mt-2 text-[11px] text-ink-500">
+          <p className="mt-2 text-[11px] text-ink-400">
             Availability in {data.region}. Streaming data provided by{' '}
             {data.link ? (
               <a

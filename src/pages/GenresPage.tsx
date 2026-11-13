@@ -235,7 +235,7 @@ export function GenresPage() {
             note="Filters narrow the popular titles loaded on this page."
           >
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-500" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-400" />
               <input
                 value={searchInput}
                 onChange={(e) => {
@@ -326,7 +326,7 @@ export function GenresPage() {
                 </>
               )}
             </p>
-            <p className="text-[11px] uppercase tracking-[0.14em] text-ink-500">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-ink-400">
               {hasActiveFilters ? 'Filtered results' : 'Featured genres'}
             </p>
           </div>

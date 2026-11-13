@@ -304,7 +304,7 @@ export function Hero({ titles, loading }: { titles: ContentTitle[]; loading?: bo
 
       {/* Current level, so the filter is never a surprise */}
       <div className="relative mx-auto max-w-[1600px] px-4 pb-6 md:px-6 md:pb-7">
-        <p className="text-[10px] uppercase tracking-wider text-ink-500">
+        <p className="text-[10px] uppercase tracking-wider text-ink-400">
           Content filter: {level.toLowerCase()} · change it in{' '}
           <Link to="/settings" className="text-ink-400 underline decoration-dotted hover:text-ink-200">
             settings

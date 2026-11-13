@@ -40,7 +40,7 @@ function Tile({
       </span>
       <p className="mt-3 font-display text-3xl font-semibold leading-none text-ink-50">{value}</p>
       <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-400">{label}</p>
-      <p className="mt-1 text-[11px] leading-relaxed text-ink-500">{hint}</p>
+      <p className="mt-1 text-[11px] leading-relaxed text-ink-400">{hint}</p>
     </div>
   );
 }

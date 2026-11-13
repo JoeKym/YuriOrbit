@@ -124,7 +124,7 @@
     --color-lavender-50: 248 246 254;
   }
 
-  [data-theme='noir'] {
+  [data-theme='noir-rose'] {
     --color-ink-950: 6 5 8;
     --color-ink-900: 11 10 15;
     --color-ink-850: 17 15 22;
@@ -228,6 +228,20 @@
   ::selection {
     @apply bg-rose-500/30 text-rose-100;
   }
+  /* Keyboard focus must be visible on every interactive element. Form fields
+     already show their own focus ring, so they are left out to avoid doubling. */
+  :where(
+    a,
+    button,
+    [role='button'],
+    [role='tab'],
+    [role='menuitem'],
+    summary,
+    [tabindex]:not([tabindex='-1'])
+  ):focus-visible {
+    outline: 2px solid rgb(var(--color-rose-300));
+    outline-offset: 2px;
+  }
 }
 
 @layer components {
@@ -256,7 +270,7 @@
   }
   .input-field {
     @apply w-full px-3 py-2 rounded-lg bg-ink-850 border border-ink-700
-           text-ink-100 text-sm placeholder:text-ink-500
+           text-ink-100 text-sm placeholder:text-ink-400
            focus:outline-none focus:border-rose-500/60 focus:ring-1 focus:ring-rose-500/30
            transition-all duration-200;
   }

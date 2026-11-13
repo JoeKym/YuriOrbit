@@ -201,7 +201,7 @@ export function GLOverridesTab() {
                     <td className="max-w-[260px] truncate px-4 py-2.5 text-ink-400" title={item.note}>
                       {item.note || '—'}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-[11px] text-ink-500">
+                    <td className="whitespace-nowrap px-4 py-2.5 text-[11px] text-ink-400">
                       {item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '—'}
                     </td>
                     <td className="px-4 py-2.5 text-right">

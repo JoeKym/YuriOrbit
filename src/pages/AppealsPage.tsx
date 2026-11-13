@@ -168,7 +168,7 @@ export function AppealsPage() {
             className="input-field text-sm"
             required
           />
-          <div className="mt-1 text-right text-[10px] text-ink-500">{message.length}/4000</div>
+          <div className="mt-1 text-right text-[10px] text-ink-400">{message.length}/4000</div>
         </div>
 
         {status === 'error' && (

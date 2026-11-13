@@ -91,7 +91,7 @@ const SECTIONS: FaqSection[] = [
               Choosing <strong>Erotica (18+)</strong> (after age confirmation) expands what you can browse across the
               site, including mature titles from connected sources where available.
             </p>
-            <p className="text-ink-500">
+            <p className="text-ink-400">
               Adult content is never shown without your explicit 18+ confirmation and selected filter level.
             </p>
           </div>
@@ -302,7 +302,7 @@ export function FaqPage() {
                     <summary className="cursor-pointer list-none pr-6 text-sm font-medium text-ink-100 marker:content-none">
                       <span className="flex items-center justify-between gap-3">
                         <span>{item.q}</span>
-                        <span className="text-ink-500 transition-transform group-open:rotate-45">+</span>
+                        <span className="text-ink-400 transition-transform group-open:rotate-45">+</span>
                       </span>
                     </summary>
                     <div className="mt-3 text-sm leading-relaxed text-ink-400">{item.a}</div>

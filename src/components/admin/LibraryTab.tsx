@@ -136,7 +136,7 @@ export function LibraryTab() {
                         )}
                         <div className="min-w-0">
                           <p className="truncate font-medium text-ink-100">{entry.title}</p>
-                          <p className="text-[10px] text-ink-500">{entry.title_id}</p>
+                          <p className="text-[10px] text-ink-400">{entry.title_id}</p>
                         </div>
                       </div>
                     </td>
@@ -145,7 +145,7 @@ export function LibraryTab() {
                         <div className="flex flex-col">
                           <span className="font-medium text-ink-300">{entry.provider}</span>
                           <span
-                            className="font-mono text-[10px] text-ink-500"
+                            className="font-mono text-[10px] text-ink-400"
                             title={entry.provider_id || 'No provider id stored'}
                           >
                             {entry.provider_id || 'no id'}
@@ -168,7 +168,7 @@ export function LibraryTab() {
                       {entry.total_progress ? `/${entry.total_progress}` : ''}
                     </td>
                     <td className="px-4 py-2.5 text-ink-400">{entry.rating ? `${entry.rating}/10` : '—'}</td>
-                    <td className="px-4 py-2.5 text-[10px] text-ink-500">{entry.user_id.slice(0, 8)}…</td>
+                    <td className="px-4 py-2.5 text-[10px] text-ink-400">{entry.user_id.slice(0, 8)}…</td>
                     <td className="px-4 py-2.5">
                       <div className="flex items-center justify-end gap-1">
                         <Link

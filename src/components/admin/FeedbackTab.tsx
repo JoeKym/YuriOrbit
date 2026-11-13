@@ -227,7 +227,7 @@ export function FeedbackTab({ mode = 'feedback' }: FeedbackTabProps) {
                   >
                     {report.status}
                   </span>
-                  <span className="ml-auto text-[10px] text-ink-500">
+                  <span className="ml-auto text-[10px] text-ink-400">
                     {new Date(report.created_at).toLocaleString()}
                   </span>
                 </div>
@@ -254,7 +254,7 @@ export function FeedbackTab({ mode = 'feedback' }: FeedbackTabProps) {
                       {report.title_name || report.title_id}
                     </Link>
                   ) : (
-                    report.page_url && !isContact && <span className="text-ink-500">from {report.page_url}</span>
+                    report.page_url && !isContact && <span className="text-ink-400">from {report.page_url}</span>
                   )}
 
                   {report.contact_email && (
@@ -274,7 +274,7 @@ export function FeedbackTab({ mode = 'feedback' }: FeedbackTabProps) {
                   )}
 
                   {report.resolved_by && (
-                    <span className="text-ink-500">
+                    <span className="text-ink-400">
                       {report.status} by {report.resolved_by}
                     </span>
                   )}

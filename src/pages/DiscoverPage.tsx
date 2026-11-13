@@ -528,7 +528,7 @@ export function DiscoverPage() {
               </div>
 
               <div className="ml-auto flex items-center gap-3">
-                <span className="text-[11px] uppercase tracking-[0.14em] text-ink-500">
+                <span className="text-[11px] uppercase tracking-[0.14em] text-ink-400">
                   {loading ? 'Loading…' : `${visibleTitles.length} shown`}
                 </span>
                 {/* View Mode (Grid vs List) */}

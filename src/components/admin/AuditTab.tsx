@@ -55,8 +55,8 @@ export function AuditTab() {
           {entries.map((entry) => (
             <li key={entry.id} className="flex flex-wrap items-center gap-2 px-4 py-2.5 text-xs">
               <span className="font-medium text-ink-100">{ACTION_LABELS[entry.action] || entry.action}</span>
-              {entry.target && <span className="text-[10px] text-ink-500">{entry.target}</span>}
-              <span className="ml-auto text-[10px] text-ink-500">
+              {entry.target && <span className="text-[10px] text-ink-400">{entry.target}</span>}
+              <span className="ml-auto text-[10px] text-ink-400">
                 {entry.actor_email} · {new Date(entry.created_at).toLocaleString()}
               </span>
             </li>

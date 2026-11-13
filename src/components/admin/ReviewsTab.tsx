@@ -151,7 +151,7 @@ export function ReviewsTab() {
               <li key={r.id} className="rounded-lg border border-ink-800 bg-ink-900/40 p-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm font-medium text-ink-100">{r.name}</span>
-                  {r.role && <span className="text-[11px] text-ink-500">• {r.role}</span>}
+                  {r.role && <span className="text-[11px] text-ink-400">• {r.role}</span>}
                   <span className="ml-auto flex items-center gap-0.5 text-amber-400">{Array.from({length: Math.max(1, Math.min(5, r.rating || 5))}).map((_,i)=><Star key={i} className="h-3 w-3 fill-amber-400" />)}</span>
                 </div>
                 <p className="mt-1 text-sm text-ink-300">“{r.quote}”</p>

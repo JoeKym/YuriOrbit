@@ -534,10 +534,10 @@ export function HowItWorksFlow() {
 
           {scope === 'both' && (
             <>
-              <text x="322" y="212" textAnchor="middle" className="fill-ink-500 text-[10px] uppercase tracking-[0.14em]">
+              <text x="322" y="212" textAnchor="middle" className="fill-ink-400 text-[10px] uppercase tracking-[0.14em]">
                 catalogue
               </text>
-              <text x="558" y="212" textAnchor="middle" className="fill-ink-500 text-[10px] uppercase tracking-[0.14em]">
+              <text x="558" y="212" textAnchor="middle" className="fill-ink-400 text-[10px] uppercase tracking-[0.14em]">
                 account
               </text>
             </>
@@ -594,7 +594,7 @@ export function HowItWorksFlow() {
                   transform={`translate(${node.x - 82}, ${node.y - 12})`}
                   className={cn(
                     'transition-colors duration-500',
-                    state === 'active' ? 'text-rose-200' : state === 'visited' ? 'text-ink-200' : 'text-ink-500'
+                    state === 'active' ? 'text-rose-200' : state === 'visited' ? 'text-ink-200' : 'text-ink-400'
                   )}
                 >
                   <NodeIcon kind={node.icon} />
@@ -615,7 +615,7 @@ export function HowItWorksFlow() {
                   y={node.y + 16}
                   className={cn(
                     'text-[11px] transition-colors duration-500',
-                    state === 'active' ? 'fill-rose-200/80' : 'fill-ink-500'
+                    state === 'active' ? 'fill-rose-200/80' : 'fill-ink-400'
                   )}
                 >
                   {node.sub}
@@ -654,7 +654,7 @@ export function HowItWorksFlow() {
                     scope === path ? 'border-rose-500/30 bg-rose-500/[0.04]' : 'border-ink-800 bg-ink-900/40'
                   )}
                 >
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-500">
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-400">
                     {path === 'catalogue' ? 'Catalogue path' : 'Account path'}
                   </p>
 
@@ -685,7 +685,7 @@ export function HowItWorksFlow() {
 
           {/* The answer comes back to the browser — the loop closes. */}
           <div className="mt-3 rounded-lg border border-ink-800 bg-ink-900/40 p-2.5">
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-500">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-400">
               Response
             </p>
 
@@ -734,7 +734,7 @@ export function HowItWorksFlow() {
           </button>
         </div>
 
-        <p className="text-[11px] text-ink-500">
+        <p className="text-[11px] text-ink-400">
           {outage
             ? 'Outage view: the catalogue path shows a broken link to the upstream APIs.'
             : 'Requests travel the middle of the graph; answers come back along the return lane.'}
@@ -768,7 +768,7 @@ function MobileNode({
         viewBox="0 0 24 24"
         className={cn(
           'h-5 w-5 shrink-0 transition-colors duration-500',
-          state === 'active' ? 'text-rose-200' : state === 'visited' ? 'text-ink-200' : 'text-ink-500'
+          state === 'active' ? 'text-rose-200' : state === 'visited' ? 'text-ink-200' : 'text-ink-400'
         )}
         aria-hidden="true"
       >
@@ -784,13 +784,13 @@ function MobileNode({
         >
           {node.label}
         </p>
-        <p className={cn('truncate text-[10.5px]', state === 'active' ? 'text-rose-200/80' : 'text-ink-500')}>
+        <p className={cn('truncate text-[10.5px]', state === 'active' ? 'text-rose-200/80' : 'text-ink-400')}>
           {node.sub}
         </p>
       </div>
 
       {shared && (
-        <span className="ml-auto shrink-0 rounded-full border border-ink-700 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.1em] text-ink-500">
+        <span className="ml-auto shrink-0 rounded-full border border-ink-700 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.1em] text-ink-400">
           shared
         </span>
       )}

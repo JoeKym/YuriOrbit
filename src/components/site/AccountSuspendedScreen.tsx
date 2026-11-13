@@ -105,7 +105,7 @@ function InlineAppeal({ isBan }: { isBan: boolean }) {
               placeholder={`Explain why your ${isBan ? 'ban' : 'suspension'} should be lifted…`}
               className="input-field min-h-[110px] resize-y text-sm"
             />
-            <div className="mt-1 text-right text-[10px] text-ink-500">
+            <div className="mt-1 text-right text-[10px] text-ink-400">
               {message.length}/{MESSAGE_MAX}
             </div>
           </div>
@@ -124,7 +124,7 @@ function InlineAppeal({ isBan }: { isBan: boolean }) {
         </form>
       )}
 
-      <p className="mt-3 text-center text-[11px] text-ink-500">
+      <p className="mt-3 text-center text-[11px] text-ink-400">
         Need more detail? Use the{' '}
         <Link to="/appeals" className="text-rose-300 hover:underline">full appeals form</Link>{' '}
         or <Link to="/contact" className="text-rose-300 hover:underline">contact us</Link>.
@@ -198,7 +198,7 @@ export function AccountSuspendedScreen({
           <Link to="/privacy" className="btn-ghost text-xs">Privacy</Link>
         </div>
 
-        <p className="mt-2 flex items-center gap-1.5 text-[11px] text-ink-500">
+        <p className="mt-2 flex items-center gap-1.5 text-[11px] text-ink-400">
           <Scale className="h-3 w-3" />
           Submitting an appeal does not guarantee the decision will be reversed.
         </p>

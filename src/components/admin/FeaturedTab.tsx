@@ -172,7 +172,7 @@ export function FeaturedTab() {
           <ul className="divide-y divide-ink-800">
             {items.map((item) => (
               <li key={item.id} className="flex items-center gap-3 p-3">
-                <span className="w-5 text-center text-[11px] text-ink-500">{item.position}</span>
+                <span className="w-5 text-center text-[11px] text-ink-400">{item.position}</span>
                 <img
                   src={item.cover_image || getFallbackCover(item.title)}
                   alt=""
@@ -180,7 +180,7 @@ export function FeaturedTab() {
                 />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm text-ink-100">{item.title}</p>
-                  <p className="truncate text-[11px] text-ink-500">
+                  <p className="truncate text-[11px] text-ink-400">
                     {item.title_id}
                     {item.note ? ` · ${item.note}` : ''}
                   </p>
