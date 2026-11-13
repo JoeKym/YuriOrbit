@@ -225,15 +225,22 @@ async function persistBackfilledRef(
 // ─── Local load (IDB first, LS fallback) ──────────────────────────────────────
 
 async function loadLocal(): Promise<Record<string, LibraryEntry>> {
+  const mirrored = lsLoad();
   if (isIDBAvailable()) {
     try {
       const entries = await idbGetAll();
       const map: Record<string, LibraryEntry> = {};
       entries.forEach((e) => { map[e.id] = e; });
+      // Every write goes to both stores, so they only diverge when IndexedDB
+      // has been evicted or partly wiped. Fill in from the mirror rather than
+      // showing a library as empty while its backup still holds the titles.
+      for (const [id, entry] of Object.entries(mirrored)) {
+        if (!map[id]) map[id] = entry;
+      }
       return map;
     } catch {}
   }
-  return lsLoad();
+  return mirrored;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
