@@ -5,7 +5,8 @@
  * only be answered by asking the provider what it hosts now. MangaDex serves the
  * whole set in one batched request, so the answer is cached per browser for a
  * few hours and only manga/manhwa entries are asked about — screen titles have
- * no chapter-level releases to compare against.
+ * no chapter-level releases to compare against. The cache outlives the tab so a
+ * reader does not pay for the same lookups on every visit.
  *
  * Canonical catalogue ids keep the dominant upstream record, so most saved
  * entries hold an AniList id rather than the MangaDex uuid. Those are resolved
@@ -42,7 +43,7 @@ type Cache = Record<string, CacheEntry>;
 function readCache(): Cache {
   if (typeof window === 'undefined') return {};
   try {
-    const raw = window.sessionStorage.getItem(CACHE_KEY);
+    const raw = window.localStorage.getItem(CACHE_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw) as Cache;
     return parsed && typeof parsed === 'object' ? parsed : {};
@@ -53,7 +54,7 @@ function readCache(): Cache {
 
 function writeCache(cache: Cache): void {
   try {
-    window.sessionStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+    window.localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
   } catch {
     // Storage full or blocked: the caller still gets this visit's answer.
   }
