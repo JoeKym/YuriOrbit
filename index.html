@@ -12,7 +12,6 @@
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="theme-color" content="#0d0a14" />
     <meta name="msapplication-TileColor" content="#0d0a14" />
-    <link rel="canonical" href="https://yuriorbit.pages.dev/" />
 
     <meta name="google-site-verification" content="hg_nB8nhPW8ySf2XswYeBol3NknhZNiQEiQ9tza4HrA" />
 
@@ -24,9 +23,14 @@
     <meta name="author" content="JoeKym Labs" />
     <meta name="robots" content="index, follow" />
 
+    <!--
+      No static canonical or og:url here on purpose. This one shell answers every
+      route, so a hard-coded value would declare /discover, /manga and friends to
+      be duplicates of the homepage. `usePageMeta` writes the right one per route.
+    -->
+
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://yuriorbit.pages.dev/" />
     <meta property="og:site_name" content="YuriOrbit" />
     <meta property="og:locale" content="en_US" />
     <meta property="og:title" content="YuriOrbit — Your World of Girls' Love" />
@@ -35,7 +39,6 @@
 
     <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content="https://yuriorbit.pages.dev/" />
     <meta name="twitter:title" content="YuriOrbit — Your World of Girls' Love" />
     <meta name="twitter:description" content="Discover, track, and enjoy curated Yuri and Girls' Love anime, manga, manhwa, webtoons, light novels, and live-action dramas from around the globe." />
     <meta name="twitter:image" content="https://yuriorbit.pages.dev/android-chrome-512x512.png" />
@@ -45,19 +48,44 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
-    <!-- Structured Data (JSON-LD) -->
+    <!--
+      Structured Data (JSON-LD).
+      `name` here is what Google uses for the site name; `og:site_name` covers the
+      open-graph consumers. Both must agree, or the header falls back to the domain.
+    -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "YuriOrbit",
-      "description": "Your world of Girls' Love — anime, manga, manhwa, webtoons, novels, and dramas.",
-      "url": "https://yuriorbit.pages.dev",
-      "creator": {
-        "@type": "Organization",
-        "name": "JoeKym Labs",
-        "url": "https://joekymlabs.pages.dev"
-      }
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://yuriorbit.pages.dev/#website",
+          "name": "YuriOrbit",
+          "alternateName": ["Yuri Orbit", "YuriOrbit GL"],
+          "description": "Your world of Girls' Love — anime, manga, manhwa, webtoons, novels, and dramas.",
+          "url": "https://yuriorbit.pages.dev/",
+          "inLanguage": "en",
+          "publisher": { "@id": "https://yuriorbit.pages.dev/#organization" },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://yuriorbit.pages.dev/search?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://yuriorbit.pages.dev/#organization",
+          "name": "JoeKym Labs",
+          "url": "https://joekymlabs.pages.dev",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://yuriorbit.pages.dev/android-chrome-512x512.png"
+          }
+        }
+      ]
     }
     </script>
     <!--
