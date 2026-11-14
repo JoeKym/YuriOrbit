@@ -41,7 +41,15 @@ import { THEMES, type ThemeId, getStoredTheme, applyTheme, THEME_STORAGE_KEY } f
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { cn } from '@/lib/utils/format';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { Button, Tabs, buttonClasses, tabPanelProps } from '@/components/ui';
+import {
+  Button,
+  SettingRow,
+  SettingsSection,
+  Switch,
+  Tabs,
+  buttonClasses,
+  tabPanelProps,
+} from '@/components/ui';
 import { useChapterUpdatePrefs, type ChapterUpdatePrefs } from '@/lib/content/chapter-update-prefs';
 import { clearChapterProgressCache } from '@/lib/content/chapter-updates';
 
@@ -52,6 +60,20 @@ const SETTINGS_TABS = [
   { id: 'content', label: 'Content', icon: ShieldAlert },
   { id: 'account', label: 'Account', icon: UserRound },
 ];
+
+/** Device-local vs account-synced marker for sections that also write to a profile. */
+function ScopeBadge({ synced }: { synced: boolean }) {
+  return (
+    <span
+      className={cn(
+        'rounded-full px-2 py-0.5 text-micro font-semibold',
+        synced ? 'bg-lavender-500/15 text-lavender-300' : 'bg-ink-700/60 text-ink-300'
+      )}
+    >
+      {synced ? 'Synced to your account' : 'This device'}
+    </span>
+  );
+}
 
 export function SettingsPage() {
   usePageMeta({
@@ -404,7 +426,7 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8 md:px-6">
+    <div className="mx-auto max-w-2xl px-4 py-8 md:px-6 lg:max-w-5xl">
       <PageHeader
         eyebrow="Preferences"
         title="Settings"
@@ -430,24 +452,51 @@ export function SettingsPage() {
         </div>
       )}
 
-      <Tabs
-        items={SETTINGS_TABS}
-        value={tab}
-        onChange={handleTabChange}
-        label="Settings sections"
-        className="mb-6"
-      />
+      <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start lg:gap-8">
+        <Tabs
+          items={SETTINGS_TABS}
+          value={tab}
+          onChange={handleTabChange}
+          label="Settings sections"
+          className="mb-6 lg:hidden"
+        />
+
+        <nav aria-label="Settings sections" className="hidden lg:sticky lg:top-24 lg:block">
+          <ul className="space-y-0.5">
+            {SETTINGS_TABS.map((item) => {
+              const Icon = item.icon;
+              const selected = item.id === tab;
+              return (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange(item.id)}
+                    aria-current={selected ? 'page' : undefined}
+                    className={cn(
+                      'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                      selected
+                        ? 'bg-rose-500/15 text-rose-200'
+                        : 'text-ink-300 hover:bg-ink-850 hover:text-ink-100'
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {item.label}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+
+        <div className="min-w-0">
 
       {tab === 'appearance' && (
         <div {...tabPanelProps('appearance')} className="space-y-6">
-          {/* Appearance & Accessibility */}
-          <section className="card-surface p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <Sliders className="h-4 w-4 text-rose-400" />
-              <h2 className="text-lg font-semibold text-ink-50">Appearance & Motion</h2>
-            </div>
-            <p className="mb-4 text-xs text-ink-400">Personalize display style and interface animations.</p>
-
+          <SettingsSection
+            icon={Sliders}
+            title="Appearance & Motion"
+            description="Personalize display style and interface animations."
+          >
             <div className="space-y-5">
               <div>
                 <label className="mb-2 flex items-center gap-1.5 text-xs font-medium text-ink-300">
@@ -465,7 +514,7 @@ export function SettingsPage() {
                         className={cn(
                           'flex items-start gap-3 rounded-xl border p-3 text-left transition-colors',
                           selected
-                            ? 'border-rose-500/50 bg-rose-500/10'
+                            ? 'border-rose-500/50 bg-rose-500/10 ring-1 ring-rose-500/40'
                             : 'border-ink-800 bg-ink-900/60 hover:border-ink-700 hover:bg-ink-850'
                         )}
                         aria-pressed={selected}
@@ -492,218 +541,163 @@ export function SettingsPage() {
                 </div>
               </div>
 
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
+              <div className="border-t border-ink-800/60">
+                <Switch
                   checked={reducedMotion}
-                  onChange={(e) => setReducedMotion(e.target.checked)}
-                  className="h-4 w-4 rounded border-ink-600 bg-ink-800 text-rose-500 focus:ring-rose-500"
+                  onChange={setReducedMotion}
+                  label="Reduce animations and transitions"
+                  description="Minimizes smooth scrolling and carousel movement."
                 />
-                <div>
-                  <span className="text-sm font-medium text-ink-200 block">Reduce animations and transitions</span>
-                  <span className="text-xs text-ink-400">Minimizes smooth scrolling and carousel movement</span>
-                </div>
-              </label>
+              </div>
             </div>
-          </section>
+          </SettingsSection>
         </div>
       )}
 
       {tab === 'reading' && (
         <div {...tabPanelProps('reading')} className="space-y-6">
-          {/* Reader Preferences */}
-          <section className="card-surface p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <BookOpen className="h-4 w-4 text-rose-400" />
-              <h2 className="text-lg font-semibold text-ink-50">Reader Preferences</h2>
+          <SettingsSection
+            icon={BookOpen}
+            title="Reader Preferences"
+            description="Default settings for the MangaDex chapter reader. Saved on this device."
+          >
+            <div className="divide-y divide-ink-800/60">
+              <SettingRow
+                label="Default Reading Width"
+                description="How wide chapter pages render by default."
+                htmlFor="settings-reader-width"
+                control={
+                  <select
+                    id="settings-reader-width"
+                    value={readerWidth}
+                    onChange={(e) => setReaderWidth(e.target.value as 'narrow' | 'normal' | 'wide' | 'full')}
+                    className="input-field w-full text-xs sm:w-60"
+                  >
+                    <option value="narrow">Narrow (Phone width)</option>
+                    <option value="normal">Normal (Tablet / standard)</option>
+                    <option value="wide">Wide (Desktop)</option>
+                    <option value="full">Full (Window width)</option>
+                  </select>
+                }
+              />
+              <SettingRow
+                label="Reader Background"
+                description="Canvas colour behind chapter pages."
+                htmlFor="settings-reader-bg"
+                control={
+                  <select
+                    id="settings-reader-bg"
+                    value={readerBg}
+                    onChange={(e) => setReaderBg(e.target.value as 'dark' | 'sepia' | 'light')}
+                    className="input-field w-full text-xs sm:w-60"
+                  >
+                    <option value="dark">Dark Canvas (OLED black)</option>
+                    <option value="sepia">Warm Sepia</option>
+                    <option value="light">Paper Light</option>
+                  </select>
+                }
+              />
+              <Switch
+                checked={dataSaver}
+                onChange={setDataSaver}
+                label="Data Saver Mode"
+                description="Request compressed chapter images from MangaDex for faster loading."
+              />
             </div>
-            <p className="mb-4 text-xs text-ink-400">Default settings for the MangaDex chapter reader.</p>
+          </SettingsSection>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-ink-300">Default Reading Width</label>
+          <SettingsSection
+            icon={Globe}
+            title="Streaming availability"
+            badge={<ScopeBadge synced={isAuthenticated} />}
+            description="Which country's streaming services appear under Where to Watch and on Discover and Search cards."
+          >
+            <SettingRow
+              label="Region"
+              description="Availability comes from TMDB's watch-provider data. Choosing a region turns off the US fallback, so an empty list means nothing is streaming there."
+              htmlFor="settings-watch-region"
+              control={
                 <select
-                  value={readerWidth}
-                  onChange={(e) => setReaderWidth(e.target.value as 'narrow' | 'normal' | 'wide' | 'full')}
-                  className="input-field text-xs"
+                  id="settings-watch-region"
+                  value={watchRegion ?? 'auto'}
+                  onChange={(e) => handleWatchRegionChange(e.target.value)}
+                  className="input-field w-full text-xs sm:w-64"
                 >
-                  <option value="narrow">Narrow (Phone width)</option>
-                  <option value="normal">Normal (Tablet / standard)</option>
-                  <option value="wide">Wide (Desktop)</option>
-                  <option value="full">Full (Window width)</option>
+                  <option value="auto">Detect automatically ({regionName(tmdbPreferredRegion())})</option>
+                  {(watchRegion && !REGION_OPTIONS.some((option) => option.code === watchRegion)
+                    ? [{ code: watchRegion, name: regionName(watchRegion) }, ...REGION_OPTIONS]
+                    : REGION_OPTIONS
+                  ).map((option) => (
+                    <option key={option.code} value={option.code}>
+                      {option.name}
+                    </option>
+                  ))}
                 </select>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-ink-300">Reader Background</label>
-                <select
-                  value={readerBg}
-                  onChange={(e) => setReaderBg(e.target.value as 'dark' | 'sepia' | 'light')}
-                  className="input-field text-xs"
-                >
-                  <option value="dark">Dark Canvas (OLED black)</option>
-                  <option value="sepia">Warm Sepia</option>
-                  <option value="light">Paper Light</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-ink-800/80">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={dataSaver}
-                  onChange={(e) => setDataSaver(e.target.checked)}
-                  className="h-4 w-4 rounded border-ink-600 bg-ink-800 text-rose-500 focus:ring-rose-500"
-                />
-                <div>
-                  <span className="text-sm font-medium text-ink-200 block">Data Saver Mode</span>
-                  <span className="text-xs text-ink-400">Request compressed chapter images from MangaDex for faster loading</span>
-                </div>
-              </label>
-            </div>
-          </section>
-
-          {/* Streaming availability */}
-          <section className="card-surface p-5">
-            <div className="mb-1 flex items-center gap-2">
-              <Globe className="h-4 w-4 text-rose-400" />
-              <h2 className="text-lg font-semibold text-ink-50">Streaming availability</h2>
-            </div>
-            <p className="mb-4 text-xs text-ink-400">
-              Which country's streaming services appear under Where to Watch and on Discover and
-              Search cards.
-              {isAuthenticated
-                ? ' Synced to your profile.'
-                : ' Saved in this browser until you sign in.'}
-            </p>
-
-            <div className="max-w-md">
-              <label
-                className="mb-1.5 block text-xs font-medium text-ink-300"
-                htmlFor="settings-watch-region"
-              >
-                Region
-              </label>
-              <select
-                id="settings-watch-region"
-                value={watchRegion ?? 'auto'}
-                onChange={(e) => handleWatchRegionChange(e.target.value)}
-                className="input-field text-xs"
-              >
-                <option value="auto">Detect automatically ({regionName(tmdbPreferredRegion())})</option>
-                {(watchRegion && !REGION_OPTIONS.some((option) => option.code === watchRegion)
-                  ? [{ code: watchRegion, name: regionName(watchRegion) }, ...REGION_OPTIONS]
-                  : REGION_OPTIONS
-                ).map((option) => (
-                  <option key={option.code} value={option.code}>
-                    {option.name}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-2 text-micro text-ink-400">
-                Availability comes from TMDB's watch-provider data. Choosing a region turns off the
-                US fallback, so an empty list means nothing is streaming there.
-              </p>
-            </div>
-          </section>
+              }
+            />
+          </SettingsSection>
         </div>
       )}
 
       {tab === 'library' && (
         <div {...tabPanelProps('library')} className="space-y-6">
-          {/* Storage Mode Notice */}
-          <section className="card-surface p-5">
-            <div className="flex gap-3">
-              <Info className="h-5 w-5 flex-shrink-0 text-lavender-400" />
-              <div>
-                <h2 className="mb-1 flex flex-wrap items-center gap-2 text-sm font-semibold text-ink-50">
-                  Library storage
-                  <span
-                    className={cn(
-                      'rounded-full px-2 py-0.5 text-micro font-semibold',
-                      isAuthenticated
-                        ? 'bg-lavender-500/15 text-lavender-300'
-                        : 'bg-ink-700/60 text-ink-300'
-                    )}
-                  >
-                    {isAuthenticated ? 'Synced to your account' : 'Stored on this device'}
-                  </span>
-                </h2>
-                <p className="text-xs text-ink-400 leading-relaxed">
-                  {isAuthenticated
-                    ? 'Saved titles, reading progress, ratings and notes sync across your devices. Export a backup before making destructive changes.'
-                    : 'Without an account, saved titles and reading progress stay in this browser only. Sign in to sync them across devices, or export a backup.'}
-                </p>
-              </div>
+          <SettingsSection
+            icon={Info}
+            title="Library storage"
+            badge={<ScopeBadge synced={isAuthenticated} />}
+            description={
+              isAuthenticated
+                ? 'Saved titles, reading progress, ratings and notes sync across your devices. Export a backup before making destructive changes.'
+                : 'Without an account, saved titles and reading progress stay in this browser only. Sign in to sync them across devices, or export a backup.'
+            }
+          />
+
+          <SettingsSection
+            icon={BookMarked}
+            title="Chapter updates"
+            badge={<ScopeBadge synced={isAuthenticated} />}
+            description="What the library’s “New chapters” badge tracks. Only manga, manhwa, manhua and webtoons have numbered releases to compare against."
+            footer={
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    clearChapterProgressCache();
+                    showFeedback('Chapter data will be refreshed on your next library visit.');
+                  }}
+                >
+                  <RotateCcw className="h-3.5 w-3.5" /> Refresh chapter data
+                </Button>
+                {chapterPrefs.showBadges && (
+                  <Link to="/library?filter=UPDATES" className={buttonClasses('ghost', 'sm')}>
+                    <BookMarked className="h-3.5 w-3.5" /> Open new chapters
+                  </Link>
+                )}
+              </>
+            }
+          >
+            <div className="divide-y divide-ink-800/60">
+              <Switch
+                checked={chapterPrefs.showBadges}
+                onChange={(showBadges) => handleChapterPrefsChange({ showBadges })}
+                label="Show new-chapter badges"
+                description="Adds the “N new chapters” chip to library cards and the New chapters filter."
+              />
+              <Switch
+                checked={chapterPrefs.onlyReading}
+                onChange={(onlyReading) => handleChapterPrefsChange({ onlyReading })}
+                label="Only flag what I’m reading"
+                description="Skips Completed, Planned, On Hold and Dropped titles when checking for new releases."
+              />
             </div>
-          </section>
+          </SettingsSection>
 
-          {/* Chapter updates — what the library badge tracks */}
-          <section className="card-surface p-5">
-            <div className="mb-1 flex items-center gap-2">
-              <BookMarked className="h-4 w-4 text-rose-400" />
-              <h2 className="text-lg font-semibold text-ink-50">Chapter updates</h2>
-            </div>
-            <p className="mb-4 text-xs text-ink-400">
-              What the library&rsquo;s &ldquo;New chapters&rdquo; badge tracks. Only manga, manhwa, manhua and
-              webtoons have numbered releases to compare against.
-              {isAuthenticated
-                ? ' Synced to your profile.'
-                : ' Saved in this browser until you sign in.'}
-            </p>
-
-            <div className="space-y-3">
-              <label className="flex cursor-pointer items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={chapterPrefs.showBadges}
-                  onChange={(e) => handleChapterPrefsChange({ showBadges: e.target.checked })}
-                  className="mt-0.5 h-4 w-4 rounded border-ink-600 bg-ink-800 text-rose-500 focus:ring-rose-500"
-                />
-                <span>
-                  <span className="block text-sm font-medium text-ink-200">Show new-chapter badges</span>
-                  <span className="block text-xs text-ink-400">
-                    Adds the &ldquo;N new chapters&rdquo; chip to library cards and the New chapters filter.
-                  </span>
-                </span>
-              </label>
-
-              <label className="flex cursor-pointer items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={chapterPrefs.onlyReading}
-                  onChange={(e) => handleChapterPrefsChange({ onlyReading: e.target.checked })}
-                  className="mt-0.5 h-4 w-4 rounded border-ink-600 bg-ink-800 text-rose-500 focus:ring-rose-500"
-                />
-                <span>
-                  <span className="block text-sm font-medium text-ink-200">Only flag what I&rsquo;m reading</span>
-                  <span className="block text-xs text-ink-400">
-                    Skips Completed, Planned, On Hold and Dropped titles when checking for new releases.
-                  </span>
-                </span>
-              </label>
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-ink-800/80 pt-4">
-              <Button variant="secondary" size="sm" onClick={() => { clearChapterProgressCache(); showFeedback('Chapter data will be refreshed on your next library visit.'); }}>
-                <RotateCcw className="h-3.5 w-3.5" /> Refresh chapter data
-              </Button>
-              {chapterPrefs.showBadges && (
-                <Link to="/library?filter=UPDATES" className={buttonClasses('ghost', 'sm')}>
-                  <BookMarked className="h-3.5 w-3.5" /> Open new chapters
-                </Link>
-              )}
-            </div>
-          </section>
-
-          {/* Data Management */}
-          <section className="card-surface p-5">
-            <h2 className="mb-1 text-lg font-semibold text-ink-50">Data Management & Backup</h2>
-            <p className="mb-4 text-xs text-ink-400">
-              Export your library and preferences as a JSON file, or restore one. Restoring replaces the library stored in this browser.
-            </p>
-
+          <SettingsSection
+            icon={Download}
+            title="Data Management & Backup"
+            description="Export your library and preferences as a JSON file, or restore one. Restoring replaces the library stored in this browser."
+          >
             <input
               type="file"
               ref={fileInputRef}
@@ -714,10 +708,15 @@ export function SettingsPage() {
 
             <div className="flex flex-wrap gap-2.5">
               <Button variant="secondary" size="sm" onClick={handleExport} className="flex items-center gap-1.5">
-                <Download className="h-3.5 w-3.5" /> Export Data Backup
+                <Download className="h-3.5 w-3.5" /> Export data backup
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5">
-                <Upload className="h-3.5 w-3.5" /> Import Data Backup
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-1.5"
+              >
+                <Upload className="h-3.5 w-3.5" /> Import data backup
               </Button>
             </div>
 
@@ -729,26 +728,20 @@ export function SettingsPage() {
               .
             </p>
 
-            <div className="mt-4 flex items-center gap-4 text-xs text-ink-400">
-              <span>Library Items: <strong className="text-ink-200">{library.length}</strong></span>
-            </div>
-          </section>
+            <p className="mt-4 border-t border-ink-800/60 pt-3 text-xs text-ink-400">
+              Library items: <strong className="text-ink-200">{library.length}</strong>
+            </p>
+          </SettingsSection>
         </div>
       )}
 
       {tab === 'content' && (
         <div {...tabPanelProps('content')} className="space-y-6">
-          {/* Content filter */}
-          <section className="card-surface p-5">
-            <div className="mb-1 flex items-center gap-2">
-              <ShieldAlert className="h-4 w-4 text-rose-400" />
-              <h2 className="text-lg font-semibold text-ink-50">Content filter</h2>
-            </div>
-            <p className="mb-4 text-xs text-ink-400">
-              The highest rating you want to see anywhere on YuriOrbit — home, search, every format page.
-              Anything above it is hidden, and explicit titles need a one-time 18+ confirmation.
-            </p>
-
+          <SettingsSection
+            icon={ShieldAlert}
+            title="Content filter"
+            description="The highest rating you want to see anywhere on YuriOrbit — home, search, every format page. Anything above it is hidden, and explicit titles need a one-time 18+ confirmation."
+          >
             <div className="grid gap-2 sm:grid-cols-2">
               {MATURITY_LEVELS.map((option) => {
                 const selected = option === maturityLevel;
@@ -815,20 +808,18 @@ export function SettingsPage() {
             <p className="mt-3 text-micro leading-relaxed text-ink-400">
               The filter is a browsing preference, not a verification of your age. Clear this site's storage to reset it.
             </p>
-          </section>
-
+          </SettingsSection>
         </div>
       )}
 
       {tab === 'account' && (
         <div {...tabPanelProps('account')} className="space-y-6">
           {/* Identity */}
-          <section className="card-surface p-5">
-            <div className="mb-1 flex items-center gap-2">
-              <UserRound className="h-4 w-4 text-rose-400" />
-              <h2 className="text-lg font-semibold text-ink-50">Account</h2>
-            </div>
-
+          <SettingsSection
+            icon={UserRound}
+            title="Account"
+            description="Your session on this device. Profile details live on your public profile page."
+          >
             {isAuthenticated ? (
               <>
                 <div className="mt-3 flex items-center gap-3">
@@ -889,7 +880,7 @@ export function SettingsPage() {
                 </div>
               </>
             )}
-          </section>
+          </SettingsSection>
 
           {/* Danger Zone */}
           <section className="rounded-2xl border border-rose-500/25 bg-rose-500/[0.03] p-5">
@@ -962,6 +953,9 @@ export function SettingsPage() {
           </section>
         </div>
       )}
+
+        </div>
+      </div>
     </div>
   );
 }
