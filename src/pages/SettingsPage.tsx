@@ -145,7 +145,7 @@ export function SettingsPage() {
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [confirmText, setConfirmText] = useState('');
   const [chapterPrefs, updateChapterPrefs] = useChapterUpdatePrefs();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
@@ -476,7 +476,7 @@ export function SettingsPage() {
 
   const closeConfirm = () => {
     setConfirmAction(null);
-    setDeleteConfirmText('');
+    setConfirmText('');
   };
 
   const runConfirmedAction = () => {
@@ -489,9 +489,17 @@ export function SettingsPage() {
   };
 
   const confirmCopy = confirmAction ? confirmCopyFor(confirmAction, isAuthenticated) : null;
+  // A signed-in library clear deletes cloud rows, so it carries the same typed
+  // confirmation as account deletion. Guest clears stay one click.
+  const confirmPhrase =
+    isAuthenticated &&
+    (confirmAction === 'delete-account' ||
+      confirmAction === 'clear-library' ||
+      confirmAction === 'clear-all')
+      ? 'DELETE'
+      : null;
   const confirmBlocked =
-    confirmAction === 'delete-account' &&
-    (deletingAccount || deleteConfirmText.trim() !== 'DELETE');
+    confirmPhrase !== null && (deletingAccount || confirmText.trim() !== confirmPhrase);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 md:px-6 lg:max-w-5xl">
@@ -984,7 +992,7 @@ export function SettingsPage() {
                   </p>
                   <p className="mt-0.5 text-xs text-ink-400">
                     {isAuthenticated
-                      ? 'Removes every saved title and reading progress from your account and this browser. This cannot be undone.'
+                      ? 'Removes every saved title and reading progress from your account and this browser. You will type DELETE to confirm.'
                       : 'Removes saved titles and reading progress stored in this browser. This cannot be undone.'}
                   </p>
                 </div>
@@ -1000,7 +1008,7 @@ export function SettingsPage() {
                   </p>
                   <p className="mt-0.5 text-xs text-ink-400">
                     {isAuthenticated
-                      ? 'Deletes your saved library from this account and this browser, then resets every setting on this device.'
+                      ? 'Deletes your saved library from this account and this browser, then resets every setting on this device. You will type DELETE to confirm.'
                       : 'Removes the local library and resets every setting on this device.'}
                   </p>
                 </div>
@@ -1060,18 +1068,18 @@ export function SettingsPage() {
             </>
           }
         >
-          {confirmAction === 'delete-account' && (
+          {confirmPhrase && (
             <div>
               <label
-                htmlFor="delete-account-confirm"
+                htmlFor="settings-confirm-phrase"
                 className="block text-xs font-medium text-ink-300"
               >
-                Type DELETE to confirm
+                Type {confirmPhrase} to confirm
               </label>
               <input
-                id="delete-account-confirm"
-                value={deleteConfirmText}
-                onChange={(event) => setDeleteConfirmText(event.target.value)}
+                id="settings-confirm-phrase"
+                value={confirmText}
+                onChange={(event) => setConfirmText(event.target.value)}
                 autoComplete="off"
                 spellCheck={false}
                 className="input-field mt-1.5 w-full text-sm"
