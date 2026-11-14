@@ -19,6 +19,7 @@ import {
   UserX,
   Loader2,
   BookMarked,
+  LogOut,
 } from 'lucide-react';
 import { useLibrary } from '@/hooks/useLibrary';
 import { useMaturity } from '@/hooks/useMaturity';
@@ -66,6 +67,7 @@ export function SettingsPage() {
   const [pendingLevel, setPendingLevel] = useState<MaturityLevel | null>(null);
   const [theme, setTheme] = useState<ThemeId>(() => getStoredTheme());
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [chapterPrefs, updateChapterPrefs] = useChapterUpdatePrefs();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
@@ -199,7 +201,7 @@ export function SettingsPage() {
   // Export JSON backup
   const handleExport = () => {
     const backup = {
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
       library,
       preferences: {
@@ -208,6 +210,10 @@ export function SettingsPage() {
         readerBg,
         dataSaver,
         theme,
+        maturityLevel,
+        adultAcknowledged,
+        chapterPrefs,
+        watchRegion,
       },
     };
     const data = JSON.stringify(backup, null, 2);
@@ -218,7 +224,7 @@ export function SettingsPage() {
     a.download = `yuriorbit-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    showFeedback('Library and preferences exported successfully.');
+    showFeedback('Library and preferences exported to a JSON backup.');
   };
 
   // Import JSON backup
@@ -246,11 +252,36 @@ export function SettingsPage() {
           if (parsed.preferences.theme && THEMES.some((t) => t.id === parsed.preferences.theme)) {
             handleThemeChange(parsed.preferences.theme as ThemeId);
           }
+          if (parsed.preferences.watchRegion !== undefined) {
+            const nextRegion =
+              typeof parsed.preferences.watchRegion === 'string' ? parsed.preferences.watchRegion : null;
+            handleWatchRegionChange(nextRegion ?? 'auto');
+          }
+          const importedChapterPrefs = parsed.preferences.chapterPrefs;
+          if (importedChapterPrefs && typeof importedChapterPrefs === 'object') {
+            const patch: Partial<ChapterUpdatePrefs> = {};
+            if (typeof importedChapterPrefs.showBadges === 'boolean') {
+              patch.showBadges = importedChapterPrefs.showBadges;
+            }
+            if (typeof importedChapterPrefs.onlyReading === 'boolean') {
+              patch.onlyReading = importedChapterPrefs.onlyReading;
+            }
+            if (Object.keys(patch).length > 0) handleChapterPrefsChange(patch);
+          }
+          const importedLevel = parsed.preferences.maturityLevel;
+          if (typeof importedLevel === 'string' && (MATURITY_LEVELS as readonly string[]).includes(importedLevel)) {
+            const level = importedLevel as MaturityLevel;
+            const needsAck = requiresAdultConfirmation(level) && !adultAcknowledged;
+            if (!needsAck || parsed.preferences.adultAcknowledged === true) {
+              if (needsAck) acknowledge();
+              setLevel(level);
+            }
+          }
         }
         if (Array.isArray(parsed.library)) {
           localStorage.setItem('yuriorbit_library', JSON.stringify(parsed.library));
         }
-        showFeedback('Backup restored successfully. Refresh to see updated library items.', 'success', 4500);
+        showFeedback('Backup restored. Library and preferences updated — refresh to see library changes.', 'success', 4500);
       } catch {
         showFeedback('Failed to parse backup file. Please ensure it is a valid YuriOrbit JSON export.', 'error', 4500);
       }
@@ -286,6 +317,25 @@ export function SettingsPage() {
     }
     clearLocalSettingsState();
     showFeedback('Settings have been reset to defaults.');
+  };
+
+  const handleClearLocalLibrary = () => {
+    if (
+      !confirm(
+        'Clear the library saved in this browser? This removes saved titles and reading progress on this device. Cloud-synced data is not deleted.'
+      )
+    ) {
+      return;
+    }
+    clearLibrary();
+    showFeedback('Local library data has been cleared.');
+  };
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    await logout().catch(() => {});
+    setSigningOut(false);
+    showFeedback('Signed out. Your settings stay saved on this device.');
   };
 
   const handleClearAllLocalData = () => {
@@ -356,9 +406,9 @@ export function SettingsPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 md:px-6">
       <PageHeader
-        eyebrow="Account"
+        eyebrow="Preferences"
         title="Settings"
-        description="Appearance, reading, library, content and account — saved on this device."
+        description="Appearance, reading, library, content and account. Most preferences stay on this device; your watch region and chapter updates sync when you're signed in."
         className="mb-6"
       />
 
@@ -567,9 +617,23 @@ export function SettingsPage() {
             <div className="flex gap-3">
               <Info className="h-5 w-5 flex-shrink-0 text-lavender-400" />
               <div>
-                <h2 className="mb-1 text-sm font-semibold text-ink-50">Cloud-Synced Library</h2>
+                <h2 className="mb-1 flex flex-wrap items-center gap-2 text-sm font-semibold text-ink-50">
+                  Library storage
+                  <span
+                    className={cn(
+                      'rounded-full px-2 py-0.5 text-micro font-semibold',
+                      isAuthenticated
+                        ? 'bg-lavender-500/15 text-lavender-300'
+                        : 'bg-ink-700/60 text-ink-300'
+                    )}
+                  >
+                    {isAuthenticated ? 'Synced to your account' : 'Stored on this device'}
+                  </span>
+                </h2>
                 <p className="text-xs text-ink-400 leading-relaxed">
-                  Sign in to sync your library across devices. Your saved titles, reading progress, ratings, and notes are stored securely in your account. When not signed in, data stays in your browser. Use Export to keep a backup.
+                  {isAuthenticated
+                    ? 'Saved titles, reading progress, ratings and notes sync across your devices. Export a backup before making destructive changes.'
+                    : 'Without an account, saved titles and reading progress stay in this browser only. Sign in to sync them across devices, or export a backup.'}
                 </p>
               </div>
             </div>
@@ -637,7 +701,7 @@ export function SettingsPage() {
           <section className="card-surface p-5">
             <h2 className="mb-1 text-lg font-semibold text-ink-50">Data Management & Backup</h2>
             <p className="mb-4 text-xs text-ink-400">
-              When signed in, your library is synced to your account and available across devices. When not signed in, data is stored locally in your browser.
+              Export your library and preferences as a JSON file, or restore one. Restoring replaces the library stored in this browser.
             </p>
 
             <input
@@ -655,10 +719,15 @@ export function SettingsPage() {
               <Button variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5">
                 <Upload className="h-3.5 w-3.5" /> Import Data Backup
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => { if (confirm('Clear all local library data? This will reset your saved bookmarks and reading progress.')) { clearLibrary(); showFeedback('Local library data has been cleared.'); } }} className="text-error-400 hover:text-error-300 flex items-center gap-1.5">
-                <Trash2 className="h-3.5 w-3.5" /> Clear Local Library
-              </Button>
             </div>
+
+            <p className="mt-3 text-micro leading-relaxed text-ink-400">
+              Removing this device&rsquo;s saved titles is in{' '}
+              <Link to="/settings?tab=account" className="text-rose-300 underline-offset-2 hover:underline">
+                Account &rarr; Danger zone
+              </Link>
+              .
+            </p>
 
             <div className="mt-4 flex items-center gap-4 text-xs text-ink-400">
               <span>Library Items: <strong className="text-ink-200">{library.length}</strong></span>
@@ -748,24 +817,80 @@ export function SettingsPage() {
             </p>
           </section>
 
-          {/* Public profile — edited on /profile */}
-          <section className="card-surface p-5">
-            <div className="mb-1 flex items-center gap-2">
-              <UserRound className="h-4 w-4 text-rose-400" />
-              <h2 className="text-lg font-semibold text-ink-50">Public profile</h2>
-            </div>
-            <p className="mb-4 text-xs text-ink-400">
-              Username, display name, bio, avatar and visibility live on your profile page.
-            </p>
-            <Link to="/profile" className={buttonClasses('secondary', 'sm')}>
-              <Pencil className="h-3.5 w-3.5" /> Go to profile
-            </Link>
-          </section>
         </div>
       )}
 
       {tab === 'account' && (
         <div {...tabPanelProps('account')} className="space-y-6">
+          {/* Identity */}
+          <section className="card-surface p-5">
+            <div className="mb-1 flex items-center gap-2">
+              <UserRound className="h-4 w-4 text-rose-400" />
+              <h2 className="text-lg font-semibold text-ink-50">Account</h2>
+            </div>
+
+            {isAuthenticated ? (
+              <>
+                <div className="mt-3 flex items-center gap-3">
+                  {user?.picture ? (
+                    <img
+                      src={user.picture}
+                      alt=""
+                      className="h-10 w-10 rounded-full object-cover ring-1 ring-ink-700"
+                    />
+                  ) : (
+                    <span
+                      aria-hidden="true"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-sm font-semibold uppercase text-rose-200"
+                    >
+                      {(user?.email || '?').slice(0, 2)}
+                    </span>
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-ink-100">{user?.email || 'Signed in'}</p>
+                    <p className="text-xs text-ink-400">
+                      Library, watch region and chapter updates sync to this account.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Link to="/profile" className={buttonClasses('secondary', 'sm', 'flex items-center gap-1.5')}>
+                    <Pencil className="h-3.5 w-3.5" /> Edit public profile
+                  </Link>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSignOut}
+                    disabled={signingOut}
+                    className="flex items-center gap-1.5"
+                  >
+                    {signingOut ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <LogOut className="h-3.5 w-3.5" />
+                    )}
+                    {signingOut ? 'Signing out…' : 'Sign out'}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="mt-1 text-xs leading-relaxed text-ink-400">
+                  You&rsquo;re browsing as a guest, so your library and preferences stay in this browser.
+                  Sign in to sync them across devices and to edit a public profile.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Link
+                    to={`/auth?next=${encodeURIComponent('/settings?tab=account')}`}
+                    className={buttonClasses('primary', 'sm')}
+                  >
+                    Sign in to sync
+                  </Link>
+                </div>
+              </>
+            )}
+          </section>
+
           {/* Danger Zone */}
           <section className="rounded-2xl border border-rose-500/25 bg-rose-500/[0.03] p-5">
             <div className="mb-1 flex items-center gap-2">
@@ -796,7 +921,7 @@ export function SettingsPage() {
                     Removes saved titles and reading progress stored in this browser. Cloud-synced data (if signed in) is not deleted.
                   </p>
                 </div>
-                <Button variant="secondary" size="sm" onClick={() => { if (confirm('Clear all local library data? This will reset your saved bookmarks and reading progress.')) { clearLibrary(); showFeedback('Local library data has been cleared.'); } }} className="shrink-0 text-error-400 hover:text-error-300 border-rose-500/30 flex items-center gap-1.5">
+                <Button variant="secondary" size="sm" onClick={handleClearLocalLibrary} className="shrink-0 text-error-400 hover:text-error-300 border-rose-500/30 flex items-center gap-1.5">
                   <Trash2 className="h-3.5 w-3.5" /> Clear library
                 </Button>
               </div>
@@ -828,7 +953,7 @@ export function SettingsPage() {
                     {deletingAccount ? 'Deleting…' : 'Delete account'}
                   </Button>
                 ) : (
-                  <Link to="/auth?next=/settings" className={buttonClasses('secondary', 'sm', 'shrink-0 flex items-center gap-1.5')}>
+                  <Link to={`/auth?next=${encodeURIComponent('/settings?tab=account')}`} className={buttonClasses('secondary', 'sm', 'shrink-0 flex items-center gap-1.5')}>
                     Sign in
                   </Link>
                 )}
