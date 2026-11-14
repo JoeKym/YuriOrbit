@@ -1,22 +1,19 @@
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import {
-  Menu,
-  X,
-  BookOpen,
-  LogOut,
-  Shield,
-  ChevronDown,
-  Sparkles,
-  Flame,
-  Tags,
-  Compass,
-  Film,
   BookMarked,
-  Settings,
-  Layers,
-  UserRound,
+  BookOpen,
+  ChevronDown,
   ExternalLink,
+  Flame,
+  LogOut,
+  Menu,
+  Search,
+  Settings,
+  Shield,
+  Tags,
+  UserRound,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/format';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -24,16 +21,28 @@ import { useIsAdmin } from '@/lib/auth/admin';
 import { useMyProfile } from '@/hooks/useMyProfile';
 import { SearchCommand } from '@/components/search/SearchCommand';
 
-const FORMAT_ITEMS = [
-  { to: '/manga', label: 'Manga', desc: 'Japanese Girls\' Love comics' },
-  { to: '/manhwa', label: 'Manhwa', desc: 'Korean colored GL series' },
-  { to: '/manhua', label: 'Manhua', desc: 'Chinese baihe comics' },
-  { to: '/webtoons', label: 'Webtoons', desc: 'Vertical-scroll GL webtoons' },
-  { to: '/novels', label: 'Novels', desc: 'Light novels & web fiction' },
-  { to: '/anime', label: 'Anime', desc: 'TV series, OVAs & films' },
-  { to: '/movies', label: 'Movies', desc: 'Animated & live-action films' },
-  { to: '/dramas', label: 'Dramas', desc: 'Live-action series & GL shows' },
+const FORMAT_GROUPS = [
+  {
+    label: 'Reading',
+    items: [
+      { to: '/manga', label: 'Manga', desc: "Japanese Girls' Love comics" },
+      { to: '/manhwa', label: 'Manhwa', desc: 'Korean colored GL series' },
+      { to: '/manhua', label: 'Manhua', desc: 'Chinese baihe comics' },
+      { to: '/webtoons', label: 'Webtoons', desc: 'Vertical-scroll GL webtoons' },
+      { to: '/novels', label: 'Novels', desc: 'Light novels & web fiction' },
+    ],
+  },
+  {
+    label: 'Screen',
+    items: [
+      { to: '/anime', label: 'Anime', desc: 'TV series, OVAs & films' },
+      { to: '/movies', label: 'Movies', desc: 'Animated & live-action films' },
+      { to: '/dramas', label: 'Dramas', desc: 'Live-action series & GL shows' },
+    ],
+  },
 ];
+
+const FORMAT_ITEMS = FORMAT_GROUPS.flatMap((group) => group.items);
 
 export function Navbar() {
   const { logout, user, isAuthenticated, isLoading } = useAuth();
@@ -49,14 +58,14 @@ export function Navbar() {
   const formatsRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdowns on route change
+  // Close menus on route change (including back/forward).
   useEffect(() => {
     setFormatsOpen(false);
     setUserMenuOpen(false);
     setMobileOpen(false);
   }, [location.pathname]);
 
-  // Click outside to close menus
+  // Click outside to close dropdowns.
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (formatsRef.current && !formatsRef.current.contains(e.target as Node)) {
@@ -69,15 +78,6 @@ export function Navbar() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  // Navigating (including back/forward) always leaves the menus behind. The
-  // mobile links also close themselves, but a keyboard-driven route change from
-  // the desktop dropdown would otherwise keep it open over the new page.
-  useEffect(() => {
-    setFormatsOpen(false);
-    setUserMenuOpen(false);
-    setMobileOpen(false);
-  }, [location.pathname]);
 
   // Escape closes whichever menu is open.
   useEffect(() => {
@@ -94,11 +94,17 @@ export function Navbar() {
 
   const isFormatActive = FORMAT_ITEMS.some((f) => location.pathname === f.to);
 
+  const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+    cn(
+      'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+      isActive ? 'bg-rose-500/10 font-semibold text-rose-400' : 'text-ink-200 hover:bg-ink-850 hover:text-ink-50'
+    );
+
   return (
     <header className="sticky top-0 z-50 border-b border-ink-800/80 bg-ink-950/85 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-page items-center justify-between gap-4 px-4 md:px-6">
-        {/* Brand Logo */}
-        <Link to="/" className="flex items-center gap-2.5 flex-shrink-0 group">
+      <div className="mx-auto flex h-16 max-w-page items-center justify-between gap-3 px-4 md:px-6">
+        {/* Brand */}
+        <Link to="/" className="group flex flex-shrink-0 items-center gap-2.5">
           <img
             src="/apple-touch-icon.png"
             alt="YuriOrbit"
@@ -106,45 +112,25 @@ export function Navbar() {
             height={36}
             className="h-9 w-9 rounded-xl shadow-md shadow-rose-500/20 transition-transform duration-200 group-hover:scale-105"
           />
-          <div className="flex flex-col">
-            <span className="font-display text-xl font-bold tracking-tight text-ink-50 transition-colors group-hover:text-rose-200">
-              YuriOrbit
-            </span>
-          </div>
+          <span className="font-display text-xl font-bold tracking-tight text-ink-50 transition-colors group-hover:text-rose-200">
+            YuriOrbit
+          </span>
         </Link>
 
-        {/* Primary Desktop Nav Links */}
-        <nav aria-label="Primary" className="hidden lg:flex items-center gap-1.5 ml-4">
-          <NavLink
-            to="/"
-            end
-            className={({ isActive }) =>
-              cn(
-                'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
-                isActive ? 'bg-rose-500/10 text-rose-400 font-semibold' : 'text-ink-200 hover:bg-ink-850 hover:text-ink-50'
-              )
-            }
-          >
+        {/* Primary nav: compact at md (key destinations), full at lg */}
+        <nav aria-label="Primary" className="ml-2 hidden items-center gap-1 md:flex">
+          <NavLink to="/" end className={({ isActive }) => cn(navLinkClass({ isActive }), 'hidden lg:inline-flex')}>
             Home
           </NavLink>
 
-          <NavLink
-            to="/discover"
-            className={({ isActive }) =>
-              cn(
-                'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
-                isActive ? 'bg-rose-500/10 text-rose-400 font-semibold' : 'text-ink-200 hover:bg-ink-850 hover:text-ink-50'
-              )
-            }
-          >
+          <NavLink to="/discover" className={navLinkClass}>
             Discover
           </NavLink>
 
-          {/* Formats Dropdown */}
-          <div className="relative" ref={formatsRef}>
+          <div className="relative hidden lg:block" ref={formatsRef}>
             <button
               type="button"
-              onClick={() => setFormatsOpen(!formatsOpen)}
+              onClick={() => setFormatsOpen((open) => !open)}
               onMouseEnter={() => setFormatsOpen(true)}
               aria-expanded={formatsOpen}
               aria-controls="formats-menu"
@@ -152,7 +138,7 @@ export function Navbar() {
               className={cn(
                 'flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
                 isFormatActive || formatsOpen
-                  ? 'bg-rose-500/10 text-rose-400 font-semibold'
+                  ? 'bg-rose-500/10 font-semibold text-rose-400'
                   : 'text-ink-200 hover:bg-ink-850 hover:text-ink-50'
               )}
             >
@@ -164,26 +150,32 @@ export function Navbar() {
               <div
                 id="formats-menu"
                 onMouseLeave={() => setFormatsOpen(false)}
-                className="absolute left-0 mt-2 w-64 rounded-xl border border-ink-800 bg-ink-900/95 p-2 shadow-2xl backdrop-blur-xl animate-fade-in-fast z-50"
+                className="absolute left-0 z-50 mt-2 w-[22rem] rounded-xl border border-ink-800 bg-ink-900/95 p-3 shadow-2xl backdrop-blur-xl animate-fade-in-fast"
               >
-                <div className="px-2 py-1 text-micro font-semibold uppercase tracking-wider text-ink-400">
-                  Girls' Love Formats
-                </div>
-                <div className="mt-1 space-y-0.5">
-                  {FORMAT_ITEMS.map((item) => (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      className={cn(
-                        'flex flex-col rounded-lg px-2.5 py-1.5 transition-colors',
-                        location.pathname === item.to
-                          ? 'bg-rose-500/15 text-rose-300'
-                          : 'text-ink-200 hover:bg-ink-800 hover:text-ink-50'
-                      )}
-                    >
-                      <span className="text-sm font-medium">{item.label}</span>
-                      <span className="text-micro text-ink-400">{item.desc}</span>
-                    </Link>
+                <div className="grid grid-cols-2 gap-3">
+                  {FORMAT_GROUPS.map((group) => (
+                    <div key={group.label}>
+                      <div className="px-2 pb-1 text-micro font-semibold uppercase tracking-wider text-ink-400">
+                        {group.label}
+                      </div>
+                      <div className="space-y-0.5">
+                        {group.items.map((item) => (
+                          <Link
+                            key={item.to}
+                            to={item.to}
+                            className={cn(
+                              'flex flex-col rounded-lg px-2.5 py-1.5 transition-colors',
+                              location.pathname === item.to
+                                ? 'bg-rose-500/15 text-rose-300'
+                                : 'text-ink-200 hover:bg-ink-800 hover:text-ink-50'
+                            )}
+                          >
+                            <span className="text-sm font-medium">{item.label}</span>
+                            <span className="text-micro text-ink-400">{item.desc}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -195,11 +187,11 @@ export function Navbar() {
             className={({ isActive }) =>
               cn(
                 'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
-                isActive ? 'bg-rose-500/10 text-rose-400 font-semibold' : 'text-ink-200 hover:bg-ink-850 hover:text-ink-50'
+                isActive ? 'bg-rose-500/10 font-semibold text-rose-400' : 'text-ink-200 hover:bg-ink-850 hover:text-ink-50'
               )
             }
           >
-            <Flame className="h-3.5 w-3.5 text-rose-400" />
+            <Flame className="h-3.5 w-3.5 text-rose-400" aria-hidden="true" />
             <span>Trending</span>
           </NavLink>
 
@@ -207,24 +199,33 @@ export function Navbar() {
             to="/genres"
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
-                isActive ? 'bg-rose-500/10 text-rose-400 font-semibold' : 'text-ink-200 hover:bg-ink-850 hover:text-ink-50'
+                'hidden items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors lg:flex',
+                isActive ? 'bg-rose-500/10 font-semibold text-rose-400' : 'text-ink-200 hover:bg-ink-850 hover:text-ink-50'
               )
             }
           >
-            <Tags className="h-3.5 w-3.5 text-lavender-400" />
+            <Tags className="h-3.5 w-3.5 text-lavender-400" aria-hidden="true" />
             <span>Genres</span>
           </NavLink>
         </nav>
 
-        {/* Right Controls: Search, Library & Auth */}
-        <div className="flex items-center gap-2.5">
-          {/* Live search */}
+        {/* Right controls: search, library, account */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
           <div className="hidden sm:block">
             <SearchCommand />
           </div>
 
-          {/* Library Link */}
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="rounded-xl p-2 text-ink-200 transition-colors hover:bg-ink-850 hover:text-ink-50 sm:hidden"
+            aria-label="Search"
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-menu"
+          >
+            <Search className="h-5 w-5" />
+          </button>
+
           <Link
             to="/library"
             className={cn(
@@ -237,24 +238,12 @@ export function Navbar() {
             <BookOpen className="h-5 w-5" />
           </Link>
 
-          {/* User / Auth Section */}
-          {!isLoading && (
-            isAuthenticated ? (
-              <div className="flex items-center gap-2">
-                {isAdmin && (
-                  <Link
-                    to="/admin"
-                    className="hidden sm:flex items-center gap-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 px-2.5 py-1 text-xs font-medium text-rose-300 hover:bg-rose-500/20 hover:text-rose-200 transition-colors"
-                    title="Admin Console"
-                  >
-                    <Shield className="h-3.5 w-3.5 text-rose-400" />
-                    <span>Admin</span>
-                  </Link>
-                )}
-                <div className="relative" ref={userMenuRef}>
+          {!isLoading &&
+            (isAuthenticated ? (
+              <div className="relative" ref={userMenuRef}>
                 <button
                   type="button"
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  onClick={() => setUserMenuOpen((open) => !open)}
                   className="flex items-center gap-2 rounded-full border border-ink-700/80 bg-ink-900/90 py-1 pl-1 pr-2.5 transition-all hover:border-ink-600 hover:bg-ink-850"
                   aria-label="User menu"
                   aria-expanded={userMenuOpen}
@@ -264,7 +253,7 @@ export function Navbar() {
                   {user?.picture ? (
                     <img
                       src={user.picture}
-                      alt={user.givenName || 'User'}
+                      alt=""
                       width={24}
                       height={24}
                       decoding="async"
@@ -275,104 +264,85 @@ export function Navbar() {
                       {(user?.givenName?.[0] || user?.email?.[0] || 'U').toUpperCase()}
                     </div>
                   )}
-                  <span className="hidden sm:inline text-xs font-medium text-ink-200 max-w-[90px] truncate">
+                  <span className="hidden max-w-[90px] truncate text-xs font-medium text-ink-200 sm:inline">
                     {user?.givenName || user?.email?.split('@')[0]}
                   </span>
-                  <ChevronDown className="h-3 w-3 text-ink-400" />
+                  <ChevronDown className="h-3 w-3 text-ink-400" aria-hidden="true" />
                 </button>
 
-                {/* User Dropdown Menu */}
                 {userMenuOpen && (
                   <div
                     id="user-menu"
-                    className="absolute right-0 mt-2 w-56 rounded-xl border border-ink-800 bg-ink-900/95 p-2 shadow-2xl backdrop-blur-xl animate-fade-in-fast z-50"
+                    className="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-ink-800 bg-ink-900/95 p-2 shadow-2xl backdrop-blur-xl animate-fade-in-fast"
                   >
-                    <div className="px-3 py-2 border-b border-ink-800/80 mb-1">
-                      <p className="text-xs font-semibold text-ink-100 truncate">
+                    <div className="mb-1 border-b border-ink-800/80 px-3 py-2">
+                      <p className="truncate text-xs font-semibold text-ink-100">
                         {user?.givenName ? `${user.givenName} ${user?.familyName || ''}`.trim() : user?.email}
                       </p>
-                      <p className="text-micro text-ink-400 truncate">{user?.email}</p>
+                      <p className="truncate text-micro text-ink-400">{user?.email}</p>
                     </div>
 
                     <div className="space-y-0.5">
-                      <Link
-                        to="/profile"
-                        className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-ink-200 hover:bg-ink-800 hover:text-ink-50 transition-colors"
-                      >
-                        <UserRound className="h-3.5 w-3.5 text-rose-400" />
+                      <Link to="/profile" className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-ink-200 transition-colors hover:bg-ink-800 hover:text-ink-50">
+                        <UserRound className="h-3.5 w-3.5 text-rose-400" aria-hidden="true" />
                         <span>Your profile</span>
                       </Link>
 
                       {myProfile?.username && (
-                        <Link
-                          to={`/user/${myProfile.username}`}
-                          className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-ink-200 hover:bg-ink-800 hover:text-ink-50 transition-colors"
-                        >
-                          <ExternalLink className="h-3.5 w-3.5 text-lavender-400" />
+                        <Link to={`/user/${myProfile.username}`} className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-ink-200 transition-colors hover:bg-ink-800 hover:text-ink-50">
+                          <ExternalLink className="h-3.5 w-3.5 text-lavender-400" aria-hidden="true" />
                           <span>Public profile</span>
                         </Link>
                       )}
 
-                      <Link
-                        to="/library"
-                        className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-ink-200 hover:bg-ink-800 hover:text-ink-50 transition-colors"
-                      >
-                        <BookMarked className="h-3.5 w-3.5 text-rose-400" />
+                      <Link to="/library" className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-ink-200 transition-colors hover:bg-ink-800 hover:text-ink-50">
+                        <BookMarked className="h-3.5 w-3.5 text-rose-400" aria-hidden="true" />
                         <span>My Library</span>
                       </Link>
 
-                      <Link
-                        to="/settings"
-                        className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-ink-200 hover:bg-ink-800 hover:text-ink-50 transition-colors"
-                      >
-                        <Settings className="h-3.5 w-3.5 text-ink-400" />
+                      <Link to="/settings" className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-ink-200 transition-colors hover:bg-ink-800 hover:text-ink-50">
+                        <Settings className="h-3.5 w-3.5 text-ink-400" aria-hidden="true" />
                         <span>Settings</span>
                       </Link>
 
                       {isAdmin && (
-                        <Link
-                          to="/admin"
-                          className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-rose-300 hover:bg-rose-500/10 transition-colors"
-                        >
-                          <Shield className="h-3.5 w-3.5 text-rose-400" />
+                        <Link to="/admin" className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-rose-300 transition-colors hover:bg-rose-500/10">
+                          <Shield className="h-3.5 w-3.5 text-rose-400" aria-hidden="true" />
                           <span>Admin Console</span>
                         </Link>
                       )}
 
                       <button
                         onClick={() => logout()}
-                        className="w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-ink-400 hover:bg-rose-500/10 hover:text-rose-300 transition-colors text-left"
+                        className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs text-ink-400 transition-colors hover:bg-rose-500/10 hover:text-rose-300"
                       >
-                        <LogOut className="h-3.5 w-3.5" />
+                        <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
                         <span>Sign out</span>
                       </button>
                     </div>
                   </div>
                 )}
               </div>
-              </div>
             ) : (
               <div className="flex items-center gap-2">
                 <Link
                   to="/auth"
-                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-ink-200 hover:bg-ink-850 hover:text-ink-50 transition-colors"
+                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-ink-200 transition-colors hover:bg-ink-850 hover:text-ink-50"
                 >
                   Sign in
                 </Link>
                 <Link
                   to="/auth?mode=signup"
-                  className="rounded-lg bg-gradient-to-r from-rose-500 to-lavender-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:from-rose-600 hover:to-lavender-700 transition-all shadow-rose-500/20"
+                  className="rounded-lg bg-gradient-to-r from-rose-500 to-lavender-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm shadow-rose-500/20 transition-all hover:from-rose-600 hover:to-lavender-700"
                 >
                   Sign up
                 </Link>
               </div>
-            )
-          )}
+            ))}
 
-          {/* Mobile Hamburger Button */}
           <button
             type="button"
-            onClick={() => setMobileOpen(!mobileOpen)}
+            onClick={() => setMobileOpen((open) => !open)}
             className="rounded-xl p-2 text-ink-200 transition-colors hover:bg-ink-850 hover:text-ink-50 lg:hidden"
             aria-label="Menu"
             aria-expanded={mobileOpen}
@@ -383,75 +353,33 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Drawer Menu */}
+      {/* Mobile / tablet drawer */}
       {mobileOpen && (
         <div
           id="mobile-menu"
-          className="lg:hidden border-t border-ink-800 bg-ink-950/98 px-4 py-4 backdrop-blur-xl animate-fade-in-fast"
+          className="max-h-[calc(100vh-4rem)] overflow-y-auto border-t border-ink-800 bg-ink-950/98 px-4 py-4 backdrop-blur-xl animate-fade-in-fast lg:hidden"
         >
-          {/* Mobile Search */}
           <div className="mb-4 sm:hidden">
             <SearchCommand variant="mobile" onNavigate={() => setMobileOpen(false)} />
           </div>
 
-          {/* Primary Mobile Links */}
-          <div className="grid grid-cols-2 gap-1.5 mb-3">
-            <NavLink
-              to="/"
-              end
-              onClick={() => setMobileOpen(false)}
-              className={({ isActive }) =>
-                cn(
-                  'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  isActive ? 'bg-rose-500/10 text-rose-400' : 'text-ink-200 hover:bg-ink-850 hover:text-ink-50'
-                )
-              }
-            >
+          <div className="mb-3 grid grid-cols-2 gap-1.5">
+            <NavLink to="/" end onClick={() => setMobileOpen(false)} className={({ isActive }) => cn('rounded-lg px-3 py-2 text-sm font-medium transition-colors', isActive ? 'bg-rose-500/10 text-rose-400' : 'text-ink-200 hover:bg-ink-850 hover:text-ink-50')}>
               Home
             </NavLink>
-            <NavLink
-              to="/discover"
-              onClick={() => setMobileOpen(false)}
-              className={({ isActive }) =>
-                cn(
-                  'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  isActive ? 'bg-rose-500/10 text-rose-400' : 'text-ink-200 hover:bg-ink-850 hover:text-ink-50'
-                )
-              }
-            >
+            <NavLink to="/discover" onClick={() => setMobileOpen(false)} className={({ isActive }) => cn('rounded-lg px-3 py-2 text-sm font-medium transition-colors', isActive ? 'bg-rose-500/10 text-rose-400' : 'text-ink-200 hover:bg-ink-850 hover:text-ink-50')}>
               Discover
             </NavLink>
-            <NavLink
-              to="/trending"
-              onClick={() => setMobileOpen(false)}
-              className={({ isActive }) =>
-                cn(
-                  'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  isActive ? 'bg-rose-500/10 text-rose-400' : 'text-ink-200 hover:bg-ink-850 hover:text-ink-50'
-                )
-              }
-            >
+            <NavLink to="/trending" onClick={() => setMobileOpen(false)} className={({ isActive }) => cn('rounded-lg px-3 py-2 text-sm font-medium transition-colors', isActive ? 'bg-rose-500/10 text-rose-400' : 'text-ink-200 hover:bg-ink-850 hover:text-ink-50')}>
               Trending
             </NavLink>
-            <NavLink
-              to="/genres"
-              onClick={() => setMobileOpen(false)}
-              className={({ isActive }) =>
-                cn(
-                  'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  isActive ? 'bg-rose-500/10 text-rose-400' : 'text-ink-200 hover:bg-ink-850 hover:text-ink-50'
-                )
-              }
-            >
+            <NavLink to="/genres" onClick={() => setMobileOpen(false)} className={({ isActive }) => cn('rounded-lg px-3 py-2 text-sm font-medium transition-colors', isActive ? 'bg-rose-500/10 text-rose-400' : 'text-ink-200 hover:bg-ink-850 hover:text-ink-50')}>
               Genres
             </NavLink>
           </div>
 
-          {/* Formats Section */}
-          <div className="pt-3 border-t border-ink-800/80 mb-3">
-            <span className="px-2 text-micro font-semibold uppercase tracking-wider text-ink-400">
-              Browse by Format
-            </span>
+          <div className="mb-3 border-t border-ink-800/80 pt-3">
+            <span className="px-2 text-micro font-semibold uppercase tracking-wider text-ink-400">Browse by format</span>
             <div className="mt-2 grid grid-cols-2 gap-1.5">
               {FORMAT_ITEMS.map((item) => (
                 <Link
@@ -460,9 +388,7 @@ export function Navbar() {
                   onClick={() => setMobileOpen(false)}
                   className={cn(
                     'rounded-lg px-3 py-2 text-xs font-medium transition-colors',
-                    location.pathname === item.to
-                      ? 'bg-rose-500/15 text-rose-300'
-                      : 'text-ink-300 hover:bg-ink-850 hover:text-ink-50'
+                    location.pathname === item.to ? 'bg-rose-500/15 text-rose-300' : 'text-ink-300 hover:bg-ink-850 hover:text-ink-50'
                   )}
                 >
                   {item.label}
@@ -471,50 +397,55 @@ export function Navbar() {
             </div>
           </div>
 
-          {/* User Auth Footer in Mobile Menu */}
           {!isLoading && (
-            <div className="pt-3 border-t border-ink-800/80">
+            <div className="border-t border-ink-800/80 pt-3">
               {isAuthenticated ? (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
+                <div>
+                  <div className="mb-3 flex items-center gap-2.5 px-1">
                     {user?.picture ? (
-                      <img
-                        src={user.picture}
-                        alt={user.givenName || 'User'}
-                        width={32}
-                        height={32}
-                        decoding="async"
-                        className="h-8 w-8 rounded-full object-cover"
-                      />
+                      <img src={user.picture} alt="" width={32} height={32} decoding="async" className="h-8 w-8 rounded-full object-cover" />
                     ) : (
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-rose-500 to-lavender-500 text-xs font-bold text-white">
                         {(user?.givenName?.[0] || user?.email?.[0] || 'U').toUpperCase()}
                       </div>
                     )}
-                    <div>
-                      <p className="text-xs font-semibold text-ink-100">
-                        {user?.givenName || user?.email?.split('@')[0]}
-                      </p>
-                      <p className="text-micro text-ink-400">{user?.email}</p>
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-ink-100">{user?.givenName || user?.email?.split('@')[0]}</p>
+                      <p className="truncate text-micro text-ink-400">{user?.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+
+                  <div className="space-y-0.5">
+                    <Link to="/profile" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-ink-200 transition-colors hover:bg-ink-850 hover:text-ink-50">
+                      <UserRound className="h-4 w-4 text-rose-400" aria-hidden="true" />
+                      <span>Your profile</span>
+                    </Link>
+                    {myProfile?.username && (
+                      <Link to={`/user/${myProfile.username}`} onClick={() => setMobileOpen(false)} className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-ink-200 transition-colors hover:bg-ink-850 hover:text-ink-50">
+                        <ExternalLink className="h-4 w-4 text-lavender-400" aria-hidden="true" />
+                        <span>Public profile</span>
+                      </Link>
+                    )}
+                    <Link to="/library" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-ink-200 transition-colors hover:bg-ink-850 hover:text-ink-50">
+                      <BookMarked className="h-4 w-4 text-rose-400" aria-hidden="true" />
+                      <span>My Library</span>
+                    </Link>
+                    <Link to="/settings" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-ink-200 transition-colors hover:bg-ink-850 hover:text-ink-50">
+                      <Settings className="h-4 w-4 text-ink-400" aria-hidden="true" />
+                      <span>Settings</span>
+                    </Link>
                     {isAdmin && (
-                      <Link
-                        to="/admin"
-                        onClick={() => setMobileOpen(false)}
-                        className="rounded-lg p-2 text-ink-300 hover:bg-ink-800 hover:text-ink-100 transition-colors"
-                        title="Admin Dashboard"
-                      >
-                        <Shield className="h-4 w-4 text-rose-400" />
+                      <Link to="/admin" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-rose-300 transition-colors hover:bg-rose-500/10">
+                        <Shield className="h-4 w-4 text-rose-400" aria-hidden="true" />
+                        <span>Admin Console</span>
                       </Link>
                     )}
                     <button
                       onClick={() => logout()}
-                      className="rounded-lg p-2 text-ink-400 hover:bg-ink-800 hover:text-rose-400 transition-colors"
-                      title="Sign out"
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-ink-400 transition-colors hover:bg-rose-500/10 hover:text-rose-300"
                     >
-                      <LogOut className="h-4 w-4" />
+                      <LogOut className="h-4 w-4" aria-hidden="true" />
+                      <span>Sign out</span>
                     </button>
                   </div>
                 </div>
@@ -523,14 +454,14 @@ export function Navbar() {
                   <Link
                     to="/auth"
                     onClick={() => setMobileOpen(false)}
-                    className="flex-1 rounded-xl border border-ink-700 bg-ink-900 py-2.5 text-center text-xs font-semibold text-ink-100 hover:bg-ink-850 transition-colors"
+                    className="flex-1 rounded-xl border border-ink-700 bg-ink-900 py-2.5 text-center text-xs font-semibold text-ink-100 transition-colors hover:bg-ink-850"
                   >
                     Sign in
                   </Link>
                   <Link
                     to="/auth?mode=signup"
                     onClick={() => setMobileOpen(false)}
-                    className="flex-1 rounded-xl bg-gradient-to-r from-rose-500 to-lavender-600 py-2.5 text-center text-xs font-semibold text-white shadow-sm hover:from-rose-600 hover:to-lavender-700 transition-all"
+                    className="flex-1 rounded-xl bg-gradient-to-r from-rose-500 to-lavender-600 py-2.5 text-center text-xs font-semibold text-white shadow-sm transition-all hover:from-rose-600 hover:to-lavender-700"
                   >
                     Sign up
                   </Link>
