@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Activity,
@@ -119,42 +119,36 @@ export function AdminPage() {
     };
   }, [isAuthenticated, isLoading]);
 
-  // How much work each queue holds, so the tabs double as a to-do list.
+  // How much work each queue holds, so the tabs and the overview agree.
+  const loadQueueCounts = useCallback(async () => {
+    const [appeals, inbox, contact, settings] = await Promise.all([
+      adminApi.feedback({ kind: 'appeal', status: 'open', perPage: 1 }),
+      adminApi.feedback({ status: 'open', perPage: 1 }),
+      adminApi.feedback({ kind: 'contact', status: 'open', perPage: 1 }),
+      adminApi.settings(),
+    ]);
+
+    const moderationRow = settings.ok
+      ? settings.data?.settings.find((row) => row.key === 'content_moderation')
+      : undefined;
+    const moderationValue = moderationRow?.value;
+    const moderationCount =
+      moderationValue && typeof moderationValue === 'object'
+        ? Object.keys(moderationValue as Record<string, unknown>).length
+        : 0;
+
+    setQueueCounts({
+      appeals: appeals.ok ? appeals.data?.total ?? 0 : undefined,
+      feedback: inbox.ok ? inbox.data?.total ?? 0 : undefined,
+      contact: contact.ok ? contact.data?.total ?? 0 : undefined,
+      moderation: moderationCount,
+    });
+  }, []);
+
   useEffect(() => {
     if (!authorised) return;
-    let cancelled = false;
-
-    const loadCounts = async () => {
-      const [appeals, inbox, contact, settings] = await Promise.all([
-        adminApi.feedback({ kind: 'appeal', status: 'open', perPage: 1 }),
-        adminApi.feedback({ status: 'open', perPage: 1 }),
-        adminApi.feedback({ kind: 'contact', status: 'open', perPage: 1 }),
-        adminApi.settings(),
-      ]);
-      if (cancelled) return;
-
-      const moderationRow = settings.ok
-        ? settings.data?.settings.find((row) => row.key === 'content_moderation')
-        : undefined;
-      const moderationValue = moderationRow?.value;
-      const moderationCount =
-        moderationValue && typeof moderationValue === 'object'
-          ? Object.keys(moderationValue as Record<string, unknown>).length
-          : 0;
-
-      setQueueCounts({
-        appeals: appeals.ok ? appeals.data?.total ?? 0 : undefined,
-        feedback: inbox.ok ? inbox.data?.total ?? 0 : undefined,
-        contact: contact.ok ? contact.data?.total ?? 0 : undefined,
-        moderation: moderationCount,
-      });
-    };
-
-    void loadCounts();
-    return () => {
-      cancelled = true;
-    };
-  }, [authorised]);
+    void loadQueueCounts();
+  }, [authorised, loadQueueCounts]);
 
   // A deep link can open a tab that starts outside the scrolling strip.
   useEffect(() => {
@@ -275,7 +269,9 @@ export function AdminPage() {
         </div>
       </div>
 
-      {tab === 'overview' && <OverviewTab onNavigate={setTab} />}
+      {tab === 'overview' && (
+        <OverviewTab onNavigate={setTab} counts={queueCounts} onRefreshCounts={loadQueueCounts} />
+      )}
       {tab === 'traffic' && <TrafficTab />}
       {tab === 'users' && <UsersTab />}
       {tab === 'appeals' && <AppealsTab />}
