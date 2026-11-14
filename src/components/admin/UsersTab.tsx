@@ -264,7 +264,7 @@ export function UsersTab() {
                 <th className="px-4 py-2.5 font-medium">Account</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
                 <th className="px-4 py-2.5 font-medium">Joined / Last sign-in</th>
-                <th className="px-4 py-2.5 font-medium">Library</th>
+                <th className="px-4 py-2.5 text-right font-medium">Library</th>
                 <th className="px-4 py-2.5 text-right font-medium">Actions</th>
               </tr>
             </thead>
@@ -298,15 +298,15 @@ export function UsersTab() {
                         <div>{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '—'}</div>
                         <div className="text-micro text-ink-400">{user.lastSignInAt ? `Last: ${new Date(user.lastSignInAt).toLocaleDateString()}` : 'never signed in'}</div>
                       </td>
-                      <td className="px-4 py-2.5 text-ink-300">{user.libraryCount}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-ink-300">{user.libraryCount}</td>
                       <td className="px-4 py-2.5">
                         <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => openModeration(user, 'suspend')} disabled={busyId === user.id} title="Suspend user" className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-warning-400 disabled:opacity-40"><Clock3 className="h-3.5 w-3.5" /></button>
-                          <button onClick={() => openModeration(user, 'ban')} disabled={busyId === user.id} title="Ban user" className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-error-400 disabled:opacity-40"><Ban className="h-3.5 w-3.5" /></button>
-                          {banned && <button onClick={() => openModeration(user, 'unban')} disabled={busyId === user.id} title="Unban/remove restriction" className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-success-400 disabled:opacity-40"><ShieldCheck className="h-3.5 w-3.5" /></button>}
-                          <button onClick={() => handleBackfillRefs(user)} disabled={busyId === user.id} title="Backfill this user's provider references" className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-rose-400 disabled:opacity-40">{busyId === user.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}</button>
-                          <button onClick={() => handlePurge(user)} disabled={busyId === user.id} title="Delete this user's library entries" className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-warning-400 disabled:opacity-40"><Trash2 className="h-3.5 w-3.5" /></button>
-                          <button onClick={() => handleDelete(user)} disabled={busyId === user.id} title="Delete this account" className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-error-400 disabled:opacity-40"><UserMinus className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => openModeration(user, 'suspend')} disabled={busyId === user.id} title="Suspend user" aria-label={`Suspend ${user.email ?? user.id}`} className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-warning-400 disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-rose-500/60"><Clock3 className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => openModeration(user, 'ban')} disabled={busyId === user.id} title="Ban user" aria-label={`Ban ${user.email ?? user.id}`} className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-error-400 disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-rose-500/60"><Ban className="h-3.5 w-3.5" /></button>
+                          {banned && <button onClick={() => openModeration(user, 'unban')} disabled={busyId === user.id} title="Unban/remove restriction" aria-label={`Remove restrictions from ${user.email ?? user.id}`} className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-success-400 disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-rose-500/60"><ShieldCheck className="h-3.5 w-3.5" /></button>}
+                          <button onClick={() => handleBackfillRefs(user)} disabled={busyId === user.id} title="Backfill this user's provider references" aria-label={`Backfill provider references for ${user.email ?? user.id}`} className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-rose-400 disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-rose-500/60">{busyId === user.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}</button>
+                          <button onClick={() => handlePurge(user)} disabled={busyId === user.id} title="Delete this user's library entries" aria-label={`Delete library entries for ${user.email ?? user.id}`} className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-warning-400 disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-rose-500/60"><Trash2 className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => handleDelete(user)} disabled={busyId === user.id} title="Delete this account" aria-label={`Delete account ${user.email ?? user.id}`} className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-error-400 disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-rose-500/60"><UserMinus className="h-3.5 w-3.5" /></button>
                         </div>
                       </td>
                     </tr>
