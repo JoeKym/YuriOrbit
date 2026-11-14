@@ -50,11 +50,14 @@ export function Tabs({ items, value, onChange, label, scrollable = false, classN
     const active = list?.querySelector<HTMLElement>(`#${tabId(value)}`);
     if (!list || !active) return;
 
-    const left = active.offsetLeft;
-    const right = left + active.offsetWidth;
-    if (left < list.scrollLeft) list.scrollLeft = left - 8;
-    else if (right > list.scrollLeft + list.clientWidth) {
-      list.scrollLeft = right - list.clientWidth + 8;
+    // Rect-based rather than offsetLeft: the strip is not positioned, so
+    // offsetLeft would be measured from some unrelated ancestor.
+    const listRect = list.getBoundingClientRect();
+    const activeRect = active.getBoundingClientRect();
+    if (activeRect.left < listRect.left) {
+      list.scrollLeft -= listRect.left - activeRect.left + 8;
+    } else if (activeRect.right > listRect.right) {
+      list.scrollLeft += activeRect.right - listRect.right + 8;
     }
   }, [value, scrollable]);
 

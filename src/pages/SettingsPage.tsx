@@ -64,39 +64,56 @@ const SETTINGS_TABS = [
 
 type ConfirmAction = 'reset' | 'clear-library' | 'clear-all' | 'delete-account';
 
-const CONFIRM_COPY: Record<
-  ConfirmAction,
-  { title: string; description: string; confirmLabel: string; danger: boolean }
-> = {
-  reset: {
-    title: 'Reset settings to defaults?',
-    description:
-      'Restores appearance, theme, reader preferences, data saver and the content filter. Your library is not affected.',
-    confirmLabel: 'Reset settings',
-    danger: false,
-  },
-  'clear-library': {
-    title: 'Clear this device’s library?',
-    description:
-      'Removes saved titles and reading progress stored in this browser. Cloud-synced data is not deleted.',
-    confirmLabel: 'Clear library',
-    danger: true,
-  },
-  'clear-all': {
-    title: 'Clear all local data?',
-    description:
-      'Removes the local library and resets every setting on this device. Cloud-synced library data stays in your account.',
-    confirmLabel: 'Clear all local data',
-    danger: true,
-  },
-  'delete-account': {
-    title: 'Delete your account?',
-    description:
-      'Permanently deletes your account and cloud library data, then signs you out. This cannot be undone.',
-    confirmLabel: 'Delete account',
-    danger: true,
-  },
-};
+interface ConfirmCopy {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  danger: boolean;
+}
+
+/**
+ * Clearing the library goes through `useLibrary().clearLibrary`, which deletes
+ * the signed-in account's rows as well as the local copy — so the copy has to
+ * say that when it is true.
+ */
+function confirmCopyFor(action: ConfirmAction, signedIn: boolean): ConfirmCopy {
+  switch (action) {
+    case 'reset':
+      return {
+        title: 'Reset settings to defaults?',
+        description:
+          'Restores appearance, theme, reader preferences, data saver and the content filter. Your library is not affected.',
+        confirmLabel: 'Reset settings',
+        danger: false,
+      };
+    case 'clear-library':
+      return {
+        title: signedIn ? 'Delete your saved library?' : 'Clear this device’s library?',
+        description: signedIn
+          ? 'Removes every saved title and reading progress from your account and this browser. Cloud data is deleted — this cannot be undone.'
+          : 'Removes saved titles and reading progress stored in this browser. This cannot be undone.',
+        confirmLabel: signedIn ? 'Delete library' : 'Clear library',
+        danger: true,
+      };
+    case 'clear-all':
+      return {
+        title: signedIn ? 'Delete your library and reset settings?' : 'Clear all local data?',
+        description: signedIn
+          ? 'Deletes your saved library from this account and this browser, then resets every setting on this device. This cannot be undone.'
+          : 'Removes the local library and resets every setting on this device. This cannot be undone.',
+        confirmLabel: signedIn ? 'Delete library and reset' : 'Clear all local data',
+        danger: true,
+      };
+    case 'delete-account':
+      return {
+        title: 'Delete your account?',
+        description:
+          'Permanently deletes your account and cloud library data, then signs you out. This cannot be undone.',
+        confirmLabel: 'Delete account',
+        danger: true,
+      };
+  }
+}
 
 /** Device-local vs account-synced marker for sections that also write to a profile. */
 function ScopeBadge({ synced }: { synced: boolean }) {
@@ -353,7 +370,16 @@ export function SettingsPage() {
           }
         }
         if (Array.isArray(parsed.library)) {
-          localStorage.setItem('yuriorbit_library', JSON.stringify(parsed.library));
+          // useLibrary's localStorage mirror is a map keyed by entry id, and it
+          // recovers mirrored entries back into IndexedDB on the next load. An
+          // exported array has to be reshaped before it lands there.
+          const mirror: Record<string, unknown> = {};
+          for (const entry of parsed.library) {
+            if (entry && typeof entry === 'object' && typeof entry.id === 'string') {
+              mirror[entry.id] = entry;
+            }
+          }
+          localStorage.setItem('yuriorbit:library', JSON.stringify(mirror));
         }
         showFeedback('Backup restored. Library and preferences updated — refresh to see library changes.', 'success', 4500);
       } catch {
@@ -388,7 +414,7 @@ export function SettingsPage() {
 
   const handleClearLocalLibrary = () => {
     clearLibrary();
-    showFeedback('Local library data has been cleared.');
+    showFeedback(isAuthenticated ? 'Your saved library has been deleted.' : 'Local library data has been cleared.');
   };
 
   const handleSignOut = async () => {
@@ -399,12 +425,15 @@ export function SettingsPage() {
   };
 
   const handleClearAllLocalData = () => {
-    try {
-      localStorage.removeItem('yuriorbit_library');
-    } catch {}
     clearLibrary();
     clearLocalSettingsState();
-    showFeedback('All local data has been cleared and settings reset to defaults.', 'success', 4500);
+    showFeedback(
+      isAuthenticated
+        ? 'Your saved library was deleted and settings were reset.'
+        : 'All local data has been cleared and settings reset to defaults.',
+      'success',
+      4500
+    );
   };
 
   const handleDeleteAccount = async () => {
@@ -434,9 +463,6 @@ export function SettingsPage() {
         return;
       }
 
-      try {
-        localStorage.removeItem('yuriorbit_library');
-      } catch {}
       clearLibrary();
       clearLocalSettingsState();
       await logout().catch(() => {});
@@ -462,7 +488,7 @@ export function SettingsPage() {
     else if (action === 'delete-account') void handleDeleteAccount();
   };
 
-  const confirmCopy = confirmAction ? CONFIRM_COPY[confirmAction] : null;
+  const confirmCopy = confirmAction ? confirmCopyFor(confirmAction, isAuthenticated) : null;
   const confirmBlocked =
     confirmAction === 'delete-account' &&
     (deletingAccount || deleteConfirmText.trim() !== 'DELETE');
@@ -767,7 +793,7 @@ export function SettingsPage() {
             </div>
 
             <p className="mt-3 text-micro leading-relaxed text-ink-400">
-              Removing this device&rsquo;s saved titles is in{' '}
+              Clearing your saved library lives in{' '}
               <Link to="/settings?tab=account" className="text-rose-300 underline-offset-2 hover:underline">
                 Account &rarr; Danger zone
               </Link>
@@ -953,25 +979,33 @@ export function SettingsPage() {
 
               <div className="flex flex-col gap-3 rounded-xl border border-ink-800/80 bg-ink-950/30 p-3.5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-ink-100">Clear local library</p>
+                  <p className="text-sm font-medium text-ink-100">
+                    {isAuthenticated ? 'Delete saved library' : 'Clear local library'}
+                  </p>
                   <p className="mt-0.5 text-xs text-ink-400">
-                    Removes saved titles and reading progress stored in this browser. Cloud-synced data (if signed in) is not deleted.
+                    {isAuthenticated
+                      ? 'Removes every saved title and reading progress from your account and this browser. This cannot be undone.'
+                      : 'Removes saved titles and reading progress stored in this browser. This cannot be undone.'}
                   </p>
                 </div>
                 <Button variant="secondary" size="sm" onClick={() => setConfirmAction('clear-library')} className="shrink-0 text-error-400 hover:text-error-300 border-rose-500/30 flex items-center gap-1.5">
-                  <Trash2 className="h-3.5 w-3.5" /> Clear library
+                  <Trash2 className="h-3.5 w-3.5" /> {isAuthenticated ? 'Delete library' : 'Clear library'}
                 </Button>
               </div>
 
               <div className="flex flex-col gap-3 rounded-xl border border-rose-500/20 bg-rose-500/[0.04] p-3.5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-ink-100">Clear all local data</p>
+                  <p className="text-sm font-medium text-ink-100">
+                    {isAuthenticated ? 'Delete library and reset settings' : 'Clear all local data'}
+                  </p>
                   <p className="mt-0.5 text-xs text-ink-400">
-                    Removes local library and resets all settings on this device. Export a backup first if needed.
+                    {isAuthenticated
+                      ? 'Deletes your saved library from this account and this browser, then resets every setting on this device.'
+                      : 'Removes the local library and resets every setting on this device.'}
                   </p>
                 </div>
                 <Button variant="secondary" size="sm" onClick={() => setConfirmAction('clear-all')} className="shrink-0 border-rose-500/40 bg-rose-500/10 text-rose-200 hover:bg-rose-500/15 flex items-center gap-1.5">
-                  <Trash2 className="h-3.5 w-3.5" /> Clear all local data
+                  <Trash2 className="h-3.5 w-3.5" /> {isAuthenticated ? 'Delete library and reset' : 'Clear all local data'}
                 </Button>
               </div>
 
