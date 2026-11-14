@@ -43,6 +43,7 @@ import { cn } from '@/lib/utils/format';
 import { PageHeader } from '@/components/layout/PageHeader';
 import {
   Button,
+  Dialog,
   SettingRow,
   SettingsSection,
   Switch,
@@ -60,6 +61,42 @@ const SETTINGS_TABS = [
   { id: 'content', label: 'Content', icon: ShieldAlert },
   { id: 'account', label: 'Account', icon: UserRound },
 ];
+
+type ConfirmAction = 'reset' | 'clear-library' | 'clear-all' | 'delete-account';
+
+const CONFIRM_COPY: Record<
+  ConfirmAction,
+  { title: string; description: string; confirmLabel: string; danger: boolean }
+> = {
+  reset: {
+    title: 'Reset settings to defaults?',
+    description:
+      'Restores appearance, theme, reader preferences, data saver and the content filter. Your library is not affected.',
+    confirmLabel: 'Reset settings',
+    danger: false,
+  },
+  'clear-library': {
+    title: 'Clear this device’s library?',
+    description:
+      'Removes saved titles and reading progress stored in this browser. Cloud-synced data is not deleted.',
+    confirmLabel: 'Clear library',
+    danger: true,
+  },
+  'clear-all': {
+    title: 'Clear all local data?',
+    description:
+      'Removes the local library and resets every setting on this device. Cloud-synced library data stays in your account.',
+    confirmLabel: 'Clear all local data',
+    danger: true,
+  },
+  'delete-account': {
+    title: 'Delete your account?',
+    description:
+      'Permanently deletes your account and cloud library data, then signs you out. This cannot be undone.',
+    confirmLabel: 'Delete account',
+    danger: true,
+  },
+};
 
 /** Device-local vs account-synced marker for sections that also write to a profile. */
 function ScopeBadge({ synced }: { synced: boolean }) {
@@ -90,6 +127,8 @@ export function SettingsPage() {
   const [theme, setTheme] = useState<ThemeId>(() => getStoredTheme());
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [chapterPrefs, updateChapterPrefs] = useChapterUpdatePrefs();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
@@ -138,12 +177,25 @@ export function SettingsPage() {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [feedbackTone, setFeedbackTone] = useState<'success' | 'error'>('success');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showFeedback = (msg: string, tone: 'success' | 'error' = 'success', ms = 3500) => {
     setFeedbackTone(tone);
     setFeedback(msg);
-    setTimeout(() => setFeedback(null), ms);
+    // One timer at a time: a newer message must not be cleared by an older one.
+    if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+    feedbackTimer.current = setTimeout(() => {
+      setFeedback(null);
+      feedbackTimer.current = null;
+    }, ms);
   };
+
+  useEffect(
+    () => () => {
+      if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+    },
+    []
+  );
 
   // Sync reduced motion to document root
   useEffect(() => {
@@ -330,25 +382,11 @@ export function SettingsPage() {
   };
 
   const handleResetSettings = () => {
-    if (
-      !confirm(
-        'Reset all settings to defaults? This restores appearance, theme, reader, data saver, and content filter preferences. Your library data will not be affected.'
-      )
-    ) {
-      return;
-    }
     clearLocalSettingsState();
     showFeedback('Settings have been reset to defaults.');
   };
 
   const handleClearLocalLibrary = () => {
-    if (
-      !confirm(
-        'Clear the library saved in this browser? This removes saved titles and reading progress on this device. Cloud-synced data is not deleted.'
-      )
-    ) {
-      return;
-    }
     clearLibrary();
     showFeedback('Local library data has been cleared.');
   };
@@ -361,13 +399,6 @@ export function SettingsPage() {
   };
 
   const handleClearAllLocalData = () => {
-    if (
-      !confirm(
-        'Clear all local data on this device? This removes your local library and resets all settings to defaults. If you are signed in, cloud-synced library data remains in your account.'
-      )
-    ) {
-      return;
-    }
     try {
       localStorage.removeItem('yuriorbit_library');
     } catch {}
@@ -381,14 +412,6 @@ export function SettingsPage() {
       showFeedback('Sign in to delete your account.', 'error');
       return;
     }
-    const typed = window.prompt(
-      'This will permanently delete your account and cloud library data. This cannot be undone.\n\nType DELETE to confirm:'
-    );
-    if (typed !== 'DELETE') {
-      if (typed !== null) showFeedback('Account deletion cancelled (confirmation did not match).', 'error');
-      return;
-    }
-
     setDeletingAccount(true);
     try {
       const {
@@ -425,6 +448,25 @@ export function SettingsPage() {
     }
   };
 
+  const closeConfirm = () => {
+    setConfirmAction(null);
+    setDeleteConfirmText('');
+  };
+
+  const runConfirmedAction = () => {
+    const action = confirmAction;
+    closeConfirm();
+    if (action === 'reset') handleResetSettings();
+    else if (action === 'clear-library') handleClearLocalLibrary();
+    else if (action === 'clear-all') handleClearAllLocalData();
+    else if (action === 'delete-account') void handleDeleteAccount();
+  };
+
+  const confirmCopy = confirmAction ? CONFIRM_COPY[confirmAction] : null;
+  const confirmBlocked =
+    confirmAction === 'delete-account' &&
+    (deletingAccount || deleteConfirmText.trim() !== 'DELETE');
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 md:px-6 lg:max-w-5xl">
       <PageHeader
@@ -436,6 +478,9 @@ export function SettingsPage() {
 
       {feedback && (
         <div
+          role={feedbackTone === 'error' ? 'alert' : 'status'}
+          aria-live={feedbackTone === 'error' ? 'assertive' : 'polite'}
+          aria-atomic="true"
           className={cn(
             'mb-6 flex items-center gap-2 rounded-xl border p-3.5 text-xs font-medium',
             feedbackTone === 'error'
@@ -900,7 +945,7 @@ export function SettingsPage() {
                     Restores appearance, theme, reader preferences, data saver, and content filter. Does not touch your library.
                   </p>
                 </div>
-                <Button variant="secondary" size="sm" onClick={handleResetSettings} className="shrink-0 border-rose-500/30 text-rose-300 hover:border-rose-500/50 hover:text-rose-200 flex items-center gap-1.5">
+                <Button variant="secondary" size="sm" onClick={() => setConfirmAction('reset')} className="shrink-0 border-rose-500/30 text-rose-300 hover:border-rose-500/50 hover:text-rose-200 flex items-center gap-1.5">
                   <RotateCcw className="h-3.5 w-3.5" /> Reset settings
                 </Button>
               </div>
@@ -912,7 +957,7 @@ export function SettingsPage() {
                     Removes saved titles and reading progress stored in this browser. Cloud-synced data (if signed in) is not deleted.
                   </p>
                 </div>
-                <Button variant="secondary" size="sm" onClick={handleClearLocalLibrary} className="shrink-0 text-error-400 hover:text-error-300 border-rose-500/30 flex items-center gap-1.5">
+                <Button variant="secondary" size="sm" onClick={() => setConfirmAction('clear-library')} className="shrink-0 text-error-400 hover:text-error-300 border-rose-500/30 flex items-center gap-1.5">
                   <Trash2 className="h-3.5 w-3.5" /> Clear library
                 </Button>
               </div>
@@ -924,7 +969,7 @@ export function SettingsPage() {
                     Removes local library and resets all settings on this device. Export a backup first if needed.
                   </p>
                 </div>
-                <Button variant="secondary" size="sm" onClick={handleClearAllLocalData} className="shrink-0 border-rose-500/40 bg-rose-500/10 text-rose-200 hover:bg-rose-500/15 flex items-center gap-1.5">
+                <Button variant="secondary" size="sm" onClick={() => setConfirmAction('clear-all')} className="shrink-0 border-rose-500/40 bg-rose-500/10 text-rose-200 hover:bg-rose-500/15 flex items-center gap-1.5">
                   <Trash2 className="h-3.5 w-3.5" /> Clear all local data
                 </Button>
               </div>
@@ -939,7 +984,7 @@ export function SettingsPage() {
                   </p>
                 </div>
                 {isAuthenticated ? (
-                  <Button variant="secondary" size="sm" onClick={handleDeleteAccount} disabled={deletingAccount} className="shrink-0 border-error-500/50 bg-error-500/10 text-error-200 hover:bg-error-500/20 disabled:opacity-60 flex items-center gap-1.5">
+                  <Button variant="secondary" size="sm" onClick={() => setConfirmAction('delete-account')} disabled={deletingAccount} className="shrink-0 border-error-500/50 bg-error-500/10 text-error-200 hover:bg-error-500/20 disabled:opacity-60 flex items-center gap-1.5">
                     {deletingAccount ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserX className="h-3.5 w-3.5" />}
                     {deletingAccount ? 'Deleting…' : 'Delete account'}
                   </Button>
@@ -956,6 +1001,50 @@ export function SettingsPage() {
 
         </div>
       </div>
+
+      {confirmCopy && (
+        <Dialog
+          open
+          onClose={closeConfirm}
+          title={confirmCopy.title}
+          description={confirmCopy.description}
+          tone={confirmCopy.danger ? 'danger' : 'default'}
+          footer={
+            <>
+              <Button variant="secondary" size="sm" onClick={closeConfirm}>
+                Cancel
+              </Button>
+              <Button
+                variant={confirmCopy.danger ? 'danger' : 'primary'}
+                size="sm"
+                onClick={runConfirmedAction}
+                disabled={confirmBlocked}
+              >
+                {confirmCopy.confirmLabel}
+              </Button>
+            </>
+          }
+        >
+          {confirmAction === 'delete-account' && (
+            <div>
+              <label
+                htmlFor="delete-account-confirm"
+                className="block text-xs font-medium text-ink-300"
+              >
+                Type DELETE to confirm
+              </label>
+              <input
+                id="delete-account-confirm"
+                value={deleteConfirmText}
+                onChange={(event) => setDeleteConfirmText(event.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+                className="input-field mt-1.5 w-full text-sm"
+              />
+            </div>
+          )}
+        </Dialog>
+      )}
     </div>
   );
 }
