@@ -1,45 +1,88 @@
-import { useEffect, useState } from 'react';
-import { AlertTriangle, BookOpen, Loader2, Sparkles, Users } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { AlertTriangle, BookOpen, Megaphone, RefreshCw, Sparkles, Users } from 'lucide-react';
 import { adminApi, type AdminStats } from '@/lib/admin/api';
 import { LIBRARY_STATUS_LABELS, type LibraryStatus } from '@/types/content';
+import { Button } from '@/components/ui';
+import { StatTile } from '@/components/admin/StatTile';
 
 interface OverviewTabProps {
   onNavigate: (tab: 'users' | 'library' | 'featured' | 'settings') => void;
+}
+
+function OverviewSkeleton() {
+  return (
+    <div className="space-y-6" aria-busy="true" aria-live="polite">
+      <span className="sr-only">Loading site metrics…</span>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="card-surface animate-pulse p-4">
+            <div className="h-3 w-24 rounded bg-ink-800" />
+            <div className="mt-3 h-7 w-16 rounded bg-ink-800" />
+            <div className="mt-2 h-2.5 w-32 rounded bg-ink-800/70" />
+          </div>
+        ))}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        {Array.from({ length: 2 }).map((_, index) => (
+          <div key={index} className="card-surface animate-pulse p-5">
+            <div className="h-3 w-32 rounded bg-ink-800" />
+            <div className="mt-4 space-y-3">
+              {Array.from({ length: 4 }).map((__, row) => (
+                <div key={row} className="h-2.5 w-full rounded bg-ink-800/70" />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function OverviewTab({ onNavigate }: OverviewTabProps) {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [asOf, setAsOf] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    adminApi.stats().then((result) => {
-      if (cancelled) return;
-      if (result.ok) setStats(result.data);
-      else setError(result.error);
-      setLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
+  const load = useCallback(async (cancelled?: { value: boolean }) => {
+    setLoading(true);
+    setError(null);
+    const result = await adminApi.stats();
+    if (cancelled?.value) return;
+    if (result.ok && result.data) {
+      setStats(result.data);
+      setAsOf(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    } else {
+      setError(result.error);
+    }
+    setLoading(false);
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2 rounded-xl border border-ink-800 bg-ink-900 p-6 text-sm text-ink-300">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading site metrics…
-      </div>
-    );
-  }
+  useEffect(() => {
+    const cancelled = { value: false };
+    void load(cancelled);
+    return () => {
+      cancelled.value = true;
+    };
+  }, [load]);
+
+  if (loading) return <OverviewSkeleton />;
 
   if (error || !stats) {
     return (
-      <div className="rounded-xl border border-error-500/30 bg-error-500/5 p-5 text-sm text-error-300">
-        <p className="flex items-center gap-2 font-medium">
+      <div role="alert" className="rounded-xl border border-error-500/30 bg-error-500/5 p-5">
+        <p className="flex items-center gap-2 text-sm font-medium text-error-300">
           <AlertTriangle className="h-4 w-4" /> Could not load metrics
         </p>
-        <p className="mt-1 text-xs text-error-400/90">{error}</p>
+        <p className="mt-1 text-xs text-error-400/90">{error || 'The stats endpoint returned no data.'}</p>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => void load()}
+          className="mt-3 flex items-center gap-1.5"
+        >
+          <RefreshCw className="h-3.5 w-3.5" /> Try again
+        </Button>
       </div>
     );
   }
@@ -48,43 +91,58 @@ export function OverviewTab({ onNavigate }: OverviewTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="card-surface p-4">
-          <div className="flex items-center gap-1.5 text-xs text-ink-400">
-            <Users className="h-3.5 w-3.5" /> Accounts
-          </div>
-          <p className="mt-1 font-display text-3xl font-semibold text-ink-50">{stats.users.total}</p>
-          <p className="mt-0.5 text-micro text-ink-400">+{stats.users.last7d} in the last 7 days</p>
-        </div>
-        <div className="card-surface p-4">
-          <div className="flex items-center gap-1.5 text-xs text-ink-400">
-            <BookOpen className="h-3.5 w-3.5" /> Library entries
-          </div>
-          <p className="mt-1 font-display text-3xl font-semibold text-ink-50">{stats.library.total}</p>
-          <p className="mt-0.5 text-micro text-ink-400">across all accounts</p>
-        </div>
-        <div className="card-surface p-4">
-          <div className="flex items-center gap-1.5 text-xs text-ink-400">
-            <Sparkles className="h-3.5 w-3.5" /> Editor's Picks
-          </div>
-          <p className="mt-1 font-display text-3xl font-semibold text-ink-50">{stats.featured.total}</p>
-          <button onClick={() => onNavigate('featured')} className="mt-1 text-micro text-rose-400 hover:text-rose-300">
-            Manage picks
-          </button>
-        </div>
-        <div className="card-surface p-4">
-          <div className="flex items-center gap-1.5 text-xs text-ink-400">Announcement</div>
-          <p className="mt-1 font-display text-lg font-semibold text-ink-50">
-            {stats.announcement?.active ? 'Live' : 'Off'}
-          </p>
-          <button onClick={() => onNavigate('settings')} className="mt-1 text-micro text-rose-400 hover:text-rose-300">
-            Edit banner
-          </button>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold text-ink-100">Site metrics</h2>
+        <div className="flex items-center gap-2 text-micro text-ink-400">
+          {asOf && <span>Updated {asOf}</span>}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void load()}
+            className="flex items-center gap-1.5"
+          >
+            <RefreshCw className="h-3.5 w-3.5" /> Refresh
+          </Button>
         </div>
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatTile
+          icon={Users}
+          label="Accounts"
+          value={stats.users.total}
+          hint={`+${stats.users.last7d} in the last 7 days`}
+          to="/admin?tab=users"
+        />
+        <StatTile
+          icon={BookOpen}
+          label="Library entries"
+          value={stats.library.total}
+          hint="Across all accounts"
+          to="/admin?tab=library"
+        />
+        <StatTile
+          icon={Sparkles}
+          label="Editor's Picks"
+          value={stats.featured.total}
+          hint="Manage featured titles"
+          to="/admin?tab=featured"
+        />
+        <StatTile
+          icon={Megaphone}
+          label="Announcement banner"
+          value={stats.announcement?.active ? 'Live' : 'Off'}
+          hint={stats.announcement?.active ? 'Visible on every page' : 'No banner is showing'}
+          tone={stats.announcement?.active ? 'success' : 'default'}
+          to="/admin?tab=settings"
+        />
+      </div>
+
       {stats.users.warning && (
-        <div className="rounded-xl border border-warning-500/30 bg-warning-500/5 p-4 text-xs text-warning-400">
+        <div
+          role="status"
+          className="rounded-xl border border-warning-500/30 bg-warning-500/5 p-4 text-xs text-warning-400"
+        >
           {stats.users.warning}
         </div>
       )}
@@ -128,7 +186,7 @@ export function OverviewTab({ onNavigate }: OverviewTabProps) {
                 <li key={row.titleId} className="flex items-center gap-2 text-xs">
                   <span className="w-4 text-ink-400">{index + 1}</span>
                   <span className="min-w-0 flex-1 truncate text-ink-200">{row.title}</span>
-                  <span className="rounded bg-ink-800 px-1.5 py-0.5 text-micro text-ink-300">
+                  <span className="rounded bg-ink-800 px-1.5 py-0.5 text-micro tabular-nums text-ink-300">
                     {row.count}
                   </span>
                 </li>
@@ -142,15 +200,24 @@ export function OverviewTab({ onNavigate }: OverviewTabProps) {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <button onClick={() => onNavigate('users')} className="card-surface p-4 text-left transition-colors hover:border-ink-700">
+        <button
+          onClick={() => onNavigate('users')}
+          className="card-surface p-4 text-left transition-colors hover:border-ink-700 focus-visible:ring-2 focus-visible:ring-rose-500/60"
+        >
           <p className="text-sm font-medium text-ink-100">Manage users</p>
           <p className="mt-0.5 text-xs text-ink-400">Inspect accounts, purge or remove data.</p>
         </button>
-        <button onClick={() => onNavigate('library')} className="card-surface p-4 text-left transition-colors hover:border-ink-700">
+        <button
+          onClick={() => onNavigate('library')}
+          className="card-surface p-4 text-left transition-colors hover:border-ink-700 focus-visible:ring-2 focus-visible:ring-rose-500/60"
+        >
           <p className="text-sm font-medium text-ink-100">Review library entries</p>
           <p className="mt-0.5 text-xs text-ink-400">Search every tracked title.</p>
         </button>
-        <button onClick={() => onNavigate('settings')} className="card-surface p-4 text-left transition-colors hover:border-ink-700">
+        <button
+          onClick={() => onNavigate('settings')}
+          className="card-surface p-4 text-left transition-colors hover:border-ink-700 focus-visible:ring-2 focus-visible:ring-rose-500/60"
+        >
           <p className="text-sm font-medium text-ink-100">Site settings</p>
           <p className="mt-0.5 text-xs text-ink-400">Announcement banner and messaging.</p>
         </button>
