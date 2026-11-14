@@ -15,3 +15,7 @@ export { Tabs, tabId, tabPanelId, tabPanelProps } from './Tabs';
 export type { TabsProps, TabItem } from './Tabs';
 export { EmptyState } from './EmptyState';
 export type { EmptyStateProps } from './EmptyState';
+export { SettingsSection, SettingRow } from './SettingsSection';
+export type { SettingsSectionProps, SettingRowProps } from './SettingsSection';
+export { Switch } from './Switch';
+export type { SwitchProps } from './Switch';
