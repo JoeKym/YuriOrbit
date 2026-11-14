@@ -503,6 +503,7 @@ export function SettingsPage() {
           value={tab}
           onChange={handleTabChange}
           label="Settings sections"
+          scrollable
           className="mb-6 lg:hidden"
         />
 

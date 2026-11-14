@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type { ComponentType, KeyboardEvent } from 'react';
 import { cn } from '@/lib/utils/format';
 
@@ -16,6 +16,12 @@ export interface TabsProps {
   onChange: (id: string) => void;
   /** Names the tab list for assistive tech, e.g. "Settings sections". */
   label: string;
+  /**
+   * Keep the strip on one line and scroll it sideways instead of wrapping.
+   * Use where the tabs are a long, fixed list — a ragged second row reads as
+   * broken rather than intentional.
+   */
+  scrollable?: boolean;
   className?: string;
 }
 
@@ -34,8 +40,23 @@ export function tabPanelProps(id: string) {
  * URL-addressable sections (e.g. `/admin?tab=users`) should stay links with
  * `aria-current="page"` — that is navigation, not a tab widget.
  */
-export function Tabs({ items, value, onChange, label, className }: TabsProps) {
+export function Tabs({ items, value, onChange, label, scrollable = false, className }: TabsProps) {
   const listRef = useRef<HTMLDivElement>(null);
+
+  // A deep link can land on a tab that starts out of view in a scrolling strip.
+  useEffect(() => {
+    if (!scrollable) return;
+    const list = listRef.current;
+    const active = list?.querySelector<HTMLElement>(`#${tabId(value)}`);
+    if (!list || !active) return;
+
+    const left = active.offsetLeft;
+    const right = left + active.offsetWidth;
+    if (left < list.scrollLeft) list.scrollLeft = left - 8;
+    else if (right > list.scrollLeft + list.clientWidth) {
+      list.scrollLeft = right - list.clientWidth + 8;
+    }
+  }, [value, scrollable]);
 
   const focusTab = (index: number) => {
     const next = items[(index + items.length) % items.length];
@@ -75,7 +96,13 @@ export function Tabs({ items, value, onChange, label, className }: TabsProps) {
       role="tablist"
       aria-label={label}
       onKeyDown={handleKeyDown}
-      className={cn('flex flex-wrap gap-1.5 border-b border-ink-800 pb-3', className)}
+      className={cn(
+        'flex gap-1.5 border-b border-ink-800 pb-3',
+        scrollable
+          ? 'flex-nowrap overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+          : 'flex-wrap',
+        className
+      )}
     >
       {items.map((item) => {
         const Icon = item.icon;
@@ -91,7 +118,7 @@ export function Tabs({ items, value, onChange, label, className }: TabsProps) {
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(item.id)}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+              'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
               selected ? 'bg-rose-500/15 text-rose-300' : 'text-ink-300 hover:bg-ink-850 hover:text-ink-100'
             )}
           >
