@@ -1,12 +1,103 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, BookOpen, Megaphone, RefreshCw, Sparkles, Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { AlertTriangle, BookOpen, CheckCircle2, Megaphone, RefreshCw, Sparkles, Users } from 'lucide-react';
 import { adminApi, type AdminStats } from '@/lib/admin/api';
 import { LIBRARY_STATUS_LABELS, type LibraryStatus } from '@/types/content';
 import { Button } from '@/components/ui';
 import { StatTile } from '@/components/admin/StatTile';
 
+export type AdminQueueCounts = Partial<Record<'appeals' | 'moderation' | 'feedback', number>>;
+
 interface OverviewTabProps {
   onNavigate: (tab: 'users' | 'library' | 'featured' | 'settings') => void;
+  /** Open-work counts owned by the console shell, so both read the same numbers. */
+  counts?: AdminQueueCounts;
+  /** Ask the shell to refresh those counts alongside the stats. */
+  onRefreshCounts?: () => void;
+}
+
+const ATTENTION_ROWS = [
+  {
+    key: 'appeals' as const,
+    label: 'Open appeals',
+    hint: 'Account and content appeals awaiting a decision',
+    to: '/admin?tab=appeals',
+  },
+  {
+    key: 'moderation' as const,
+    label: 'Flagged content',
+    hint: 'Takedowns, suspensions and restrictions',
+    to: '/admin?tab=moderation',
+  },
+  {
+    key: 'feedback' as const,
+    label: 'Unresolved feedback',
+    hint: 'Feedback, reports and contact messages',
+    to: '/admin?tab=feedback',
+  },
+];
+
+/** The queues that block other people, surfaced before any vanity metric. */
+function NeedsAttention({ counts }: { counts: AdminQueueCounts }) {
+  // Count queues rather than summing: open feedback also contains the appeals,
+  // so a raw total would double-count them.
+  const openQueues = Object.values(counts).filter((value) => (value ?? 0) > 0).length;
+  const clear = openQueues === 0;
+
+  return (
+    <section aria-labelledby="needs-attention" className="card-surface p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2
+          id="needs-attention"
+          className="flex items-center gap-2 text-sm font-semibold text-ink-100"
+        >
+          {clear ? (
+            <CheckCircle2 className="h-4 w-4 text-success-400" />
+          ) : (
+            <AlertTriangle className="h-4 w-4 text-warning-400" />
+          )}
+          Needs attention
+        </h2>
+        <span
+          className={
+            clear
+              ? 'rounded-full bg-success-500/15 px-2 py-0.5 text-micro font-semibold text-success-400'
+              : 'rounded-full bg-warning-500/15 px-2 py-0.5 text-micro font-semibold text-warning-400'
+          }
+        >
+          {clear ? 'All clear' : `${openQueues} queue${openQueues === 1 ? '' : 's'} to review`}
+        </span>
+      </div>
+
+      <ul className="mt-3 grid gap-2 sm:grid-cols-3">
+        {ATTENTION_ROWS.map((row) => {
+          const count = counts[row.key];
+          return (
+            <li key={row.key}>
+              <Link
+                to={row.to}
+                className="flex h-full items-center justify-between gap-3 rounded-xl border border-ink-800 bg-ink-950/30 px-3.5 py-3 transition-colors hover:border-ink-700 focus-visible:ring-2 focus-visible:ring-rose-500/60"
+              >
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium text-ink-100">{row.label}</span>
+                  <span className="mt-0.5 block text-micro leading-relaxed text-ink-400">{row.hint}</span>
+                </span>
+                <span
+                  className={
+                    count && count > 0
+                      ? 'shrink-0 rounded-full bg-warning-500/15 px-2 py-0.5 text-xs font-semibold tabular-nums text-warning-300'
+                      : 'shrink-0 rounded-full bg-ink-800 px-2 py-0.5 text-xs font-semibold tabular-nums text-ink-300'
+                  }
+                >
+                  {typeof count === 'number' ? count : '—'}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
 }
 
 function OverviewSkeleton() {
@@ -38,7 +129,7 @@ function OverviewSkeleton() {
   );
 }
 
-export function OverviewTab({ onNavigate }: OverviewTabProps) {
+export function OverviewTab({ onNavigate, counts, onRefreshCounts }: OverviewTabProps) {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -98,13 +189,20 @@ export function OverviewTab({ onNavigate }: OverviewTabProps) {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => void load()}
+            onClick={() => {
+              void load();
+              onRefreshCounts?.();
+            }}
             className="flex items-center gap-1.5"
           >
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </Button>
         </div>
       </div>
+
+      {counts && Object.values(counts).some((value) => typeof value === 'number') && (
+        <NeedsAttention counts={counts} />
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile
